@@ -907,12 +907,22 @@ function renderSheet(){
       <div class="hrow"><span class="dot-b" style="background:var(--sun);color:#1d1404">↻</span><span>Même famille qu'une saison récente : rotation à revoir</span></div>
     </div>
     <p class="note">Aujourd'hui : tout ce qui demande une action. Récoltes : ce qui est prêt et ce qui arrive. Eau & gel : pluie, cuve, risque de gel. Cultures : fiches et calendrier de semis.</p></div>`;
+  }else if(sheetMode==='wu'){const c=WU.get();
+    h+=`<div class="stack"><div class="row between"><h3>Station météo</h3><button class="btn small" data-act="close">Fermer</button></div>
+    <p class="note" style="color:var(--ink)">Relie ta station Weather Underground : la pluie se note toute seule et l'alerte gel utilise la prévision de la nuit.</p>
+    <label class="field"><span class="lbl">Identifiant de la station</span><input id="wu-id" value="${esc(c.id||'')}" placeholder="ex. ILEUZE12" autocapitalize="characters" autocomplete="off" spellcheck="false"></label>
+    <label class="field"><span class="lbl">Clé API</span><input id="wu-key" value="${esc(c.key||'')}" placeholder="32 caractères" autocomplete="off" spellcheck="false"></label>
+    <p class="alert" id="wu-err" hidden></p>
+    <div class="row"><button class="btn primary" data-act="wu-save">Relier et tester</button>${c.key?'<button class="btn danger" data-act="wu-del">Délier</button>':''}</div>
+    <div class="note"><b>Où les trouver</b> : connecte-toi sur wunderground.com, ouvre le menu de ton profil, puis <b>My Devices</b> pour l'identifiant de la station (il commence par I) et <b>API Keys</b> pour la clé (bouton « Generate » si tu n'en as pas encore). La clé est gratuite pour les stations qui envoient leurs données.</div>
+    <p class="note">La clé reste sur cet appareil : elle n'est jamais envoyée ailleurs que chez Weather Underground, ni enregistrée dans le plan.</p></div>`;
   }else if(sheetMode==='menu'){
     h+=`<div class="stack"><div class="row between"><h3>Potager</h3><button class="btn small" data-act="close">Fermer</button></div>
     <label class="field"><span class="lbl">Nom</span><input id="g-name" value="${esc(S.name)}"></label>
     ${S.shape?`<div class="row between"><span><span class="lbl">Terrain</span><br><span class="mono">${num(Math.abs(polyArea(S.shape))/1e4)} m² · ${S.shape.length} côtés</span></span><span class="row"><button class="btn small" data-act="shape-rect">Revenir au rectangle</button></span></div>`:
     `<div class="grid2"><label class="field"><span class="lbl">Largeur du terrain (m)</span><input id="g-w" type="number" min="2" step="0.5" value="${S.w/100}"></label>
     <label class="field"><span class="lbl">Longueur du terrain (m)</span><input id="g-h" type="number" min="2" step="0.5" value="${S.h/100}"></label></div>`}
+    <div class="row between"><span><span class="lbl">Station météo</span><br><span class="note">${WU.get().key?'Station '+esc(WU.get().id)+' reliée':'Pas de station reliée'}</span></span><button class="btn small" data-act="wu">${WU.get().key?'Modifier':'Relier ma station'}</button></div>
     <div><span class="lbl">Apparence</span><div class="seg" style="margin-top:6px">${[['auto','Automatique'],['light','Clair'],['dark','Sombre']].map(([k,l])=>`<button data-act="theme" data-k="${k}" aria-pressed="${themePref()===k}">${l}</button>`).join('')}</div></div>
     <div class="row"><button class="btn" data-act="help">Comment ça marche</button><button class="btn" data-act="openinv">Inventaire</button></div>
     ${ctx?'':`<button class="btn" data-act="shape-edit">${S.shape?'Modifier la forme du terrain':'Dessiner une forme libre'}</button>`}
@@ -966,6 +976,10 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
   if(a==='toedit'){setEdit(true);renderSheet()}
   if(a==='enterserre'&&o)enterSerre(o.id);
   if(a==='openinv'){sheetMode=null;renderSheet();openInv()}
+  if(a==='wu'){sheetMode='wu';renderSheet();return}
+  if(a==='wu-test'||a==='wu-save'){const c={id:$('#wu-id').value.trim().toUpperCase(),key:$('#wu-key').value.trim()};if(!c.id||!c.key)return toast('Indique l\'identifiant et la clé');
+    b.disabled=true;b.textContent='Connexion…';try{const w=await syncStation(false,c);WU.set(c);sheetMode=null;renderSheet();toast(`Station reliée : ${num(w.now.t,1)} °C, ${num(w.now.rain||0,1)} mm aujourd'hui`);syncStation(false)}catch(err){b.disabled=false;b.textContent='Relier et tester';const el=$('#wu-err');if(el){el.hidden=false;el.textContent=err.message}}return}
+  if(a==='wu-del'){WU.set({});wx=null;sheetMode='menu';renderSheet();return toast('Station déliée de cet appareil')}
   if(a==='theme'){setTheme(b.dataset.k);renderSheet();renderPlan()}
   if(a==='shape-edit')startShapeEdit();
   if(a==='shape-rect'){S.shape=null;save();renderSheet();renderPlan();toast('Terrain redevenu rectangulaire',true)}
@@ -1403,13 +1417,13 @@ function cultivated(){let a=0;const per=[];plantables().forEach(o=>{let ao=0;o.z
 function renderWeather(){
   const fp=frostPeriod(TODAY),mo=TODAY.getMonth();
   const sens=[];plantables().forEach(o=>o.zones.forEach(z=>{if(z.crop&&FROST_SENSITIVE.has(z.crop)&&Object.keys(z.cells).length)sens.push({o,z})}));
-  const fr=S.frost&&S.frost.d===iso(TODAY)?S.frost.t:'';
+  const fr=S.frost&&S.frost.d===iso(TODAY)?S.frost.t:'',frSrc=S.frost&&S.frost.d===iso(TODAY)&&S.frost.src==='station';
   const danger=fr!==''&&+fr<=2;
   let frost=`<div class="alert ${danger?'':'frost'}"><span><b>${fp.txt}.</b> ${sens.length?`${sens.length} culture${sens.length>1?'s':''} sensible${sens.length>1?'s':''} en place.`:'Aucune culture sensible en place.'}</span>
     ${danger&&sens.length?`<span>Minimum prévu ${num(fr)} °C : couvre ou rentre ${sens.map(s=>`<b>${P[s.z.crop].n.toLowerCase()}</b> (${esc(fullName(s.o))}${serreOf(s.o)?', serre non chauffée':''})`).join(', ')} ce soir. Un voile d'hivernage P30 gagne environ 2 à 4 °C.</span>`:''}
     ${fr!==''&&!danger?`<span>Minimum prévu ${num(fr)} °C : pas de protection nécessaire cette nuit.</span>`:''}</div>
     ${sens.length?`<div class="chips">${sens.map(s=>`<span class="chip"><i style="background:${P[s.z.crop].c}"></i>${P[s.z.crop].n} · ${esc(fullName(s.o))}</span>`).join('')}</div>`:''}
-    <label class="field" style="max-width:260px"><span class="lbl">Minimum prévu cette nuit (°C)</span><input id="w-tmin" type="number" step="0.5" value="${fr}" placeholder="selon ta météo"></label>`;
+    <label class="field" style="max-width:260px"><span class="lbl">Minimum prévu cette nuit (°C)${frSrc?' · prévision station':''}</span><input id="w-tmin" type="number" step="0.5" value="${fr}" placeholder="selon ta météo"></label>`;
   const tc=tankCap();if(tc){S.water.cap=tc.cap;if(S.water.level>tc.cap)S.water.level=tc.cap}
   const w=S.water,cu=cultivated(),eff=.85;
   const collect=RAIN.map(mm=>w.roof*mm*eff),need=NEED.map(n=>cu.a*n*30/7);
@@ -1424,11 +1438,14 @@ function renderWeather(){
   ch+=`</svg>`;
   
   $('#v-weather').innerHTML=`<div class="page">
+   ${WU.get().key?`<div class="tcard"><div class="row between"><h3>Ma station</h3><button class="btn small" data-wact="wusync">${wxBusy?'…':'Actualiser'}</button></div>${wx?stationLine():'<span class="note">Lecture en cours…</span>'}
+     ${wx&&wx.fc?`<div class="mths" style="grid-template-columns:repeat(${Math.min(5,wx.fc.length)},1fr);gap:6px;font-size:12px">${wx.fc.slice(0,5).map(f=>`<div style="display:grid;gap:2px;text-align:center;padding:6px 2px;border-radius:8px;background:var(--surface-2)"><b style="color:var(--ink)">${esc((f.dow||'').slice(0,3))}</b><span>${f.min!=null?num(f.min,0):'–'}° / ${f.max!=null?num(f.max,0):'–'}°</span><span style="color:var(--water)">${num(f.mm||0,1)} mm</span></div>`).join('')}</div>`:''}</div>`
+   :`<div class="tcard"><h3>Ma station</h3><span class="note">Relie ta station Weather Underground pour noter la pluie automatiquement et recevoir l'alerte gel sur prévision.</span><button class="btn small primary" data-wact="wuconf" style="justify-self:start">Relier ma station</button></div>`}
    <h2>Gel</h2>${frost}
    <p class="note">Les seuils viennent du calendrier climatique de la Hesbaye. L'alerte automatique sur les prévisions arrivera avec l'app native ou une station météo reliée.</p>
    <h2>Pluie</h2>
    <div class="row"><button class="btn primary" data-wact="rain">Il a plu aujourd'hui</button><label class="field" style="width:120px"><span class="lbl">Quantité (mm)</span><input id="r-mm" type="number" min="0" step="0.5" placeholder="facultatif"></label></div>
-   ${(S.rain||[]).length?`<div class="jlist">${S.rain.slice(0,6).map(r=>`<div class="jent"><span class="d">${fdate(parse(r.d))}</span><div>${r.mm!=null?`<span class="mono">${num(r.mm)} mm</span>`:'Pluie'}${r.mm!=null&&r.mm<RAIN_MIN?' <span class="note">· trop faible pour compter comme arrosage</span>':''}</div><button class="del" data-wact="rdel" data-id="${r.id}" aria-label="Supprimer">×</button></div>`).join('')}</div>`:'<p class="note">Aucune pluie notée.</p>'}
+   ${(S.rain||[]).length?`<div class="jlist">${S.rain.slice(0,6).map(r=>`<div class="jent"><span class="d">${fdate(parse(r.d))}</span><div>${r.mm!=null?`<span class="mono">${num(r.mm)} mm</span>`:'Pluie'}${r.src==='station'?' <span class="note">· station</span>':''}${r.mm!=null&&r.mm<RAIN_MIN?' <span class="note">· trop faible pour compter comme arrosage</span>':''}</div><button class="del" data-wact="rdel" data-id="${r.id}" aria-label="Supprimer">×</button></div>`).join('')}</div>`:'<p class="note">Aucune pluie notée.</p>'}
    <p class="note">Une pluie de ${RAIN_MIN} mm ou plus, ou sans quantité, compte comme un arrosage pour les planches en plein air. La page ne peut pas lire la météo elle-même : la station météo ou l'app native le feront automatiquement.</p>
    <h2>Eau</h2>
    <div class="grid3"><label class="field"><span class="lbl">Toit raccordé (m²)</span><input id="w-roof" type="number" min="0" step="1" value="${w.roof}"></label>
@@ -1448,6 +1465,8 @@ $('#v-weather').addEventListener('change',e=>{const t=e.target,v=parseFloat(t.va
   if(t.id==='w-tmin'){S.frost=t.value===''?null:{t:v,d:iso(TODAY)};save();renderWeather()}
   if(['w-roof','w-cap','w-level'].includes(t.id)&&!isNaN(v)){S.water[t.id.slice(2)]=Math.max(0,v);if(S.water.level>S.water.cap)S.water.level=S.water.cap;save();renderWeather()}});
 $('#v-weather').addEventListener('click',e=>{const wa=e.target.closest('[data-wact]');
+  if(wa&&wa.dataset.wact==='wusync'){syncStation(true);return}
+  if(wa&&wa.dataset.wact==='wuconf'){setTab('plan');sheetMode='wu';selId=null;renderSheet();return}
   if(wa&&wa.dataset.wact==='rain'){const v=parseFloat(String($('#r-mm').value).replace(',','.'));addRain(isNaN(v)?null:v);save();renderWeather();return toast('Pluie notée',true)}
   if(wa&&wa.dataset.wact==='rdel'){S.rain=S.rain.filter(r=>r.id!==wa.dataset.id);save();renderWeather();return toast('Pluie supprimée',true)}
   const b=e.target.closest('[data-open]');if(b)openBed(b.dataset.open,0)});
@@ -1508,7 +1527,7 @@ function renderToday(){
   gen.push(`<div class="tcard"><h3>À semer ou planter en place ce mois-ci</h3><div class="chips">${sow.map(p=>`<span class="chip"><i style="background:${p.c}"></i>${p.n}${hasSeeds(p.id)?' <span class="mono note">· graines ✓</span>':''}</span>`).join('')||'<span class="note">Rien ce mois-ci.</span>'}</div><button class="btn small" data-tgo="crops" style="justify-self:start">Voir les cultures</button></div>`);
   const sec=(t,ico,cards,n,id)=>`<section class="tsec" id="ts-${id}"><div class="tsec-h"><svg viewBox="0 0 24 24">${ico}</svg><h2>${esc(t)}</h2>${n?`<span class="n">${n}</span>`:''}</div>${cards.join('')}</section>`;
   const count=c=>c.length;
-  $('#v-today').innerHTML=`<div class="page"><div><h2>Aujourd'hui</h2><span class="note">${TODAY.toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'})} · ${nAct?nAct+' chose'+(nAct>1?'s':'')+' à faire':'rien d\'urgent'}</span></div>
+  $('#v-today').innerHTML=`<div class="page"><div><h2>Aujourd'hui</h2>${wx?`<div style="margin:2px 0 4px">${stationLine()}</div>`:''}<span class="note">${TODAY.toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'})} · ${nAct?nAct+' chose'+(nAct>1?'s':'')+' à faire':'rien d\'urgent'}</span></div>
   <div class="bednav">${secs.map(x=>`<button data-tj="${x.L.key}">${esc(x.L.t)}</button>`).join('')}${semis.length?'<button data-tj="semis">Semis</button>':''}<button data-tj="gen">Stock et saison</button></div>
   ${secs.map(x=>sec(x.L.t,x.L.ico,x.c,0,x.L.key)).join('')}
   ${semis.length?sec('Semis à l\'abri','<path d="M6 20h12l-1.5-7h-9z"/><path d="M12 13V8"/><path d="M12 9c0-3 2-5 5-5 0 3-2 5-5 5z"/>',semis,0,'semis'):''}
@@ -1571,6 +1590,41 @@ $('#v-crops').addEventListener('click',e=>{const b=e.target.closest('[data-cact]
   if(a==='buy'){S.stock=S.stock||[];if(!S.stock.some(q=>q.cat==='graine'&&q.crop===c&&!expired(q)))S.stock.push({id:uid(),name:P[c].n,crop:c,cat:'graine',unit:'graines',min:0,moves:[]});save();renderCrops();return toast(P[c].n+' : graines ajoutées à la liste d\'achat',true)}});
 $('#v-crops').addEventListener('input',e=>{if(e.target.id==='cq'){cq=e.target.value;renderCrops()}});
 
+/* ================= Station météo (Weather Underground) ================= */
+/* identifiant et clé gardés sur cet appareil uniquement, jamais dans le plan synchronisé */
+const WU={get(){try{return JSON.parse(localStorage.getItem('potager-wu'))||{}}catch(e){return{}}},set(v){try{localStorage.setItem('potager-wu',JSON.stringify(v))}catch(e){}}};
+let wx=null,wxBusy=false;
+const inClaude=()=>!!window.claude||/claude\.ai|claudeusercontent/.test(location.hostname);
+async function wuFetch(path,c){const u=`https://api.weather.com${path}${path.includes('?')?'&':'?'}apiKey=${encodeURIComponent(c.key)}&format=json&units=m&numericPrecision=decimal`;
+  let r;try{r=await fetch(u)}catch(e){throw new Error(inClaude()?'La station ne se lit que dans l\'app installée, pas dans Claude.':'Station injoignable : vérifie la connexion internet.')}
+  if(r.status===401||r.status===403)throw new Error('Clé API refusée par Weather Underground.');
+  if(r.status===204)throw new Error('Aucune donnée : vérifie l\'identifiant de la station, ou elle est hors ligne.');
+  if(!r.ok)throw new Error('Weather Underground a répondu ' + r.status + '.');return r.json()}
+async function syncStation(manual,cfg){const c=cfg||WU.get();if(!c.id||!c.key){if(manual)toast('Configure d\'abord ta station');return null}if(wxBusy)return;wxBusy=true;
+  try{const sid=encodeURIComponent(c.id.trim());
+    const cur=await wuFetch(`/v2/pws/observations/current?stationId=${sid}`,c),ob=cur&&cur.observations&&cur.observations[0];if(!ob)throw new Error('Aucune observation récente pour cette station.');
+    let days=null;try{days=await wuFetch(`/v2/pws/dailysummary/7day?stationId=${sid}`,c)}catch(e){}
+    let fc=null;try{fc=await wuFetch(`/v3/wx/forecast/daily/5day?geocode=${ob.lat},${ob.lon}&language=fr-FR`,c)}catch(e){}
+    const m=ob.metric||{};
+    let night=null;if(fc){const dp=fc.daypart&&fc.daypart[0];night=dp&&dp.temperature&&dp.temperature[1]!=null?dp.temperature[1]:(fc.temperatureMin||[])[0]??null}
+    wx={now:{t:m.temp,h:ob.humidity,rain:m.precipTotal,wind:m.windSpeed,time:ob.obsTimeLocal},night,
+      fc:fc&&fc.validTimeLocal?fc.validTimeLocal.map((v,i)=>({d:v.slice(0,10),dow:(fc.dayOfWeek||[])[i],min:(fc.temperatureMin||[])[i],max:(fc.temperatureMax||[])[i],mm:(fc.qpf||[])[i]})):null,at:Date.now(),id:c.id};
+    if(cfg)return wx;
+    let changed=false;S.rain=S.rain||[];
+    const put=(d,mm)=>{mm=Math.round((+mm||0)*10)/10;const ex=S.rain.find(r=>r.d===d&&r.src==='station');
+      if(mm<0.2){if(ex){S.rain=S.rain.filter(r=>r!==ex);changed=true}return}
+      if(ex){if(ex.mm!==mm){ex.mm=mm;changed=true}}else{S.rain.push({id:uid(),d,mm,src:'station'});changed=true}};
+    ((days&&days.summaries)||[]).forEach(x=>{if(x.obsTimeLocal&&x.metric)put(x.obsTimeLocal.slice(0,10),x.metric.precipTotal)});
+    put(iso(TODAY),m.precipTotal);
+    if(night!=null&&(!S.frost||S.frost.d!==iso(TODAY)||S.frost.src==='station')&&!(S.frost&&S.frost.d===iso(TODAY)&&S.frost.t===night)){S.frost={t:night,d:iso(TODAY),src:'station'};changed=true}
+    if(changed){S.rain.sort((a,b)=>b.d.localeCompare(a.d));save()}
+    if(manual)toast('Station synchronisée');refresh();return wx}
+  catch(e){if(cfg)throw e;wx={err:e.message,at:Date.now()};if(manual)toast(e.message);refresh();return null}
+  finally{wxBusy=false}}
+function stationLine(){if(!wx)return'';if(wx.err)return`<span class="note" style="color:var(--danger)">${esc(wx.err)}</span>`;const n=wx.now,ago=Math.round((Date.now()-new Date(n.time.replace(' ','T')).getTime())/60000);
+  return`<span class="mono">${num(n.t,1)} °C · ${n.h} % · pluie ${num(n.rain||0,1)} mm aujourd'hui</span> <span class="note">· station ${esc(wx.id)}${ago>=0&&ago<600?`, il y a ${ago<1?'moins d\'1':ago} min`:''}</span>`}
+addEventListener('visibilitychange',()=>{if(!document.hidden&&WU.get().key&&(!wx||Date.now()-wx.at>30*60000))syncStation(false)});
+
 /* ================= Démarrage ================= */
 function themePref(){try{return localStorage.getItem('potager-theme')||'auto'}catch(e){return'auto'}}
 function setTheme(k){try{localStorage.setItem('potager-theme',k)}catch(e){}applyTheme()}
@@ -1581,4 +1635,5 @@ let seenHelp=false;try{seenHelp=!!localStorage.getItem('potager-aide-vue');local
 if(!seenHelp)sheetMode='help';
 renderHeader();requestAnimationFrame(()=>{fit();renderSheet();setTab('today')});
 initCaps();
+if(WU.get().key)setTimeout(()=>syncStation(false),600);
 </script>
