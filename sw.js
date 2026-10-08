@@ -1,5 +1,5 @@
-// Atelier Potager — service worker e3a6998e0e
-const CACHE='potager-e3a6998e0e';
+// Atelier Potager — service worker c53a0f9d33
+const CACHE='potager-c53a0f9d33';
 const CORE=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-180.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});

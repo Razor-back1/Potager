@@ -172,6 +172,26 @@ main{position:relative;min-height:0;overflow:hidden}
 .wxbits{display:flex;flex-wrap:wrap;gap:6px}
 .wxbits span{font-size:12.5px;padding:3px 9px;border-radius:99px;background:var(--glass);font-family:var(--f-mono)}
 .wxbits .wfrost{background:var(--frost);color:#fff;font-weight:600}
+.wxgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:6px}
+.wxtile{display:grid;gap:1px;padding:8px 10px;border-radius:12px;background:var(--glass)}
+.wxtile span{font-size:11.5px;opacity:.75}.wxtile b{font-family:var(--f-mono);font-size:15px}.wxtile small{font-size:11px;opacity:.7}
+.wxhours{display:flex;gap:2px;overflow-x:auto;padding:8px 4px;margin:0 -4px;border:1px solid var(--line);border-radius:16px;background:var(--surface);scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.wxhours::-webkit-scrollbar{display:none}
+.wxh{flex:none;width:48px;display:grid;justify-items:center;gap:1px;font-size:12px;padding:2px 0;border-radius:10px}
+.wxh.mid{border-left:1px dashed var(--line)}
+.wxh .wxi{width:30px;height:30px}.wxh b{font-family:var(--f-mono);font-size:13px}.wxh small{font-size:10.5px;min-height:14px;color:var(--muted)}.wxh small.wet{color:var(--water);font-weight:600}
+.wxweek{display:grid;border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:4px 12px}
+.wxw{display:grid;grid-template-columns:38px 30px 28px minmax(40px,1fr) 28px 62px 50px;align-items:center;gap:6px;padding:5px 0;font-size:13px}
+.wxw+.wxw{border-top:1px solid var(--line)}
+.wxw .wxi{width:30px;height:30px}.wxw .mono{text-align:right}
+.wxbar{position:relative;height:6px;border-radius:9px;background:var(--surface-2)}
+.wxbar i{position:absolute;top:0;bottom:0;border-radius:9px;background:linear-gradient(90deg,var(--frost),var(--sun))}
+.wxr{display:grid;justify-items:end;font-family:var(--f-mono);font-size:12px;color:var(--muted)}.wxr.wet{color:var(--water);font-weight:600}.wxr small{font-size:10.5px;font-weight:400}
+.wxv{display:grid;justify-items:end;font-family:var(--f-mono);font-size:12px}.wxv small{font-size:10px;color:var(--muted)}
+.wxadv{display:grid;gap:0;border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:2px 12px}
+.wxadv>div{display:grid;grid-template-columns:8px 1fr;gap:10px;padding:9px 0;font-size:13.5px;align-items:start}
+.wxadv>div>i{width:8px;height:8px;border-radius:50%;margin-top:6px}
+.wxadv>div+div{border-top:1px solid var(--line)}
 .wxdays{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding-top:10px;border-top:1px solid var(--glass)}
 .wxd{display:grid;justify-items:center;gap:1px;font-size:12px}
 .wxd .wxi{width:34px;height:34px}
@@ -486,7 +506,7 @@ table.cmp tr:last-child td{border-bottom:0}
     <button data-tab="today"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>Aujourd'hui</button>
     <button data-tab="plan" aria-current="page"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 3v18M14 3v18"/></svg>Plan</button>
     <button data-tab="harvest"><svg viewBox="0 0 24 24"><path d="M4 9h16l-2 11H6z"/><path d="M8 9a4 4 0 0 1 8 0"/></svg>Récoltes</button>
-    <button data-tab="weather"><svg viewBox="0 0 24 24"><path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z"/></svg>Eau & gel</button>
+    <button data-tab="weather"><svg viewBox="0 0 24 24"><path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z"/></svg>Eau & météo</button>
     <button data-tab="crops"><svg viewBox="0 0 24 24"><path d="M5 20c0-8 5-14 15-15-1 10-7 15-15 15zM5 20l7-7"/></svg>Cultures</button>
   </nav>
   <input type="file" id="importIn" accept="application/json,.json" hidden>
@@ -1128,7 +1148,7 @@ function renderSheet(){
       <div class="hrow"><span class="dot-b" style="background:var(--muted)">☀</span><span>Une culture manque de soleil à cet endroit</span></div>
       <div class="hrow"><span class="dot-b" style="background:var(--sun);color:#1d1404">↻</span><span>Même famille qu'une saison récente : rotation à revoir</span></div>
     </div>
-    <p class="note">Aujourd'hui : tout ce qui demande une action. Récoltes : ce qui est prêt et ce qui arrive. Eau & gel : pluie, cuve, risque de gel. Cultures : fiches et calendrier de semis.</p></div>`;
+    <p class="note">Aujourd'hui : tout ce qui demande une action. Récoltes : ce qui est prêt et ce qui arrive. Eau & météo : prévisions, pluie, cuve, risque de gel. Cultures : fiches et calendrier de semis.</p></div>`;
   }else if(sheetMode==='wu'){const c=WU.get();
     h+=`<div class="stack"><div class="row between"><h3>Station météo</h3><button class="btn small" data-act="close">Fermer</button></div>
     <p class="note" style="color:var(--ink)">Relie ta station Weather Underground : la pluie se note toute seule et l'alerte gel utilise la prévision de la nuit.</p>
@@ -1632,7 +1652,7 @@ function renderHarvest(){
 }
 $('#v-harvest').addEventListener('click',e=>{const y=e.target.closest('[data-hy]');if(y){hvYear=+y.dataset.hy;return renderHarvest()}const b=e.target.closest('[data-open]');if(b)openBed(b.dataset.open,+b.dataset.zi)});
 
-/* ================= Eau & gel ================= */
+/* ================= Eau & météo ================= */
 function frostPeriod(d){const m=d.getMonth()+1,dd=d.getDate();
   if(m>=11||m<=3)return{lvl:2,txt:'Gel probable la nuit'};
   if(m===10)return{lvl:1,txt:'Premières gelées possibles (souvent mi-octobre en Hesbaye)'};
@@ -1663,15 +1683,13 @@ function renderWeather(){
   ch+=`</svg>`;
   
   $('#v-weather').innerHTML=`<div class="page">
-   ${WU.get().key||wx?`<div class="tcard"><div class="row between"><h3>${WU.get().key?'Ma station':'Météo'}</h3><button class="btn small" data-wact="wusync">${wxBusy?'…':'Actualiser'}</button></div>${wx?stationLine():'<span class="note">Lecture en cours…</span>'}
-     ${wx&&wx.fcErr?`<span class="note" style="color:var(--danger)">${esc(wx.fcErr)}</span>`:''}${wx&&wx.fc?`<span class="lbl">Prévisions (Open-Meteo)</span><div class="mths" style="grid-template-columns:repeat(${Math.min(5,wx.fc.length)},1fr);gap:6px;font-size:12px">${wx.fc.slice(0,5).map(f=>`<div style="display:grid;gap:2px;text-align:center;padding:6px 2px;border-radius:8px;background:var(--surface-2)"><b style="color:var(--ink)">${esc((f.dow||'').slice(0,3))}</b><span>${f.min!=null?num(f.min,0):'–'}° / ${f.max!=null?num(f.max,0):'–'}°</span><span style="color:var(--water)">${num(f.mm||0,1)} mm</span></div>`).join('')}</div>`:''}</div>`
-   :`<div class="tcard"><h3>Ma station</h3><span class="note">Relie ta station Weather Underground pour noter la pluie automatiquement et recevoir l'alerte gel sur prévision.</span><button class="btn small primary" data-wact="wuconf" style="justify-self:start">Relier ma station</button></div>`}
+   ${weatherPanel()}
    <h2>Gel</h2>${frost}
-   <p class="note">Les seuils viennent du calendrier climatique de la Hesbaye. L'alerte automatique sur les prévisions arrivera avec l'app native ou une station météo reliée.</p>
+   <p class="note">Les seuils viennent du calendrier climatique de la Hesbaye. Le minimum de la nuit se remplit tout seul avec les prévisions.</p>
    <h2>Pluie</h2>
    <div class="row"><button class="btn primary" data-wact="rain">Il a plu aujourd'hui</button><label class="field" style="width:120px"><span class="lbl">Quantité (mm)</span><input id="r-mm" type="number" min="0" step="0.5" placeholder="facultatif"></label></div>
    ${(S.rain||[]).length?`<div class="jlist">${S.rain.slice(0,6).map(r=>`<div class="jent"><span class="d">${fdate(parse(r.d))}</span><div>${r.mm!=null?`<span class="mono">${num(r.mm)} mm</span>`:'Pluie'}${r.src==='station'?' <span class="note">· station</span>':''}${r.mm!=null&&r.mm<RAIN_MIN?' <span class="note">· trop faible pour compter comme arrosage</span>':''}</div><button class="del" data-wact="rdel" data-id="${r.id}" aria-label="Supprimer">×</button></div>`).join('')}</div>`:'<p class="note">Aucune pluie notée.</p>'}
-   <p class="note">Une pluie de ${RAIN_MIN} mm ou plus, ou sans quantité, compte comme un arrosage pour les planches en plein air. La page ne peut pas lire la météo elle-même : la station météo ou l'app native le feront automatiquement.</p>
+   <p class="note">Une pluie de ${RAIN_MIN} mm ou plus, ou sans quantité, compte comme un arrosage pour les planches en plein air. Avec la station reliée, la pluie se note toute seule.</p>
    <h2>Eau</h2>
    <div class="grid3"><label class="field"><span class="lbl">Toit raccordé (m²)</span><input id="w-roof" type="number" min="0" step="1" value="${w.roof}"></label>
    ${tc?`<div class="field"><span class="lbl">Capacité (L)</span><span class="mono" style="padding-top:9px">${num(tc.cap,0)} L</span><span class="note">calculée sur ${tc.n} cuve${tc.n>1?'s':''} du plan</span></div>`:`<label class="field"><span class="lbl">Capacité cuve (L)</span><input id="w-cap" type="number" min="0" step="100" value="${w.cap}"></label>`}
@@ -1831,27 +1849,38 @@ async function wuFetch(path,c){const u=`https://api.weather.com${path}${path.inc
 /* Prévisions publiques Open-Meteo (gratuites, sans clé) : minimum de la nuit et 5 jours */
 const HOME_GEO={lat:50.586,lon:4.877};
 async function forecastOM(lat,lon){
-  const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_min,temperature_2m_max,precipitation_sum,weather_code&hourly=temperature_2m&current=temperature_2m,weather_code,is_day,wind_speed_10m,precipitation&timezone=Europe%2FBrussels&forecast_days=6`;
+  const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
+    +`&daily=temperature_2m_min,temperature_2m_max,precipitation_sum,precipitation_probability_max,weather_code,wind_speed_10m_max,wind_gusts_10m_max,et0_fao_evapotranspiration,sunrise,sunset,daylight_duration,sunshine_duration,uv_index_max`
+    +`&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,is_day,wind_speed_10m,soil_temperature_6cm`
+    +`&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m,wind_gusts_10m,wind_direction_10m,pressure_msl,precipitation`
+    +`&timezone=Europe%2FBrussels&past_days=7&forecast_days=7`;
   let r;try{r=await fetch(u)}catch(e){throw new Error(inClaude()?'Les prévisions ne se lisent que dans l\'app installée.':'Prévisions injoignables : vérifie la connexion.')}
   if(!r.ok)throw new Error('Prévisions indisponibles ('+r.status+').');const j=await r.json();
+  const H=j.hourly||{},D=j.daily||{},ht=H.time||[],dt=D.time||[];
   const t0=iso(TODAY)+'T18:00',t1=iso(addD(iso(TODAY),1))+'T09:00';let night=null;
-  (j.hourly&&j.hourly.time||[]).forEach((t,i)=>{if(t>=t0&&t<=t1){const v=j.hourly.temperature_2m[i];if(v!=null&&(night==null||v<night))night=v}});
-  const dn=['dim','lun','mar','mer','jeu','ven','sam'];
-  const fc=(j.daily&&j.daily.time||[]).slice(0,5).map((d,i)=>({d,dow:dn[parse(d).getDay()],min:j.daily.temperature_2m_min[i],max:j.daily.temperature_2m_max[i],mm:j.daily.precipitation_sum[i],code:(j.daily.weather_code||[])[i]}));
-  const cu=j.current||{};return{night,fc,cur:{code:cu.weather_code,isDay:cu.is_day!==0,t:cu.temperature_2m,wind:cu.wind_speed_10m}}}
+  ht.forEach((t,i)=>{if(t>=t0&&t<=t1){const v=H.temperature_2m[i];if(v!=null&&(night==null||v<night))night=v}});
+  const dn=['dim','lun','mar','mer','jeu','ven','sam'],dv=(k,i)=>(D[k]||[])[i];
+  let ti=dt.indexOf(iso(TODAY));if(ti<0)ti=Math.min(7,dt.length-1);
+  const fc=dt.slice(ti,ti+7).map((d,k)=>{const i=ti+k;return{d,dow:dn[parse(d).getDay()],min:dv('temperature_2m_min',i),max:dv('temperature_2m_max',i),mm:dv('precipitation_sum',i),pp:dv('precipitation_probability_max',i),code:dv('weather_code',i),wind:dv('wind_speed_10m_max',i),gust:dv('wind_gusts_10m_max',i),et0:dv('et0_fao_evapotranspiration',i),rise:dv('sunrise',i),set:dv('sunset',i),dayLen:dv('daylight_duration',i),sunH:dv('sunshine_duration',i),uv:dv('uv_index_max',i)}});
+  /* 7 jours passés : pluie tombée et évaporation, pour le bilan hydrique */
+  let pRain=0,pEt=0;for(let i=Math.max(0,ti-7);i<ti;i++){pRain+=+dv('precipitation_sum',i)||0;pEt+=+dv('et0_fao_evapotranspiration',i)||0}
+  const cu=j.current||{},hNow=(cu.time||new Date().toISOString()).slice(0,13)+':00';let hi=ht.indexOf(hNow);if(hi<0)hi=ht.findIndex(t=>t>=hNow);
+  const hours=hi<0?[]:ht.slice(hi,hi+25).map((t,k)=>{const i=hi+k;return{t,temp:H.temperature_2m[i],pp:(H.precipitation_probability||[])[i],mm:(H.precipitation||[])[i],code:(H.weather_code||[])[i],day:(H.is_day||[])[i]!==0,wind:(H.wind_speed_10m||[])[i]}});
+  const soil=hi<0?null:(H.soil_temperature_6cm||[])[hi];
+  return{night,fc,hours,soil,past:{rain:pRain,et0:pEt},cur:{code:cu.weather_code,isDay:cu.is_day!==0,t:cu.temperature_2m,feel:cu.apparent_temperature,h:cu.relative_humidity_2m,wind:cu.wind_speed_10m,gust:cu.wind_gusts_10m,dir:cu.wind_direction_10m,p:cu.pressure_msl}}}
 async function syncStation(manual,cfg){const c=cfg||WU.get();if(wxBusy&&!cfg)return;wxBusy=true;
   try{
     /* 1. la station (mesures et pluie) */
     let now=null,lat=HOME_GEO.lat,lon=HOME_GEO.lon,stErr=null,days=null;
     if(c.id&&c.key){try{const sid=encodeURIComponent(c.id.trim());
         const cur=await wuFetch(`/v2/pws/observations/current?stationId=${sid}`,c),ob=cur&&cur.observations&&cur.observations[0];if(!ob)throw new Error('Aucune observation récente pour cette station.');
-        const m=ob.metric||{};now={t:m.temp,h:ob.humidity,rain:m.precipTotal,wind:m.windSpeed,time:ob.obsTimeLocal};if(ob.lat)lat=ob.lat;if(ob.lon)lon=ob.lon;
+        const m=ob.metric||{};now={t:m.temp,h:ob.humidity,rain:m.precipTotal,rate:m.precipRate,wind:m.windSpeed,gust:m.windGust,dir:ob.winddir,dew:m.dewpt,p:m.pressure,uv:ob.uv,sol:ob.solarRadiation,feel:m.temp!=null&&m.temp<10?m.windChill:m.heatIndex,time:ob.obsTimeLocal};if(ob.lat)lat=ob.lat;if(ob.lon)lon=ob.lon;
         try{days=await wuFetch(`/v2/pws/dailysummary/7day?stationId=${sid}`,c)}catch(e){}}
       catch(e){if(cfg)throw e;stErr=e.message}}
     if(cfg)return{now};
     /* 2. les prévisions publiques */
     let f=null,fcErr=null;try{f=await forecastOM(lat,lon)}catch(e){fcErr=e.message}
-    wx={now,err:stErr,fcErr,night:f?f.night:null,fc:f?f.fc:null,cur:f?f.cur:null,at:Date.now(),id:c.id};
+    wx={now,err:stErr,fcErr,night:f?f.night:null,fc:f?f.fc:null,cur:f?f.cur:null,hours:f?f.hours:[],soil:f?f.soil:null,past:f?f.past:null,at:Date.now(),id:c.id};
     let changed=false;S.rain=S.rain||[];
     if(now){const put=(d,mm)=>{mm=Math.round((+mm||0)*10)/10;const ex=S.rain.find(r=>r.d===d&&r.src==='station');
         if(mm<0.2){if(ex){S.rain=S.rain.filter(r=>r!==ex);changed=true}return}
@@ -1897,6 +1926,57 @@ function weatherHero(){if(!wx)return'';const cur=wx.cur,kind=cur&&cur.code!=null
     ${bits?`<div class="wxbits">${bits}</div>`:''}
     ${wx.fc?`<div class="wxdays">${wx.fc.slice(0,5).map((f,i)=>`<div class="wxd"><span>${i===0?'Auj.':esc((f.dow||'').slice(0,3))}</span>${f.code!=null?wxIcon(wxKind(f.code),true,false):''}<b>${f.max!=null?num(f.max,0):'–'}°</b><span class="note">${f.min!=null?num(f.min,0):'–'}°</span></div>`).join('')}</div>`:''}
   </button>`}
+/* ---- page Eau & météo : détail des conditions, 24 h, 7 jours, conseils potager ---- */
+const dirTxt=d=>d==null?'':['N','NE','E','SE','S','SO','O','NO'][Math.round(((+d%360)+360)%360/45)%8];
+const hm=t=>t?(+t.slice(11,13))+'h'+t.slice(14,16):'–';
+const DOWF={dim:'dimanche',lun:'lundi',mar:'mardi',mer:'mercredi',jeu:'jeudi',ven:'vendredi',sam:'samedi'};
+const durTxt=s=>{if(s==null)return'–';const m=Math.round(s/60);return Math.floor(m/60)+' h '+String(m%60).padStart(2,'0')};
+function wxAdvice(){const A=[],cur=wx.cur||{},n=wx.now||{},fc=wx.fc||[],H=wx.hours||[];
+  const t=n.t!=null?n.t:cur.t,h=n.h!=null?n.h:cur.h;
+  if(wx.soil!=null){const sl=wx.soil,v=num(sl,0);
+    A.push({k:'soil',txt:sl<5?`Sol à ${v} °C : trop froid, rien ne germe en pleine terre.`:sl<8?`Sol à ${v} °C : seuls fèves, pois, épinards et radis lèvent encore.`:sl<12?`Sol à ${v} °C : carottes, laitues, betteraves et oignons lèvent ; trop froid pour haricots et courges.`:`Sol à ${v} °C : assez chaud même pour haricots, courges et maïs.`})}
+  if(wx.past){const b=wx.past.rain-wx.past.et0;
+    if(b<=-8)A.push({k:'dry',txt:`Sol qui sèche : ${num(-b,0)} mm évaporés de plus que tombés sur 7 jours. Arrosage utile en plein air.`});
+    else if(b>=10)A.push({k:'wet',txt:`Sol bien humide : ${num(b,0)} mm de pluie de plus que l'évaporation sur 7 jours. Pas besoin d'arroser en plein air.`});
+    else A.push({k:'ok',txt:`Pluie et évaporation à peu près à l'équilibre sur 7 jours.`})}
+  const nr=fc.findIndex((f,i)=>i>0&&(f.mm||0)>=1);
+  if(fc.length){if((fc[0].mm||0)>=1)A.push({k:'rain',txt:`Pluie aujourd'hui : ${num(fc[0].mm,1)} mm prévus.`});
+    else if(nr<0)A.push({k:'dry',txt:'Pas de pluie notable prévue cette semaine.'});
+    else A.push({k:'rain',txt:`Prochaine pluie : ${nr===1?'demain':DOWF[fc[nr].dow]||fc[nr].dow} (${num(fc[nr].mm,1)} mm).`})}
+  const g=Math.max(...fc.slice(0,2).map(f=>f.gust||0));if(g>=50)A.push({k:'wind',txt:`Rafales jusqu'à ${num(g,0)} km/h d'ici demain : vérifie voiles, tuteurs et portes de serre.`});
+  const hot=fc.slice(0,3).find(f=>(f.max||0)>=28);if(hot)A.push({k:'hot',txt:`Chaleur ${hot===fc[0]?"aujourd'hui":DOWF[hot.dow]||hot.dow} (${num(hot.max,0)} °C) : arrose tôt le matin et aère la serre.`});
+  if(h!=null&&h>=85&&t!=null&&t>=10&&t<=25&&wx.past&&wx.past.rain>=5)A.push({k:'mold',txt:'Douceur et humidité : conditions favorables au mildiou. Surveille tomates et pommes de terre.'});
+  /* fenêtre de traitement : jour, vent ≤ 15 km/h, 5–25 °C, pas de pluie pendant 6 h */
+  const okH=i=>{const x=H[i];return x&&x.day&&(x.wind||0)<=15&&x.temp>=5&&x.temp<=25&&(x.pp||0)<40&&(x.mm||0)<.1&&H.slice(i,i+6).every(y=>(y.mm||0)<.2)};
+  let st=-1,len=0;for(let i=0;i<H.length;i++){if(okH(i)){if(st<0)st=i;len++;if(len>=3)break}else{st=-1;len=0}}
+  if(st>=0&&len>=3){const d0=H[st].t.slice(0,10)===iso(TODAY);A.push({k:'treat',txt:`Fenêtre de traitement : ${st===0?'maintenant':(d0?"aujourd'hui":'demain')+' dès '+(+H[st].t.slice(11,13))+' h'} (vent faible, sec 6 h après).`})}
+  else if(H.length)A.push({k:'notreat',txt:'Pas de bonne fenêtre de traitement dans les 24 h (vent, pluie ou nuit).'});
+  return A}
+const ADV_C={soil:'var(--wood)',dry:'var(--sun)',wet:'var(--water)',ok:'var(--ok)',rain:'var(--water)',wind:'var(--muted)',hot:'var(--danger)',mold:'var(--danger)',treat:'var(--ok)',notreat:'var(--muted)'};
+function weatherPanel(){const hasKey=!!WU.get().key;
+  const head=`<div class="row between"><h2>Météo</h2><button class="btn small" data-wact="wusync">${wxBusy?'…':'Actualiser'}</button></div>`;
+  const link=hasKey?'':`<div class="row between" style="gap:8px"><span class="note">Relie ta station Weather Underground pour des mesures sur place et la pluie notée toute seule.</span><button class="btn small" data-wact="wuconf">Relier</button></div>`;
+  if(!wx)return head+`<div class="tcard"><span class="note">Lecture de la météo…</span></div>`+link;
+  const cur=wx.cur||{},n=wx.now||{},fc=wx.fc||[],f0=fc[0]||{},kind=cur.code!=null?wxKind(cur.code):null,day=cur.isDay!==false;
+  const pick=(a,b)=>a!=null?a:b,t=pick(n.t,cur.t),feel=pick(n.feel,cur.feel),h=pick(n.h,cur.h),wind=pick(n.wind,cur.wind),gust=pick(n.gust,cur.gust),dir=pick(n.dir,cur.dir),pr=pick(n.p,cur.p),uv=pick(n.uv,f0.uv);
+  const errs=[wx.err?'Station : '+wx.err:'',wx.fcErr||''].filter(Boolean).map(e=>`<span class="note" style="color:var(--danger)">${esc(e)}</span>`).join('');
+  if(t==null&&!kind&&!fc.length)return head+`<div class="tcard">${errs||'<span class="note">Pas de données météo.</span>'}</div>`+link;
+  const tile=(l,v,s='')=>v==null||v===''?'':`<div class="wxtile"><span>${l}</span><b>${v}</b>${s?`<small>${s}</small>`:''}</div>`;
+  const ago=n.time?Math.round((Date.now()-new Date(n.time.replace(' ','T')).getTime())/60000):null;
+  const src=[wx.now?`station ${esc(wx.id||'')}${ago!=null&&ago>=0&&ago<600?`, il y a ${ago<1?'moins d\'1':ago} min`:''}`:'',fc.length?'prévisions Open-Meteo':''].filter(Boolean).join(' · ');
+  const nowCard=`<div class="wxhero ${kind||'cloudy'}${day?'':' night'}">
+    <div class="wxmain">${kind?wxIcon(kind,day,true):''}<div class="wxt"><span class="wxdeg">${t!=null?num(t,1):'–'}<small>°C</small></span><span class="wxlbl">${kind?WX_TXT[kind]:''}${feel!=null&&t!=null&&Math.abs(feel-t)>=1?` · <span class="note">ressenti ${num(feel,0)} °C</span>`:''}</span>${f0.min!=null?`<span class="note">Aujourd'hui ${num(f0.min,0)}° / ${num(f0.max,0)}°</span>`:''}</div></div>
+    <div class="wxgrid">${tile('Humidité',h!=null?Math.round(h)+' %':null)}${tile('Point de rosée',n.dew!=null?num(n.dew,1)+' °C':null)}${tile('Vent',wind!=null?num(wind,0)+' km/h':null,[dirTxt(dir),gust!=null?'rafales '+num(gust,0):''].filter(Boolean).join(' · '))}${tile('Pression',pr!=null?num(pr,0)+' hPa':null)}${tile('Pluie auj.',n.rain!=null?num(n.rain,1)+' mm':f0.mm!=null?num(f0.mm,1)+' mm':null,n.rate?num(n.rate,1)+' mm/h en ce moment':n.rain==null&&f0.mm!=null?'prévu':'')}${tile('UV',uv!=null?num(uv,0):null,uv==null?'':uv<3?'faible':uv<6?'modéré':uv<8?'élevé':'très élevé')}${tile('Soleil',f0.rise?hm(f0.rise)+' – '+hm(f0.set):null,f0.dayLen!=null?'jour '+durTxt(f0.dayLen):'')}${tile('Ensoleillement',f0.sunH!=null?num(f0.sunH/3600,1)+' h':null,'prévu aujourd\'hui')}</div>
+    ${src?`<span class="note">${src}</span>`:''}${errs}</div>`;
+  const H=(wx.hours||[]).filter((_,i)=>i%1===0).slice(0,25);
+  const hours=H.length?`<div class="stack"><span class="lbl">Prochaines 24 h</span><div class="wxhours">${H.map((x,i)=>`<div class="wxh${x.t.slice(11,13)==='00'&&i?' mid':''}"><span>${i===0?'Maint.':x.t.slice(11,13)+'h'}</span>${x.code!=null?wxIcon(wxKind(x.code),x.day,false):''}<b>${x.temp!=null?num(x.temp,0)+'°':'–'}</b><small class="${(x.pp||0)>=30?'wet':''}">${(x.pp||0)>=10?x.pp+' %':''}</small></div>`).join('')}</div></div>`:'';
+  const lo=Math.min(...fc.map(f=>f.min??99)),hi=Math.max(...fc.map(f=>f.max??-99)),sp=Math.max(1,hi-lo);
+  const week=fc.length?`<div class="stack"><span class="lbl">7 jours</span><div class="wxweek">${fc.map((f,i)=>`<div class="wxw"><b>${i===0?'Auj.':i===1?'Dem.':esc(f.dow)}</b>${f.code!=null?wxIcon(wxKind(f.code),true,false):'<span></span>'}<span class="mono note">${f.min!=null?num(f.min,0)+'°':''}</span><span class="wxbar"><i style="left:${(((f.min??lo)-lo)/sp*100).toFixed(1)}%;right:${((hi-(f.max??hi))/sp*100).toFixed(1)}%"></i></span><span class="mono">${f.max!=null?num(f.max,0)+'°':''}</span><span class="wxr${(f.mm||0)>=1?' wet':''}">${(f.mm||0)>=.1?num(f.mm,1)+' mm':'–'}${f.pp!=null&&f.pp>=20?`<small>${f.pp} %</small>`:''}</span><span class="wxv">${f.wind!=null?num(f.wind,0):''}<small>${f.gust!=null&&f.gust>=40?'raf. '+num(f.gust,0):'km/h'}</small></span></div>`).join('')}</div></div>`:'';
+  const p=wx.past,bal=p?p.rain-p.et0:null,rain7=fc.reduce((a,f)=>a+(+f.mm||0),0);
+  const stats=`<div class="stats">${wx.soil!=null?`<div class="stat"><span class="lbl">Sol à 6 cm</span><span class="v">${num(wx.soil,1)} <small>°C</small></span></div>`:''}${f0.et0!=null?`<div class="stat"><span class="lbl">Évaporation auj.</span><span class="v">${num(f0.et0,1)} <small>mm</small></span></div>`:''}${bal!=null?`<div class="stat"><span class="lbl">Bilan 7 derniers j</span><span class="v" style="color:${bal<-8?'var(--sun)':bal>10?'var(--water)':'inherit'}">${bal>=.5?'+':''}${num(bal,0)} <small>mm</small></span><span class="note">pluie ${num(p.rain,0)} − évap. ${num(p.et0,0)}</span></div>`:''}${fc.length?`<div class="stat"><span class="lbl">Pluie prévue 7 j</span><span class="v">${num(rain7,0)} <small>mm</small></span></div>`:''}</div>`;
+  const adv=wxAdvice();
+  const garden=`<div class="stack"><span class="lbl">Pour le potager</span>${stats}${adv.length?`<div class="wxadv">${adv.map(a=>`<div><i style="background:${ADV_C[a.k]||'var(--muted)'}"></i><span>${a.txt}</span></div>`).join('')}</div>`:''}</div>`;
+  return head+nowCard+hours+week+garden+link}
 addEventListener('visibilitychange',()=>{if(!document.hidden&&(!wx||Date.now()-wx.at>30*60000))syncStation(false)});
 
 /* ================= Météo vivante sur le plan (jamais en mode édition) ================= */
@@ -2017,7 +2097,7 @@ setTimeout(()=>syncStation(false),600);
 
 <script>
 setTimeout(()=>{const s=document.getElementById('splash');if(s){s.classList.add('out');setTimeout(()=>s.remove(),600)}},matchMedia('(display-mode: standalone)').matches||navigator.standalone?650:120);
-/* version e3a6998e0e : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
+/* version c53a0f9d33 : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
 if('serviceWorker' in navigator&&location.protocol==='https:'){
   navigator.serviceWorker.register('sw.js').then(r=>r.update()).catch(()=>{});
   let reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!reloaded){reloaded=true;location.reload()}});
