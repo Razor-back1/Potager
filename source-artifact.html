@@ -978,7 +978,7 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
   if(a==='openinv'){sheetMode=null;renderSheet();openInv()}
   if(a==='wu'){sheetMode='wu';renderSheet();return}
   if(a==='wu-test'||a==='wu-save'){const c={id:$('#wu-id').value.trim().toUpperCase(),key:$('#wu-key').value.trim()};if(!c.id||!c.key)return toast('Indique l\'identifiant et la clé');
-    b.disabled=true;b.textContent='Connexion…';try{const w=await syncStation(false,c);WU.set(c);sheetMode=null;renderSheet();toast(`Station reliée : ${num(w.now.t,1)} °C, ${num(w.now.rain||0,1)} mm aujourd'hui`);syncStation(false)}catch(err){b.disabled=false;b.textContent='Relier et tester';const el=$('#wu-err');if(el){el.hidden=false;el.textContent=err.message}}return}
+    b.disabled=true;b.textContent='Connexion…';try{const w=await syncStation(false,c);if(!w||!w.now)throw new Error('Aucune donnée reçue de la station.');WU.set(c);sheetMode=null;renderSheet();toast(`Station reliée : ${num(w.now.t,1)} °C, ${num(w.now.rain||0,1)} mm aujourd'hui`);syncStation(false)}catch(err){b.disabled=false;b.textContent='Relier et tester';const el=$('#wu-err');if(el){el.hidden=false;el.textContent=err.message}}return}
   if(a==='wu-del'){WU.set({off:true});wx=null;sheetMode='menu';renderSheet();return toast('Station déliée de cet appareil')}
   if(a==='theme'){setTheme(b.dataset.k);renderSheet();renderPlan()}
   if(a==='shape-edit')startShapeEdit();
@@ -1423,7 +1423,7 @@ function renderWeather(){
     ${danger&&sens.length?`<span>Minimum prévu ${num(fr)} °C : couvre ou rentre ${sens.map(s=>`<b>${P[s.z.crop].n.toLowerCase()}</b> (${esc(fullName(s.o))}${serreOf(s.o)?', serre non chauffée':''})`).join(', ')} ce soir. Un voile d'hivernage P30 gagne environ 2 à 4 °C.</span>`:''}
     ${fr!==''&&!danger?`<span>Minimum prévu ${num(fr)} °C : pas de protection nécessaire cette nuit.</span>`:''}</div>
     ${sens.length?`<div class="chips">${sens.map(s=>`<span class="chip"><i style="background:${P[s.z.crop].c}"></i>${P[s.z.crop].n} · ${esc(fullName(s.o))}</span>`).join('')}</div>`:''}
-    <label class="field" style="max-width:260px"><span class="lbl">Minimum prévu cette nuit (°C)${frSrc?' · prévision station':''}</span><input id="w-tmin" type="number" step="0.5" value="${fr}" placeholder="selon ta météo"></label>`;
+    <label class="field" style="max-width:260px"><span class="lbl">Minimum prévu cette nuit (°C)${frSrc?' · prévision automatique':''}</span><input id="w-tmin" type="number" step="0.5" value="${fr}" placeholder="selon ta météo"></label>`;
   const tc=tankCap();if(tc){S.water.cap=tc.cap;if(S.water.level>tc.cap)S.water.level=tc.cap}
   const w=S.water,cu=cultivated(),eff=.85;
   const collect=RAIN.map(mm=>w.roof*mm*eff),need=NEED.map(n=>cu.a*n*30/7);
@@ -1438,8 +1438,8 @@ function renderWeather(){
   ch+=`</svg>`;
   
   $('#v-weather').innerHTML=`<div class="page">
-   ${WU.get().key?`<div class="tcard"><div class="row between"><h3>Ma station</h3><button class="btn small" data-wact="wusync">${wxBusy?'…':'Actualiser'}</button></div>${wx?stationLine():'<span class="note">Lecture en cours…</span>'}
-     ${wx&&wx.fc?`<div class="mths" style="grid-template-columns:repeat(${Math.min(5,wx.fc.length)},1fr);gap:6px;font-size:12px">${wx.fc.slice(0,5).map(f=>`<div style="display:grid;gap:2px;text-align:center;padding:6px 2px;border-radius:8px;background:var(--surface-2)"><b style="color:var(--ink)">${esc((f.dow||'').slice(0,3))}</b><span>${f.min!=null?num(f.min,0):'–'}° / ${f.max!=null?num(f.max,0):'–'}°</span><span style="color:var(--water)">${num(f.mm||0,1)} mm</span></div>`).join('')}</div>`:''}</div>`
+   ${WU.get().key||wx?`<div class="tcard"><div class="row between"><h3>${WU.get().key?'Ma station':'Météo'}</h3><button class="btn small" data-wact="wusync">${wxBusy?'…':'Actualiser'}</button></div>${wx?stationLine():'<span class="note">Lecture en cours…</span>'}
+     ${wx&&wx.fcErr?`<span class="note" style="color:var(--danger)">${esc(wx.fcErr)}</span>`:''}${wx&&wx.fc?`<span class="lbl">Prévisions (Open-Meteo)</span><div class="mths" style="grid-template-columns:repeat(${Math.min(5,wx.fc.length)},1fr);gap:6px;font-size:12px">${wx.fc.slice(0,5).map(f=>`<div style="display:grid;gap:2px;text-align:center;padding:6px 2px;border-radius:8px;background:var(--surface-2)"><b style="color:var(--ink)">${esc((f.dow||'').slice(0,3))}</b><span>${f.min!=null?num(f.min,0):'–'}° / ${f.max!=null?num(f.max,0):'–'}°</span><span style="color:var(--water)">${num(f.mm||0,1)} mm</span></div>`).join('')}</div>`:''}</div>`
    :`<div class="tcard"><h3>Ma station</h3><span class="note">Relie ta station Weather Underground pour noter la pluie automatiquement et recevoir l'alerte gel sur prévision.</span><button class="btn small primary" data-wact="wuconf" style="justify-self:start">Relier ma station</button></div>`}
    <h2>Gel</h2>${frost}
    <p class="note">Les seuils viennent du calendrier climatique de la Hesbaye. L'alerte automatique sur les prévisions arrivera avec l'app native ou une station météo reliée.</p>
@@ -1602,30 +1602,44 @@ async function wuFetch(path,c){const u=`https://api.weather.com${path}${path.inc
   if(r.status===401||r.status===403)throw new Error('Clé API refusée par Weather Underground.');
   if(r.status===204)throw new Error('Aucune donnée : vérifie l\'identifiant de la station, ou elle est hors ligne.');
   if(!r.ok)throw new Error('Weather Underground a répondu ' + r.status + '.');return r.json()}
-async function syncStation(manual,cfg){const c=cfg||WU.get();if(!c.id||!c.key){if(manual)toast('Configure d\'abord ta station');return null}if(wxBusy)return;wxBusy=true;
-  try{const sid=encodeURIComponent(c.id.trim());
-    const cur=await wuFetch(`/v2/pws/observations/current?stationId=${sid}`,c),ob=cur&&cur.observations&&cur.observations[0];if(!ob)throw new Error('Aucune observation récente pour cette station.');
-    let days=null;try{days=await wuFetch(`/v2/pws/dailysummary/7day?stationId=${sid}`,c)}catch(e){}
-    let fc=null;try{fc=await wuFetch(`/v3/wx/forecast/daily/5day?geocode=${ob.lat},${ob.lon}&language=fr-FR`,c)}catch(e){}
-    const m=ob.metric||{};
-    let night=null;if(fc){const dp=fc.daypart&&fc.daypart[0];night=dp&&dp.temperature&&dp.temperature[1]!=null?dp.temperature[1]:(fc.temperatureMin||[])[0]??null}
-    wx={now:{t:m.temp,h:ob.humidity,rain:m.precipTotal,wind:m.windSpeed,time:ob.obsTimeLocal},night,
-      fc:fc&&fc.validTimeLocal?fc.validTimeLocal.map((v,i)=>({d:v.slice(0,10),dow:(fc.dayOfWeek||[])[i],min:(fc.temperatureMin||[])[i],max:(fc.temperatureMax||[])[i],mm:(fc.qpf||[])[i]})):null,at:Date.now(),id:c.id};
-    if(cfg)return wx;
+/* Prévisions publiques Open-Meteo (gratuites, sans clé) : minimum de la nuit et 5 jours */
+const HOME_GEO={lat:50.586,lon:4.877};
+async function forecastOM(lat,lon){
+  const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_min,temperature_2m_max,precipitation_sum&hourly=temperature_2m&timezone=Europe%2FBrussels&forecast_days=6`;
+  let r;try{r=await fetch(u)}catch(e){throw new Error(inClaude()?'Les prévisions ne se lisent que dans l\'app installée.':'Prévisions injoignables : vérifie la connexion.')}
+  if(!r.ok)throw new Error('Prévisions indisponibles ('+r.status+').');const j=await r.json();
+  const t0=iso(TODAY)+'T18:00',t1=iso(addD(iso(TODAY),1))+'T09:00';let night=null;
+  (j.hourly&&j.hourly.time||[]).forEach((t,i)=>{if(t>=t0&&t<=t1){const v=j.hourly.temperature_2m[i];if(v!=null&&(night==null||v<night))night=v}});
+  const dn=['dim','lun','mar','mer','jeu','ven','sam'];
+  const fc=(j.daily&&j.daily.time||[]).slice(0,5).map((d,i)=>({d,dow:dn[parse(d).getDay()],min:j.daily.temperature_2m_min[i],max:j.daily.temperature_2m_max[i],mm:j.daily.precipitation_sum[i]}));
+  return{night,fc}}
+async function syncStation(manual,cfg){const c=cfg||WU.get();if(wxBusy&&!cfg)return;wxBusy=true;
+  try{
+    /* 1. la station (mesures et pluie) */
+    let now=null,lat=HOME_GEO.lat,lon=HOME_GEO.lon,stErr=null,days=null;
+    if(c.id&&c.key){try{const sid=encodeURIComponent(c.id.trim());
+        const cur=await wuFetch(`/v2/pws/observations/current?stationId=${sid}`,c),ob=cur&&cur.observations&&cur.observations[0];if(!ob)throw new Error('Aucune observation récente pour cette station.');
+        const m=ob.metric||{};now={t:m.temp,h:ob.humidity,rain:m.precipTotal,wind:m.windSpeed,time:ob.obsTimeLocal};if(ob.lat)lat=ob.lat;if(ob.lon)lon=ob.lon;
+        try{days=await wuFetch(`/v2/pws/dailysummary/7day?stationId=${sid}`,c)}catch(e){}}
+      catch(e){if(cfg)throw e;stErr=e.message}}
+    if(cfg)return{now};
+    /* 2. les prévisions publiques */
+    let f=null,fcErr=null;try{f=await forecastOM(lat,lon)}catch(e){fcErr=e.message}
+    wx={now,err:stErr,fcErr,night:f?f.night:null,fc:f?f.fc:null,at:Date.now(),id:c.id};
     let changed=false;S.rain=S.rain||[];
-    const put=(d,mm)=>{mm=Math.round((+mm||0)*10)/10;const ex=S.rain.find(r=>r.d===d&&r.src==='station');
-      if(mm<0.2){if(ex){S.rain=S.rain.filter(r=>r!==ex);changed=true}return}
-      if(ex){if(ex.mm!==mm){ex.mm=mm;changed=true}}else{S.rain.push({id:uid(),d,mm,src:'station'});changed=true}};
-    ((days&&days.summaries)||[]).forEach(x=>{if(x.obsTimeLocal&&x.metric)put(x.obsTimeLocal.slice(0,10),x.metric.precipTotal)});
-    put(iso(TODAY),m.precipTotal);
+    if(now){const put=(d,mm)=>{mm=Math.round((+mm||0)*10)/10;const ex=S.rain.find(r=>r.d===d&&r.src==='station');
+        if(mm<0.2){if(ex){S.rain=S.rain.filter(r=>r!==ex);changed=true}return}
+        if(ex){if(ex.mm!==mm){ex.mm=mm;changed=true}}else{S.rain.push({id:uid(),d,mm,src:'station'});changed=true}};
+      ((days&&days.summaries)||[]).forEach(x=>{if(x.obsTimeLocal&&x.metric)put(x.obsTimeLocal.slice(0,10),x.metric.precipTotal)});
+      put(iso(TODAY),now.rain)}
+    const night=wx.night!=null?Math.round(wx.night*10)/10:null;
     if(night!=null&&(!S.frost||S.frost.d!==iso(TODAY)||S.frost.src==='station')&&!(S.frost&&S.frost.d===iso(TODAY)&&S.frost.t===night)){S.frost={t:night,d:iso(TODAY),src:'station'};changed=true}
     if(changed){S.rain.sort((a,b)=>b.d.localeCompare(a.d));save()}
-    if(manual)toast('Station synchronisée');refresh();return wx}
-  catch(e){if(cfg)throw e;wx={err:e.message,at:Date.now()};if(manual)toast(e.message);refresh();return null}
+    if(manual)toast(stErr||fcErr||'Météo à jour');refresh();return wx}
   finally{wxBusy=false}}
-function stationLine(){if(!wx)return'';if(wx.err)return`<span class="note" style="color:var(--danger)">${esc(wx.err)}</span>`;const n=wx.now,ago=Math.round((Date.now()-new Date(n.time.replace(' ','T')).getTime())/60000);
+function stationLine(){if(!wx)return'';if(wx.err)return`<span class="note" style="color:var(--danger)">Station : ${esc(wx.err)}</span>`;if(!wx.now)return wx.night!=null?`<span class="mono">Nuit prochaine : ${num(wx.night,1)} °C</span> <span class="note">· prévision</span>`:'';const n=wx.now,ago=Math.round((Date.now()-new Date(n.time.replace(' ','T')).getTime())/60000);
   return`<span class="mono">${num(n.t,1)} °C · ${n.h} % · pluie ${num(n.rain||0,1)} mm aujourd'hui</span> <span class="note">· station ${esc(wx.id)}${ago>=0&&ago<600?`, il y a ${ago<1?'moins d\'1':ago} min`:''}</span>`}
-addEventListener('visibilitychange',()=>{if(!document.hidden&&WU.get().key&&(!wx||Date.now()-wx.at>30*60000))syncStation(false)});
+addEventListener('visibilitychange',()=>{if(!document.hidden&&(!wx||Date.now()-wx.at>30*60000))syncStation(false)});
 
 /* ================= Démarrage ================= */
 function themePref(){try{return localStorage.getItem('potager-theme')||'auto'}catch(e){return'auto'}}
@@ -1637,5 +1651,5 @@ let seenHelp=false;try{seenHelp=!!localStorage.getItem('potager-aide-vue');local
 if(!seenHelp)sheetMode='help';
 renderHeader();requestAnimationFrame(()=>{fit();renderSheet();setTab('today')});
 initCaps();
-if(WU.get().key)setTimeout(()=>syncStation(false),600);
+setTimeout(()=>syncStation(false),600);
 </script>
