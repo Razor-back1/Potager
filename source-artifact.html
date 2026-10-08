@@ -13,16 +13,16 @@
   --f-mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#121812; --surface:#1a221a; --surface-2:#212b20; --ink:#e3e9d8; --muted:#9aa68f; --line:#2f3b2d;
-  --accent:#86c470; --accent-ink:#0e170d; --sun:#f0b445; --grid:rgba(134,196,112,.08); --grid-strong:rgba(134,196,112,.18);
-  --ground:#1f2a1d; --soil:#6b5038; --soil-edge:#3f2c1a; --water:#4f9bd0; --leaf:#4c8a3a; --leaf-dark:#2c5226;
-  --gravel:#4b4840; --wood:#8a6038; --danger:#ee6a58; --ok:#6fca7a; --halo:#1a221a; --shade:rgba(0,0,0,.45); --frost:#7fb0ee; color-scheme:dark;
+  --bg:#141516; --surface:#1d1e20; --surface-2:#26282a; --ink:#ebe8e2; --muted:#a19e96; --line:#34363a;
+  --accent:#7cbf6a; --accent-ink:#10150f; --sun:#f0b445; --grid:rgba(255,255,255,.045); --grid-strong:rgba(255,255,255,.10);
+  --ground:#1f2221; --soil:#6b5038; --soil-edge:#3f2c1a; --water:#4f9bd0; --leaf:#4c8a3a; --leaf-dark:#2c5226;
+  --gravel:#46443f; --wood:#8a6038; --danger:#ee6a58; --ok:#6fca7a; --halo:#1d1e20; --shade:rgba(0,0,0,.45); --frost:#7fb0ee; color-scheme:dark;
 }}
 :root[data-theme="dark"]{
-  --bg:#121812; --surface:#1a221a; --surface-2:#212b20; --ink:#e3e9d8; --muted:#9aa68f; --line:#2f3b2d;
-  --accent:#86c470; --accent-ink:#0e170d; --sun:#f0b445; --grid:rgba(134,196,112,.08); --grid-strong:rgba(134,196,112,.18);
-  --ground:#1f2a1d; --soil:#6b5038; --soil-edge:#3f2c1a; --water:#4f9bd0; --leaf:#4c8a3a; --leaf-dark:#2c5226;
-  --gravel:#4b4840; --wood:#8a6038; --danger:#ee6a58; --ok:#6fca7a; --halo:#1a221a; --shade:rgba(0,0,0,.45); --frost:#7fb0ee; color-scheme:dark;
+  --bg:#141516; --surface:#1d1e20; --surface-2:#26282a; --ink:#ebe8e2; --muted:#a19e96; --line:#34363a;
+  --accent:#7cbf6a; --accent-ink:#10150f; --sun:#f0b445; --grid:rgba(255,255,255,.045); --grid-strong:rgba(255,255,255,.10);
+  --ground:#1f2221; --soil:#6b5038; --soil-edge:#3f2c1a; --water:#4f9bd0; --leaf:#4c8a3a; --leaf-dark:#2c5226;
+  --gravel:#46443f; --wood:#8a6038; --danger:#ee6a58; --ok:#6fca7a; --halo:#1d1e20; --shade:rgba(0,0,0,.45); --frost:#7fb0ee; color-scheme:dark;
 }
 [hidden]{display:none!important}
 html,body{height:100%}
@@ -913,6 +913,7 @@ function renderSheet(){
     ${S.shape?`<div class="row between"><span><span class="lbl">Terrain</span><br><span class="mono">${num(Math.abs(polyArea(S.shape))/1e4)} m² · ${S.shape.length} côtés</span></span><span class="row"><button class="btn small" data-act="shape-rect">Revenir au rectangle</button></span></div>`:
     `<div class="grid2"><label class="field"><span class="lbl">Largeur du terrain (m)</span><input id="g-w" type="number" min="2" step="0.5" value="${S.w/100}"></label>
     <label class="field"><span class="lbl">Longueur du terrain (m)</span><input id="g-h" type="number" min="2" step="0.5" value="${S.h/100}"></label></div>`}
+    <div><span class="lbl">Apparence</span><div class="seg" style="margin-top:6px">${[['auto','Automatique'],['light','Clair'],['dark','Sombre']].map(([k,l])=>`<button data-act="theme" data-k="${k}" aria-pressed="${themePref()===k}">${l}</button>`).join('')}</div></div>
     <div class="row"><button class="btn" data-act="help">Comment ça marche</button><button class="btn" data-act="openinv">Inventaire</button></div>
     ${ctx?'':`<button class="btn" data-act="shape-edit">${S.shape?'Modifier la forme du terrain':'Dessiner une forme libre'}</button>`}
     <label class="field"><span class="lbl">Direction du nord sur le plan : <span class="mono">${S.north}°</span></span><input id="g-north" type="range" min="0" max="355" step="5" value="${S.north}"></label>
@@ -965,6 +966,7 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
   if(a==='toedit'){setEdit(true);renderSheet()}
   if(a==='enterserre'&&o)enterSerre(o.id);
   if(a==='openinv'){sheetMode=null;renderSheet();openInv()}
+  if(a==='theme'){setTheme(b.dataset.k);renderSheet();renderPlan()}
   if(a==='shape-edit')startShapeEdit();
   if(a==='shape-rect'){S.shape=null;save();renderSheet();renderPlan();toast('Terrain redevenu rectangulaire',true)}
   if(a==='newgarden'){const gw=$('#g-w'),gh=$('#g-h');S={v:8,shape:null,rain:[],stock:S.stock||[],nursery:S.nursery||[],name:'Mon potager',w:Math.round((gw?+gw.value||12:12)*100),h:Math.round((gh?+gh.value||8:8)*100),north:S.north||0,water:S.water,frost:null,objs:[],example:false};selId=null;sheetMode='add';save();fit();renderSheet();toast('Nouveau potager créé',true)}
@@ -1570,6 +1572,11 @@ $('#v-crops').addEventListener('click',e=>{const b=e.target.closest('[data-cact]
 $('#v-crops').addEventListener('input',e=>{if(e.target.id==='cq'){cq=e.target.value;renderCrops()}});
 
 /* ================= Démarrage ================= */
+function themePref(){try{return localStorage.getItem('potager-theme')||'auto'}catch(e){return'auto'}}
+function setTheme(k){try{localStorage.setItem('potager-theme',k)}catch(e){}applyTheme()}
+function applyTheme(){const k=themePref(),r=document.documentElement;if(k==='auto')delete r.dataset.theme;else r.dataset.theme=k;
+  const dark=k==='dark'||(k==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);document.querySelectorAll('meta[name="theme-color"]').forEach(m=>m.setAttribute('content',dark?'#1d1e20':'#fafbf6'))}
+applyTheme();
 let seenHelp=false;try{seenHelp=!!localStorage.getItem('potager-aide-vue');localStorage.setItem('potager-aide-vue','1')}catch(e){}
 if(!seenHelp)sheetMode='help';
 renderHeader();requestAnimationFrame(()=>{fit();renderSheet();setTab('today')});
