@@ -8,6 +8,8 @@
   --accent:#2c6a39; --accent-ink:#ffffff; --sun:#d9951c; --grid:rgba(44,106,57,.10); --grid-strong:rgba(44,106,57,.22);
   --ground:#dfe6cf; --soil:#8b6a48; --soil-edge:#5e4529; --water:#3a82b5; --leaf:#5c9a45; --leaf-dark:#2f5d2b;
   --gravel:#cdc6b5; --wood:#a3713f; --danger:#b8392b; --ok:#2e8547; --halo:#fafbf6; --shade:rgba(22,32,60,.30); --frost:#3a6fb5;
+  --sky1:#fdf4dc; --sky2:#e3efe0; --skyr1:#e3ebf3; --skyr2:#eef1ea; --skyc1:#edefec; --skyc2:#e6e9e2; --skyn1:#2a3350; --skyn2:#3c4766; --glass:rgba(255,255,255,.6);
+  --sunc:#f2a91d; --moonc:#f3e7b8; --cloudc:#ffffff; --cloudl:#c9d1d6; --cloudb:#e6eaee; --cloudd:#aab4bf; --snowc:#ffffff; --boltc:#f5c330;
   --f-display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
   --f-body:"Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
   --f-mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
@@ -16,13 +18,15 @@
   --bg:#141516; --surface:#1d1e20; --surface-2:#26282a; --ink:#ebe8e2; --muted:#a19e96; --line:#34363a;
   --accent:#7cbf6a; --accent-ink:#10150f; --sun:#f0b445; --grid:rgba(255,255,255,.045); --grid-strong:rgba(255,255,255,.10);
   --ground:#1f2221; --soil:#6b5038; --soil-edge:#3f2c1a; --water:#4f9bd0; --leaf:#4c8a3a; --leaf-dark:#2c5226;
-  --gravel:#46443f; --wood:#8a6038; --danger:#ee6a58; --ok:#6fca7a; --halo:#1d1e20; --shade:rgba(0,0,0,.45); --frost:#7fb0ee; color-scheme:dark;
+  --gravel:#46443f; --wood:#8a6038; --danger:#ee6a58; --ok:#6fca7a; --halo:#1d1e20; --shade:rgba(0,0,0,.45); --frost:#7fb0ee; --sky1:#2a2a22; --sky2:#1f2621; --skyr1:#1e2530; --skyr2:#1d2023; --skyc1:#232527; --skyc2:#1d1f21; --skyn1:#151a2b; --skyn2:#20263a; --glass:rgba(255,255,255,.08);
+  --sunc:#f5b638; --moonc:#efe2ad; --cloudc:#cfd5db; --cloudl:#8d969e; --cloudb:#9aa3ab; --cloudd:#7c8792; --snowc:#f2f5f7; --boltc:#f7cf4a; color-scheme:dark;
 }}
 :root[data-theme="dark"]{
   --bg:#141516; --surface:#1d1e20; --surface-2:#26282a; --ink:#ebe8e2; --muted:#a19e96; --line:#34363a;
   --accent:#7cbf6a; --accent-ink:#10150f; --sun:#f0b445; --grid:rgba(255,255,255,.045); --grid-strong:rgba(255,255,255,.10);
   --ground:#1f2221; --soil:#6b5038; --soil-edge:#3f2c1a; --water:#4f9bd0; --leaf:#4c8a3a; --leaf-dark:#2c5226;
-  --gravel:#46443f; --wood:#8a6038; --danger:#ee6a58; --ok:#6fca7a; --halo:#1d1e20; --shade:rgba(0,0,0,.45); --frost:#7fb0ee; color-scheme:dark;
+  --gravel:#46443f; --wood:#8a6038; --danger:#ee6a58; --ok:#6fca7a; --halo:#1d1e20; --shade:rgba(0,0,0,.45); --frost:#7fb0ee; --sky1:#2a2a22; --sky2:#1f2621; --skyr1:#1e2530; --skyr2:#1d2023; --skyc1:#232527; --skyc2:#1d1f21; --skyn1:#151a2b; --skyn2:#20263a; --glass:rgba(255,255,255,.08);
+  --sunc:#f5b638; --moonc:#efe2ad; --cloudc:#cfd5db; --cloudl:#8d969e; --cloudb:#9aa3ab; --cloudd:#7c8792; --snowc:#f2f5f7; --boltc:#f7cf4a; color-scheme:dark;
 }
 [hidden]{display:none!important}
 html,body{height:100%}
@@ -97,6 +101,50 @@ main{position:relative;min-height:0;overflow:hidden}
 .hrow .ic svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8}
 .dot-b{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:12px;font-family:var(--f-mono);font-weight:600}
 .abhome{display:grid;gap:12px}
+.wxhero{display:grid;gap:12px;padding:16px;border-radius:20px;border:1px solid var(--line);text-align:left;width:100%;color:var(--ink);background:linear-gradient(160deg,var(--sky1),var(--sky2));position:relative;overflow:hidden}
+.wxhero.rain,.wxhero.showers,.wxhero.drizzle,.wxhero.storm{--sky1:var(--skyr1);--sky2:var(--skyr2)}
+.wxhero.cloudy,.wxhero.fog{--sky1:var(--skyc1);--sky2:var(--skyc2)}
+.wxhero.night{--sky1:var(--skyn1);--sky2:var(--skyn2)}
+.wxhero.night{color:#eef1f8;--glass:rgba(255,255,255,.14)}
+.wxhero.night .note,.wxhero.night .wxdeg small{color:rgba(238,241,248,.7)}
+.wxhero.night .wxdays .note{color:rgba(238,241,248,.6)}
+.wxmain{display:flex;align-items:center;gap:14px}
+.wxhero .wxi{width:84px;height:84px;flex:none}
+.wxt{display:grid;gap:2px}
+.wxdeg{font-family:var(--f-display);font-weight:700;font-size:44px;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.wxdeg small{font-size:18px;font-weight:500;color:var(--muted);margin-left:2px}
+.wxlbl{font-weight:700;font-size:15px}
+.wxbits{display:flex;flex-wrap:wrap;gap:6px}
+.wxbits span{font-size:12.5px;padding:3px 9px;border-radius:99px;background:var(--glass);font-family:var(--f-mono)}
+.wxbits .wfrost{background:var(--frost);color:#fff;font-weight:600}
+.wxdays{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding-top:10px;border-top:1px solid var(--glass)}
+.wxd{display:grid;justify-items:center;gap:1px;font-size:12px}
+.wxd .wxi{width:34px;height:34px}
+.wxd b{font-family:var(--f-mono);font-size:13px}
+.wxi .wsun circle{fill:var(--sunc)} .wxi .wsun line{stroke:var(--sunc);stroke-width:3.2;stroke-linecap:round}
+.wxi .wmoon path{fill:var(--moonc)} .wxi .wstars circle{fill:var(--moonc)}
+.wxi .wcloud path{fill:var(--cloudc);stroke:var(--cloudl);stroke-width:1.5} .wxi .wcloud.wback path{fill:var(--cloudb)} .wxi .wcloud.wdark path{fill:var(--cloudd)}
+.wxi .wrain line{stroke:var(--water);stroke-width:3;stroke-linecap:round} .wxi .wrain.small line{stroke-width:2.2}
+.wxi .wsnow circle{fill:var(--snowc);stroke:var(--cloudl);stroke-width:.8}
+.wxi .wfog line{stroke:var(--muted);stroke-width:3.5;stroke-linecap:round}
+.wxi .wbolt{fill:var(--boltc)}
+@media (prefers-reduced-motion:no-preference){
+ .wxi .wsun.wxa .wrays{animation:wspin 18s linear infinite}
+ .wxi .wcloud.wxa{animation:wdrift 6s ease-in-out infinite alternate}
+ .wxi .wcloud.wback.wxa{animation-duration:9s;animation-direction:alternate-reverse}
+ .wxi .wrain.wxa line{animation:wdrop 1s linear infinite}
+ .wxi .wsnow.wxa circle{animation:wflake 2.4s linear infinite}
+ .wxi .wfog.wxa line{animation:wfogm 4s ease-in-out infinite alternate}
+ .wxi .wbolt.wxa{animation:wflash 3.2s steps(1) infinite}
+ .wxi .wstars.wxa circle{animation:wtw 2.8s ease-in-out infinite alternate} .wxi .wstars.wxa circle:nth-child(2){animation-delay:1s}
+}
+@keyframes wspin{to{transform:rotate(360deg)}}
+@keyframes wdrift{from{translate:-2px 0}to{translate:3px 0}}
+@keyframes wdrop{0%{transform:translateY(-6px);opacity:0}25%{opacity:1}100%{transform:translateY(10px);opacity:0}}
+@keyframes wflake{0%{transform:translateY(-6px);opacity:0}30%{opacity:1}100%{transform:translate(3px,12px);opacity:0}}
+@keyframes wfogm{from{transform:translateX(-4px)}to{transform:translateX(4px)}}
+@keyframes wflash{0%,86%,100%{opacity:1}88%,92%{opacity:.15}}
+@keyframes wtw{from{opacity:.3}to{opacity:1}}
 .tsec{display:grid;gap:10px;scroll-margin-top:8px}
 .tsec-h{display:flex;align-items:center;gap:10px;padding-top:6px;border-top:2px solid var(--line)}
 .tsec-h svg{width:22px;height:22px;stroke:var(--accent);fill:none;stroke-width:1.8;flex:none}
@@ -1546,8 +1594,9 @@ function renderToday(){
   gen.push(`<div class="tcard"><h3>À semer ou planter en place ce mois-ci</h3><div class="chips">${sow.map(p=>`<span class="chip"><i style="background:${p.c}"></i>${p.n}${hasSeeds(p.id)?' <span class="mono note">· graines ✓</span>':''}</span>`).join('')||'<span class="note">Rien ce mois-ci.</span>'}</div><button class="btn small" data-tgo="crops" style="justify-self:start">Voir les cultures</button></div>`);
   const sec=(t,ico,cards,n,id)=>`<section class="tsec" id="ts-${id}"><div class="tsec-h"><svg viewBox="0 0 24 24">${ico}</svg><h2>${esc(t)}</h2>${n?`<span class="n">${n}</span>`:''}</div>${cards.join('')}</section>`;
   const count=c=>c.length;
-  $('#v-today').innerHTML=`<div class="page"><div><h2>Aujourd'hui</h2>${wx?`<div style="margin:2px 0 4px">${stationLine()}</div>`:''}<span class="note">${TODAY.toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'})} · ${nAct?nAct+' chose'+(nAct>1?'s':'')+' à faire':'rien d\'urgent'}</span></div>
+  $('#v-today').innerHTML=`<div class="page"><div><h2>Aujourd'hui</h2><span class="note">${TODAY.toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'})} · ${nAct?nAct+' chose'+(nAct>1?'s':'')+' à faire':'rien d\'urgent'}</span></div>
   <div class="bednav">${secs.map(x=>`<button data-tj="${x.L.key}">${esc(x.L.t)}</button>`).join('')}${semis.length?'<button data-tj="semis">Semis</button>':''}<button data-tj="gen">Stock et saison</button></div>
+  ${weatherHero()}
   ${secs.map(x=>sec(x.L.t,x.L.ico,x.c,0,x.L.key)).join('')}
   ${semis.length?sec('Semis à l\'abri','<path d="M6 20h12l-1.5-7h-9z"/><path d="M12 13V8"/><path d="M12 9c0-3 2-5 5-5 0 3-2 5-5 5z"/>',semis,0,'semis'):''}
   ${sec('Stock et saison','<path d="M4 8l8-4 8 4v10l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v10"/>',gen,0,'gen')}
@@ -1624,14 +1673,14 @@ async function wuFetch(path,c){const u=`https://api.weather.com${path}${path.inc
 /* Prévisions publiques Open-Meteo (gratuites, sans clé) : minimum de la nuit et 5 jours */
 const HOME_GEO={lat:50.586,lon:4.877};
 async function forecastOM(lat,lon){
-  const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_min,temperature_2m_max,precipitation_sum&hourly=temperature_2m&timezone=Europe%2FBrussels&forecast_days=6`;
+  const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_min,temperature_2m_max,precipitation_sum,weather_code&hourly=temperature_2m&current=temperature_2m,weather_code,is_day,wind_speed_10m,precipitation&timezone=Europe%2FBrussels&forecast_days=6`;
   let r;try{r=await fetch(u)}catch(e){throw new Error(inClaude()?'Les prévisions ne se lisent que dans l\'app installée.':'Prévisions injoignables : vérifie la connexion.')}
   if(!r.ok)throw new Error('Prévisions indisponibles ('+r.status+').');const j=await r.json();
   const t0=iso(TODAY)+'T18:00',t1=iso(addD(iso(TODAY),1))+'T09:00';let night=null;
   (j.hourly&&j.hourly.time||[]).forEach((t,i)=>{if(t>=t0&&t<=t1){const v=j.hourly.temperature_2m[i];if(v!=null&&(night==null||v<night))night=v}});
   const dn=['dim','lun','mar','mer','jeu','ven','sam'];
-  const fc=(j.daily&&j.daily.time||[]).slice(0,5).map((d,i)=>({d,dow:dn[parse(d).getDay()],min:j.daily.temperature_2m_min[i],max:j.daily.temperature_2m_max[i],mm:j.daily.precipitation_sum[i]}));
-  return{night,fc}}
+  const fc=(j.daily&&j.daily.time||[]).slice(0,5).map((d,i)=>({d,dow:dn[parse(d).getDay()],min:j.daily.temperature_2m_min[i],max:j.daily.temperature_2m_max[i],mm:j.daily.precipitation_sum[i],code:(j.daily.weather_code||[])[i]}));
+  const cu=j.current||{};return{night,fc,cur:{code:cu.weather_code,isDay:cu.is_day!==0,t:cu.temperature_2m,wind:cu.wind_speed_10m}}}
 async function syncStation(manual,cfg){const c=cfg||WU.get();if(wxBusy&&!cfg)return;wxBusy=true;
   try{
     /* 1. la station (mesures et pluie) */
@@ -1644,7 +1693,7 @@ async function syncStation(manual,cfg){const c=cfg||WU.get();if(wxBusy&&!cfg)ret
     if(cfg)return{now};
     /* 2. les prévisions publiques */
     let f=null,fcErr=null;try{f=await forecastOM(lat,lon)}catch(e){fcErr=e.message}
-    wx={now,err:stErr,fcErr,night:f?f.night:null,fc:f?f.fc:null,at:Date.now(),id:c.id};
+    wx={now,err:stErr,fcErr,night:f?f.night:null,fc:f?f.fc:null,cur:f?f.cur:null,at:Date.now(),id:c.id};
     let changed=false;S.rain=S.rain||[];
     if(now){const put=(d,mm)=>{mm=Math.round((+mm||0)*10)/10;const ex=S.rain.find(r=>r.d===d&&r.src==='station');
         if(mm<0.2){if(ex){S.rain=S.rain.filter(r=>r!==ex);changed=true}return}
@@ -1658,6 +1707,38 @@ async function syncStation(manual,cfg){const c=cfg||WU.get();if(wxBusy&&!cfg)ret
   finally{wxBusy=false}}
 function stationLine(){if(!wx)return'';if(wx.err)return`<span class="note" style="color:var(--danger)">Station : ${esc(wx.err)}</span>`;if(!wx.now)return wx.night!=null?`<span class="mono">Nuit prochaine : ${num(wx.night,1)} °C</span> <span class="note">· prévision</span>`:'';const n=wx.now,ago=Math.round((Date.now()-new Date(n.time.replace(' ','T')).getTime())/60000);
   return`<span class="mono">${num(n.t,1)} °C · ${n.h} % · pluie ${num(n.rain||0,1)} mm aujourd'hui</span> <span class="note">· station ${esc(wx.id)}${ago>=0&&ago<600?`, il y a ${ago<1?'moins d\'1':ago} min`:''}</span>`}
+/* ---- icônes météo animées (codes WMO d'Open-Meteo) ---- */
+function wxKind(code){const c=+code;if(c===0)return'clear';if(c===1||c===2)return'partly';if(c===3)return'cloudy';if(c===45||c===48)return'fog';
+  if(c>=51&&c<=57)return'drizzle';if(c>=61&&c<=67)return'rain';if(c>=71&&c<=77||c===85||c===86)return'snow';if(c>=80&&c<=82)return'showers';if(c>=95)return'storm';return'cloudy'}
+const WX_TXT={clear:'Ciel dégagé',partly:'Éclaircies',cloudy:'Couvert',fog:'Brouillard',drizzle:'Bruine',rain:'Pluie',showers:'Averses',snow:'Neige',storm:'Orage'};
+function wxIcon(kind,day=true,anim=true){const A=anim?' wxa':'';
+  const sun=(x,y,r)=>`<g class="wsun${A}" transform="translate(${x} ${y})"><g class="wrays">${[0,45,90,135,180,225,270,315].map(a=>`<line x1="0" y1="${-r-5}" x2="0" y2="${-r-11}" transform="rotate(${a})"/>`).join('')}</g><circle r="${r}"/></g>`;
+  const moon=(x,y,r)=>`<g class="wmoon${A}" transform="translate(${x} ${y})"><path d="M${r*.35} ${-r}a${r} ${r} 0 1 0 ${r*.65} ${r*1.55}a${r*.82} ${r*.82} 0 1 1 ${-r*.65} ${-r*1.55}z"/></g><g class="wstars${A}"><circle cx="16" cy="14" r="1.6"/><circle cx="58" cy="10" r="1.3"/><circle cx="66" cy="34" r="1.1"/></g>`;
+  const cloud=(x,y,sc,cls='')=>`<g class="wcloud ${cls}${A}" transform="translate(${x} ${y}) scale(${sc})"><path d="M-22 10h40a13 13 0 0 0 0-26 18 18 0 0 0-34-4 12 12 0 0 0-6 30z"/></g>`;
+  const drops=(n,cls)=>`<g class="${cls}${A}">${Array.from({length:n},(_,i)=>`<line x1="${30+i*9}" y1="58" x2="${27+i*9}" y2="66" style="animation-delay:${(i*.23).toFixed(2)}s"/>`).join('')}</g>`;
+  const flakes=`<g class="wsnow${A}">${[0,1,2,3].map(i=>`<circle cx="${30+i*9}" cy="60" r="2" style="animation-delay:${(i*.35).toFixed(2)}s"/>`).join('')}</g>`;
+  const fogl=`<g class="wfog${A}"><line x1="16" y1="58" x2="62" y2="58"/><line x1="22" y1="66" x2="70" y2="66" style="animation-delay:.8s"/></g>`;
+  const bolt=`<path class="wbolt${A}" d="M44 52l-8 12h7l-4 10 11-14h-7l5-8z"/>`;
+  const so=day?sun:moon;let g='';
+  switch(kind){case'clear':g=day?sun(40,40,14):moon(40,40,15);break;
+    case'partly':g=so(30,30,11)+cloud(46,46,.95);break;
+    case'cloudy':g=cloud(32,36,.75,'wback')+cloud(46,46,1);break;
+    case'fog':g=cloud(42,40,.95,'wback')+fogl;break;
+    case'drizzle':g=cloud(42,42,1)+drops(3,'wrain small');break;
+    case'rain':g=cloud(42,42,1,'wdark')+drops(4,'wrain');break;
+    case'showers':g=so(28,26,9)+cloud(44,42,1)+drops(3,'wrain');break;
+    case'snow':g=cloud(42,42,1)+flakes;break;
+    case'storm':g=cloud(42,40,1.05,'wdark')+bolt+drops(2,'wrain');break}
+  return`<svg class="wxi" viewBox="0 0 80 80" aria-hidden="true">${g}</svg>`}
+function weatherHero(){if(!wx)return'';const cur=wx.cur,kind=cur&&cur.code!=null?wxKind(cur.code):null,day=cur?cur.isDay:true;
+  const t=wx.now&&wx.now.t!=null?wx.now.t:cur?cur.t:null;if(t==null&&!kind)return wx.err||wx.fcErr?`<div class="wxhero"><span class="note">${esc(wx.err||wx.fcErr)}</span></div>`:'';
+  const frosty=wx.night!=null&&wx.night<=2,rainToday=wx.now&&wx.now.rain!=null?wx.now.rain:null;
+  const bits=[wx.night!=null?`<span class="${frosty?'wfrost':''}">Nuit ${num(wx.night,1)} °C${frosty?' · gel possible':''}</span>`:'',rainToday!=null?`<span>Pluie ${num(rainToday,1)} mm</span>`:'',wx.now&&wx.now.h!=null?`<span>${wx.now.h} %</span>`:'',(cur&&cur.wind!=null)?`<span>Vent ${num(cur.wind,0)} km/h</span>`:''].filter(Boolean).join('');
+  return`<button class="wxhero ${kind||'cloudy'}${day?'':' night'}" data-tgo="weather" aria-label="Voir la météo détaillée">
+    <div class="wxmain">${kind?wxIcon(kind,day,true):''}<div class="wxt"><span class="wxdeg">${t!=null?num(t,1):'–'}<small>°C</small></span><span class="wxlbl">${kind?WX_TXT[kind]:''}${wx.now?' · <span class="note">station '+esc(wx.id||'')+'</span>':''}</span></div></div>
+    ${bits?`<div class="wxbits">${bits}</div>`:''}
+    ${wx.fc?`<div class="wxdays">${wx.fc.slice(0,5).map((f,i)=>`<div class="wxd"><span>${i===0?'Auj.':esc((f.dow||'').slice(0,3))}</span>${f.code!=null?wxIcon(wxKind(f.code),true,false):''}<b>${f.max!=null?num(f.max,0):'–'}°</b><span class="note">${f.min!=null?num(f.min,0):'–'}°</span></div>`).join('')}</div>`:''}
+  </button>`}
 addEventListener('visibilitychange',()=>{if(!document.hidden&&(!wx||Date.now()-wx.at>30*60000))syncStation(false)});
 
 /* ================= Démarrage ================= */
