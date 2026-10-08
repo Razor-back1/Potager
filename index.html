@@ -650,7 +650,12 @@ function renderHeader(){$('#gInfo').textContent=`${S.name} · ${m2(S.w)} × ${m2
   $('#needle').setAttribute('transform',`rotate(${S.north})`)}
 $('#undoBtnH').onclick=undo;$('#redoBtnH').onclick=redo;
 addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)){e.preventDefault();e.shiftKey?redo():undo()}});
-document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+/* toucher l'onglet déjà ouvert : ferme la planche ou l'abri ouvert, sinon remonte en haut (ou recentre le plan) */
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{const t=b.dataset.tab;
+  if(t!==tab)return setTab(t);
+  if(inv||bed){closeInv();closeBed();refresh();return}
+  if(t==='plan'){sheetMode=null;selId=null;shapeEdit=null;renderSheet();renderShapebar();fit();return}
+  const v=$('#v-'+t);if(v)v.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})});
 function setTab(t){tab=t;closeBed();closeInv();document.querySelectorAll('.tabs button').forEach(b=>{if(b.dataset.tab===t)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
   ['today','plan','harvest','weather','crops'].forEach(v=>$('#v-'+v).hidden=v!==t);refresh()}
 let toastT;
@@ -1680,7 +1685,7 @@ setTimeout(()=>syncStation(false),600);
 </script>
 
 <script>
-/* version b046d523f8 : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
+/* version fc8d7b84d0 : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
 if('serviceWorker' in navigator&&location.protocol==='https:'){
   navigator.serviceWorker.register('sw.js').then(r=>r.update()).catch(()=>{});
   let reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!reloaded){reloaded=true;location.reload()}});
