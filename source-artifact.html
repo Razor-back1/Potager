@@ -141,6 +141,37 @@ main{position:relative;min-height:0;overflow:hidden}
 .wxbits{display:flex;flex-wrap:wrap;gap:6px}
 .wxbits span{font-size:12.5px;padding:3px 9px;border-radius:99px;background:var(--glass);font-family:var(--f-mono)}
 .wxbits .wfrost{background:var(--frost);color:#fff;font-weight:600}
+.aucard{display:grid;gap:10px;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--surface);scroll-margin-top:72px}
+.aucard.run{border-color:var(--water);box-shadow:0 0 0 1px var(--water) inset}
+.auhead{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start}
+.auhead b{font-family:var(--f-display);font-size:17px}
+.aumode{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.aumode.sensor,.aumode.program{background:var(--accent);color:var(--accent-ink)}
+.augauge{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center}
+.augauge .g{position:relative;height:8px;border-radius:9px;background:var(--surface-2)}
+.augauge .g span{position:absolute;inset:0 auto 0 0;border-radius:9px;background:var(--water)}
+.augauge .g.water span{background:var(--water);opacity:.75}
+.augauge .g i{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--ink);border-radius:2px}
+.audec{display:grid;grid-template-columns:8px 1fr;gap:10px;align-items:start;font-size:13.5px}
+.audec i{width:8px;height:8px;border-radius:50%;margin-top:6px;background:var(--muted)}
+.audec.go i{background:var(--water)}.audec.ok i{background:var(--ok)}.audec.skip i{background:var(--sun)}.audec.wait i{background:var(--water);opacity:.6}
+.autimer{display:grid;gap:8px}
+.aumin{width:74px;min-height:34px;border-radius:99px;border:1px solid var(--line);background:var(--surface-2);padding:0 10px;font:inherit;font-size:13px;color:var(--ink)}
+.aurun{display:grid;gap:8px}.aurun .bar{height:8px}.aurun .bar span{background:var(--water);transition:width 1s linear}
+.aurules{display:grid;gap:12px;padding-top:10px;border-top:1px dashed var(--line)}
+.austeps{margin:0;padding-left:20px;display:grid;gap:10px;font-size:13.5px}
+.austeps code,.autok{font-family:var(--f-mono);font-size:12.5px;background:var(--surface-2);padding:1px 6px;border-radius:6px;word-break:break-all}
+.aulog{display:grid;border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:2px 12px}
+.aulog>div{display:grid;grid-template-columns:8px minmax(0,1fr) auto;gap:10px;align-items:start;padding:9px 0;font-size:13.5px}
+.aulog>div+div{border-top:1px solid var(--line)}
+.aulog i{width:8px;height:8px;border-radius:50%;margin-top:6px;background:var(--muted)}
+.aulog .water i{background:var(--water)}.aulog .skip i{background:var(--sun)}.aulog .error i{background:var(--danger)}
+.aucta{text-align:left;width:100%;cursor:pointer}
+.aucta .chev{color:var(--muted);font-size:20px}
+.aurow{display:grid;grid-template-columns:8px 1fr;gap:10px;align-items:start;font-size:13.5px}
+.aurow i{width:8px;height:8px;border-radius:50%;margin-top:6px;background:var(--ok)}
+.aurow i.on{background:var(--water);animation:aupulse 1.4s ease-in-out infinite}.aurow i.due{background:var(--water);opacity:.6}.aurow i.skip{background:var(--sun)}
+@keyframes aupulse{50%{transform:scale(1.6);opacity:.5}}
 .wxgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:6px}
 .wxtile{display:grid;gap:1px;padding:8px 10px;border-radius:12px;background:var(--glass)}
 .wxtile span{font-size:11.5px;opacity:.75}.wxtile b{font-family:var(--f-mono);font-size:15px}.wxtile small{font-size:11px;opacity:.7}
@@ -466,6 +497,7 @@ table.cmp tr:last-child td{border-bottom:0}
     <section class="view" id="v-crops" hidden></section>
     <section class="bed" id="bedView" hidden></section>
     <section class="bed" id="invView" hidden></section>
+    <section class="bed" id="autoView" hidden></section>
     <button class="notefab" id="noteBtn" aria-label="Noter quelque chose"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Noter</span></button>
     <div class="qback" id="qback" hidden></div>
     <div class="sheet qsheet" id="qsheet" hidden></div>
@@ -822,10 +854,10 @@ addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()===
 /* toucher l'onglet déjà ouvert : ferme la planche ou l'abri ouvert, sinon remonte en haut (ou recentre le plan) */
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{const t=b.dataset.tab;
   if(t!==tab)return setTab(t);
-  if(inv||bed){closeInv();closeBed();refresh();return}
+  if(inv||bed||auto){closeInv();closeBed();closeAuto();refresh();return}
   if(t==='plan'){sheetMode=null;selId=null;shapeEdit=null;if(ctx){ctx=null;renderCtxbar();renderSunbar()}renderSheet();renderShapebar();fit();return}
   const v=$('#v-'+t);if(v)v.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})});
-function setTab(t){tab=t;closeBed();closeInv();if(q)closeQ();setTimeout(updateNoteBtn);document.querySelectorAll('.tabs button').forEach(b=>{if(b.dataset.tab===t)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
+function setTab(t){tab=t;closeBed();closeInv();closeAuto();if(q)closeQ();setTimeout(updateNoteBtn);document.querySelectorAll('.tabs button').forEach(b=>{if(b.dataset.tab===t)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
   ['today','plan','harvest','weather','crops'].forEach(v=>$('#v-'+v).hidden=v!==t);refresh()}
 let toastT;
 function toast(msg,canUndo){clearTimeout(toastT);const el=$('#toast');
@@ -1028,10 +1060,10 @@ const RAIN_MIN=5; /* mm : en dessous, la pluie ne compte pas comme un arrosage *
 function lastWater(o){
   const m=(o.journal||[]).filter(x=>x.k==='arrosage').sort((a,b)=>b.d.localeCompare(a.d))[0];
   const r=serreOf(o)?null:(S.rain||[]).filter(x=>x.mm==null||x.mm>=RAIN_MIN).sort((a,b)=>b.d.localeCompare(a.d))[0];
-  let best=null;if(m)best={d:m.d,src:'main'};if(r&&(!best||r.d>best.d))best={d:r.d,src:'pluie',mm:r.mm};
+  let best=null;if(m)best={d:m.d,src:m.src==='gardena'?'gardena':'main',t:m.t};if(r&&(!best||r.d>best.d))best={d:r.d,src:'pluie',mm:r.mm};
   if(best)best.ago=days(parse(best.d),TODAY);return best}
 function waterText(w){if(!w)return'Aucune eau notée';const when=w.ago===0?"aujourd'hui":w.ago===1?'hier':'il y a '+w.ago+' jours';
-  return w.src==='pluie'?`Pluie${w.mm!=null?' ('+num(w.mm)+' mm)':''} ${when}`:`Arrosé à la main ${when}`}
+  return w.src==='pluie'?`Pluie${w.mm!=null?' ('+num(w.mm)+' mm)':''} ${when}`:w.src==='gardena'?`Arrosé par GARDENA ${when}`:`Arrosé à la main ${when}`}
 function thirstLimit(){const m=TODAY.getMonth()+1;return m>=5&&m<=9?4:(m===4||m===10)?7:null}
 function isPlanted(o){return o.zones.some(z=>z.crop&&Object.keys(z.cells).length)}
 function thirsty(o){const lim=thirstLimit();if(!lim||!isPlanted(o))return false;const w=lastWater(o);return!w||w.ago>=lim}
@@ -1056,7 +1088,7 @@ function cultureSheet(o){const t=TYPES[o.type],inS=!!serreOf(o);
     h+=`</div>`;
     const w=lastWater(o),th=thirsty(o);
     h+=`<div class="info"><span class="lbl">Eau</span><div class="irow"><i class="drop"></i><div><b>${waterText(w)}</b>${th?`<span class="note" style="color:var(--water)">Pense à arroser : rien depuis ${w?w.ago:'longtemps'}${w?' jours':''}.</span>`:inS?`<span class="note">Sous serre, seule l'eau que tu apportes compte.</span>`:''}</div></div>
-      <div class="row"><button class="btn small" data-act="water">J'ai arrosé</button>${inS?'':'<button class="btn small" data-act="rain">Il a plu</button>'}</div></div>`;
+      <div class="row"><button class="btn small" data-act="water">J'ai arrosé</button>${inS?'':'<button class="btn small" data-act="rain">Il a plu</button>'}${(()=>{const zv=gLinked()&&zoneOfObj(o.id);if(!zv)return'';const vv=gdst&&gdst.state&&gdst.state.valves.find(x=>x.id===zv);return`<button class="btn small primary" data-act="autowater" data-v="${zv}">${vv&&isRun(vv)?'En cours · ':''}${esc(valveName(zv))}</button>`})()}</div></div>`;
     const al=alertsHTML(o);if(al)h+=`<div class="info"><span class="lbl">À savoir</span>${al}</div>`;
     h+=`<button class="btn primary" data-act="openbed">Plantation, voisins et journal</button>`;
   }else{
@@ -1136,6 +1168,7 @@ function renderSheet(){
     <div class="row between"><span><span class="lbl">Station météo</span><br><span class="note">${WU.get().key?'Station '+esc(WU.get().id)+' reliée':'Pas de station reliée'}</span></span><button class="btn small" data-act="wu">${WU.get().key?'Modifier':'Relier ma station'}</button></div>
     <div><span class="lbl">Apparence</span><div class="seg" style="margin-top:6px">${[['auto','Automatique'],['light','Clair'],['dark','Sombre']].map(([k,l])=>`<button data-act="theme" data-k="${k}" aria-pressed="${themePref()===k}">${l}</button>`).join('')}</div>
     <div class="row between" style="margin-top:8px"><span class="note" style="color:var(--ink)">Météo vivante sur le plan<br><span class="note">pluie, givre, nuit et ombres à l'heure réelle, coupée en mode édition</span></span><button class="btn small ${wxPlanOn()?'on':''}" data-act="wxplan">${wxPlanOn()?'Activée':'Désactivée'}</button></div></div>
+    <div class="row between"><span><span class="lbl">Arrosage automatique</span><br><span class="note">${GDN.get().demo?'Démo':gLinked()?'GARDENA relié':'GARDENA smart system'}</span></span><button class="btn small" data-act="openauto">${gLinked()?'Ouvrir':'Relier'}</button></div>
     <div class="row"><button class="btn" data-act="help">Comment ça marche</button><button class="btn" data-act="openinv">Inventaire</button></div>
     ${ctx?'':`<button class="btn" data-act="shape-edit">${S.shape?'Modifier la forme du terrain':'Dessiner une forme libre'}</button>`}
     <label class="field"><span class="lbl">Direction du nord sur le plan : <span class="mono">${S.north}°</span></span><input id="g-north" type="range" min="0" max="355" step="5" value="${S.north}"></label>
@@ -1188,6 +1221,8 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
   if(a==='toedit'){setEdit(true);renderSheet()}
   if(a==='enterserre'&&o)enterSerre(o.id);
   if(a==='openinv'){sheetMode=null;renderSheet();openInv()}
+  if(a==='openauto'){sheetMode=null;renderSheet();openAuto();return}
+  if(a==='autowater'){openAuto(b.dataset.v);return}
   if(a==='wu'){sheetMode='wu';renderSheet();return}
   if(a==='wu-test'||a==='wu-save'){const c={id:$('#wu-id').value.trim().toUpperCase(),key:$('#wu-key').value.trim()};if(!c.id||!c.key)return toast('Indique l\'identifiant et la clé');
     b.disabled=true;b.textContent='Connexion…';try{const w=await syncStation(false,c);if(!w||!w.now)throw new Error('Aucune donnée reçue de la station.');WU.set(c);sheetMode=null;renderSheet();toast(`Station reliée : ${num(w.now.t,1)} °C, ${num(w.now.rain||0,1)} mm aujourd'hui`);syncStation(false)}catch(err){b.disabled=false;b.textContent='Relier et tester';const el=$('#wu-err');if(el){el.hidden=false;el.textContent=err.message}}return}
@@ -1652,6 +1687,7 @@ function renderWeather(){
   ch+=`</svg>`;
   
   $('#v-weather').innerHTML=`<div class="page">
+   ${autoCard(false)}
    ${weatherPanel()}
    <h2>Gel</h2>${frost}
    <p class="note">Les seuils viennent du calendrier climatique de la Hesbaye. Le minimum de la nuit se remplit tout seul avec les prévisions.</p>
@@ -1678,6 +1714,7 @@ $('#v-weather').addEventListener('change',e=>{const t=e.target,v=parseFloat(t.va
   if(['w-roof','w-cap','w-level'].includes(t.id)&&!isNaN(v)){S.water[t.id.slice(2)]=Math.max(0,v);if(S.water.level>S.water.cap)S.water.level=S.water.cap;save();renderWeather()}});
 $('#v-weather').addEventListener('click',e=>{const wa=e.target.closest('[data-wact]');
   if(wa&&wa.dataset.wact==='wusync'){syncStation(true);return}
+  if(wa&&wa.dataset.wact==='auto'){openAuto();return}
   if(wa&&wa.dataset.wact==='wuconf'){setTab('plan');sheetMode='wu';selId=null;renderSheet();return}
   if(wa&&wa.dataset.wact==='rain'){const v=parseFloat(String($('#r-mm').value).replace(',','.'));addRain(isNaN(v)?null:v);save();renderWeather();return toast('Pluie notée',true)}
   if(wa&&wa.dataset.wact==='rdel'){S.rain=S.rain.filter(r=>r.id!==wa.dataset.id);save();renderWeather();return toast('Pluie supprimée',true)}
@@ -1742,6 +1779,7 @@ function renderToday(){
   $('#v-today').innerHTML=`<div class="ptr" id="ptr"><span class="spin"></span><span id="ptrt">Tire pour actualiser la météo</span></div><div class="page"><div><h2>Aujourd'hui</h2><span class="note">${TODAY.toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'})} · ${nAct?nAct+' chose'+(nAct>1?'s':'')+' à faire':'rien d\'urgent'}</span></div>
   <div class="bednav">${secs.map(x=>`<button data-tj="${x.L.key}">${esc(x.L.t)}</button>`).join('')}${semis.length?'<button data-tj="semis">Semis</button>':''}<button data-tj="gen">Stock et saison</button></div>
   ${weatherHero()}
+  ${autoCard(true)}
   ${secs.map(x=>sec(x.L.t,x.L.ico,x.c,0,x.L.key)).join('')}
   ${semis.length?sec('Semis à l\'abri','<path d="M6 20h12l-1.5-7h-9z"/><path d="M12 13V8"/><path d="M12 9c0-3 2-5 5-5 0 3-2 5-5 5z"/>',semis,0,'semis'):''}
   ${sec('Stock et saison','<path d="M4 8l8-4 8 4v10l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v10"/>',gen,0,'gen')}
@@ -1750,7 +1788,7 @@ $('#v-today').addEventListener('click',e=>{if(swipedAt&&Date.now()-swipedAt<400)
   if(t.dataset.tw){const o=obj(t.dataset.tw);o.journal=o.journal||[];o.journal.push({id:uid(),k:'arrosage',d:iso(TODAY),t:''});save();renderToday();return toast('Arrosage noté',true)}
   if(t.dataset.train){addRain(null);save();renderToday();return toast('Pluie notée',true)}
   if(t.dataset.tinv)return openInv(t.dataset.tinv);
-  if(t.dataset.tgo)return setTab(t.dataset.tgo);
+  if(t.dataset.tgo)return t.dataset.tgo==='auto'?openAuto():setTab(t.dataset.tgo);
   if(t.dataset.open){openBed(t.dataset.open,+t.dataset.zi||0)}});
 
 /* ================= Cultures ================= */
@@ -1948,6 +1986,208 @@ function weatherPanel(){const hasKey=!!WU.get().key;
   return head+nowCard+hours+week+garden+link}
 addEventListener('visibilitychange',()=>{if(!document.hidden&&(!wx||Date.now()-wx.at>30*60000))syncStation(false)});
 
+
+/* ================= Arrosage automatique (GARDENA smart system via le relais Cloudflare) ================= */
+/* La même règle de décision tourne ici (pour l'affichage) et dans le relais (pour agir, app fermée). */
+/*DECIDE*/
+function autoDecide(z,st,now,fc){
+  if(!z||!z.mode||z.mode==='off')return{go:false,off:true,why:'Automatique coupé : arrosage à la demande seulement'};
+  const hours=z.hours&&z.hours.length?z.hours:[6],gap=z.gap||20,thr=z.thr||30,sinceH=st.lastRun?(now.ms-st.lastRun)/3.6e6:1e9;
+  if(z.mode==='sensor'){if(!z.sensor)return{go:false,why:'Choisis une sonde dans les réglages'};if(st.soil==null)return{go:false,why:'La sonde ne donne pas de mesure'};
+    if(st.soil>=thr)return{go:false,ok:true,why:'Sol à '+Math.round(st.soil)+' %, au-dessus du seuil de '+thr+' % : pas besoin'}}
+  if(z.mode==='program'){const due=(z.every||2)*24-3;if(sinceH<due)return{go:false,ok:true,why:'Prochain arrosage programmé dans '+Math.max(1,Math.ceil((due-sinceH)/24))+' j'}}
+  if(sinceH<gap)return{go:false,ok:true,why:'Déjà arrosé il y a '+Math.round(sinceH)+' h'};
+  if(fc&&fc.rain24!=null&&z.skipRain>0&&fc.rain24>=z.skipRain)return{go:false,skip:true,why:'Sauté : '+String(Math.round(fc.rain24*10)/10).replace('.',',')+' mm de pluie prévus sur 24 h'};
+  if(st.tankEst!=null&&st.tankMin!=null&&st.tankEst-(z.flow||8)*(z.min||15)<st.tankMin)return{go:false,skip:true,why:'Sauté : cuve trop basse'};
+  if(st.busy)return{go:false,wait:true,why:'Attend la fin de l\'arrosage en cours'};
+  if(!hours.some(h=>now.h>=h&&now.h<h+2))return{go:false,wait:true,due:true,why:'Arrosera au prochain créneau ('+hours.map(h=>h+' h').join(', ')+')'};
+  return{go:true,why:z.mode==='sensor'?'Sol à '+Math.round(st.soil)+' %, sous le seuil de '+thr+' %':'Programme tous les '+(z.every||2)+' j'}}
+/*/DECIDE*/
+const GDN={get(){try{return JSON.parse(localStorage.getItem('potager-gardena'))||{}}catch(e){return{}}},set(v){try{localStorage.setItem('potager-gardena',JSON.stringify(v))}catch(e){}}};
+const WORKER_URL='https://razor-back1.github.io/Potager/gardena-worker.js';
+const ZDEF={objs:[],sensor:'',mode:'off',thr:30,min:15,hours:[6],every:2,skipRain:3,gap:20,flow:8};
+let gdst=null,gdBusy=false,auto=null,cfgT=null;
+const autoCfg=()=>S.auto||(S.auto={zones:{},pump:{kind:'auto',id:''},tankMin:150});
+const zc=id=>({...ZDEF,...((S.auto&&S.auto.zones||{})[id]||{})});
+function setZ(id,patch){const c=autoCfg();c.zones[id]={...zc(id),...patch};save(true);pushCfgSoon()}
+const gLinked=()=>{const c=GDN.get();return!!(c.demo||c.url&&c.token)};
+const gDemo=()=>!!GDN.get().demo;
+const gValves=()=>gdst&&gdst.state?gdst.state.valves.filter(v=>!(autoCfg().pump.kind==='valve'&&autoCfg().pump.id===v.id)):[];
+const gSensors=()=>gdst&&gdst.state?gdst.state.sensors:[];
+const valveName=id=>{const v=gdst&&gdst.state&&gdst.state.valves.find(x=>x.id===id);return v?v.name:'Vanne'};
+const isRun=v=>v&&v.activity&&v.activity!=='CLOSED'&&v.activity!=='OFF'&&(!v.end||v.end>Date.now());
+const zoneOfObj=oid=>{const z=(S.auto&&S.auto.zones)||{};return Object.keys(z).find(k=>(z[k].objs||[]).includes(oid)&&(!gdst||!gdst.state||gdst.state.valves.some(v=>v.id===k)))||null};
+const fmtLeft=ms=>{const s=Math.max(0,Math.round(ms/1000)),m=Math.floor(s/60);return m>=60?Math.floor(m/60)+' h '+String(m%60).padStart(2,'0'):m+':'+String(s%60).padStart(2,'0')};
+const hhmm=t=>new Date(t).toLocaleTimeString('fr-BE',{hour:'2-digit',minute:'2-digit'});
+const whenTxt=t=>{const d=days(parse(iso(new Date(t))),TODAY);return(d===0?"aujourd'hui":d===1?'hier':fdate(new Date(t)))+' à '+hhmm(t)};
+
+/* ---- démo : appareils fictifs pour essayer l'écran sans matériel ---- */
+function demoInit(){const n=Date.now();return{demo:true,at:n,err:null,state:{at:n,location:'Démo',
+  valves:[{id:'demo:1',name:'Vanne 1',model:'smart Irrigation Control',activity:'CLOSED',end:null},{id:'demo:2',name:'Vanne 2',model:'smart Irrigation Control',activity:'CLOSED',end:null},{id:'demo:3',name:'Vanne 3',model:'smart Irrigation Control',activity:'CLOSED',end:null}],
+  sensors:[{id:'demo-s1',name:'Sonde potager',soil:27,soilT:12,air:11,light:1800,battery:80},{id:'demo-s2',name:'Sonde serre',soil:44,soilT:16,air:18,light:5200,battery:65}],
+  sockets:[{id:'demo-p',name:'Prise pompe',activity:'OFF',end:null}]},
+  log:[{id:'d2',at:n-20*3.6e6,type:'skip',valve:'demo:2',why:'Sauté : 4,2 mm de pluie prévus sur 24 h'},{id:'d1',at:n-26*3.6e6,type:'water',valve:'demo:1',min:15,how:'auto',why:'Sol à 24 %, sous le seuil de 30 %'}]}}
+function demoSetup(){const c=autoCfg(),pl=plantables(),out=pl.filter(o=>!serreOf(o)),inn=pl.filter(o=>serreOf(o));
+  if(!c.zones['demo:1'])c.zones['demo:1']={...ZDEF,objs:out.slice(0,2).map(o=>o.id),mode:'sensor',sensor:'demo-s1',thr:30,min:15,hours:[6]};
+  if(!c.zones['demo:2'])c.zones['demo:2']={...ZDEF,objs:out.slice(2,4).map(o=>o.id),mode:'program',every:2,min:20,hours:[7,20]};
+  if(!c.zones['demo:3'])c.zones['demo:3']={...ZDEF,objs:inn.map(o=>o.id),mode:'sensor',sensor:'demo-s2',thr:35,min:10,hours:[8],skipRain:0};
+  if(!c.pump.id){c.pump={kind:'socket',id:'demo-p'}}save()}
+function demoTick(){if(!gdst||!gdst.demo)return;const n=Date.now();gdst.state.valves.forEach(v=>{if(v.end&&v.end<=n){v.activity='CLOSED';v.end=null}});
+  const p=gdst.state.sockets[0];if(p&&p.end&&p.end<=n){p.activity='OFF';p.end=null}}
+function demoWater(id,min){const v=gdst.state.valves.find(x=>x.id===id);if(!v)return;const end=Date.now()+min*60000;v.activity='MANUAL_WATERING';v.end=end;
+  const pc=autoCfg().pump;if(pc.kind==='socket'){const p=gdst.state.sockets.find(x=>x.id===pc.id);if(p){p.activity='TIME_LIMITED_ON';p.end=end+60000}}
+  gdst.log.unshift({id:'d'+Date.now(),at:Date.now(),type:'water',valve:id,min,how:'manuel',why:'',end})}
+function demoStop(id){const v=gdst.state.valves.find(x=>x.id===id);if(!v)return;const last=gdst.log.find(e=>e.type==='water'&&e.valve===id&&e.end>Date.now());v.activity='CLOSED';v.end=null;
+  if(!gdst.state.valves.some(isRun)){const p=gdst.state.sockets[0];if(p){p.activity='OFF';p.end=null}}
+  gdst.log.unshift({id:'d'+Date.now(),at:Date.now(),type:'stop',valve:id,left:last?Math.round((last.end-Date.now())/60000):0})}
+
+/* ---- relais ---- */
+async function gReq(path,method='GET',body,cfg){const c=cfg||GDN.get();if(!c.url)throw new Error('Aucun relais relié.');
+  let r;try{r=await fetch(c.url.trim().replace(/\/+$/,'')+path,{method,headers:{'X-Potager-Key':c.token||'','Content-Type':'application/json'},body:body?JSON.stringify(body):undefined})}
+  catch(e){throw new Error(inClaude()?'Le relais ne se joint que depuis l\'app installée, pas dans Claude.':'Relais injoignable : vérifie l\'adresse et la connexion.')}
+  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||('Le relais a répondu '+r.status+'.'));return j}
+function gdSet(j){gdst={state:j.state,log:j.log||[],at:Date.now(),err:j.state&&j.state.err||null,cfgAt:j.cfgAt||null};gImport()}
+async function gSync(fresh){const c=GDN.get();
+  if(c.demo){if(!gdst||!gdst.demo)gdst=demoInit();demoTick();renderAutoAll();return}
+  if(!c.url||gdBusy)return;gdBusy=true;renderAutoAll();
+  try{gdSet(await gReq('/status'+(fresh?'?fresh=1':'')))}catch(e){gdst={...(gdst||{}),err:e.message,at:gdst&&gdst.at}}
+  finally{gdBusy=false;renderAutoAll()}}
+/* les arrosages faits par GARDENA s'inscrivent dans le journal des planches et vident la cuve */
+function gImport(){if(!gdst||gdst.demo||!gdst.log)return;const seen=new Set(S.autoSeen||[]),c=autoCfg(),fromTank=c.pump.kind!=='none';let ch=false;
+  gdst.log.slice().reverse().forEach(e=>{if(seen.has(e.id))return;seen.add(e.id);const z=c.zones[e.valve],flow=(z&&z.flow)||8;
+    if(e.type==='water'){(z&&z.objs||[]).forEach(id=>{const o=obj(id);if(o){o.journal=o.journal||[];o.journal.push({id:uid(),k:'arrosage',d:iso(new Date(e.at)),t:`${valveName(e.valve)} · ${num(e.min,0)} min${e.how==='auto'?' (automatique)':''}`,src:'gardena'})}});
+      if(fromTank&&S.water)S.water.level=Math.max(0,Math.round(S.water.level-flow*e.min));ch=true}
+    if(e.type==='stop'&&e.left>0&&fromTank&&S.water){S.water.level=Math.min(S.water.cap,Math.round(S.water.level+flow*e.left));ch=true}});
+  const nv=[...seen].slice(-300);if(ch||nv.length!==(S.autoSeen||[]).length){S.autoSeen=nv;save(true)}if(ch)pushCfgSoon()}
+function pushCfgSoon(){clearTimeout(cfgT);cfgT=setTimeout(pushCfg,1500)}
+async function pushCfg(){const c=GDN.get();if(c.demo||!c.url)return;const a=autoCfg();
+  try{await gReq('/config','PUT',{zones:a.zones,pump:a.pump,tankMin:a.tankMin,tank:a.pump.kind!=='none'&&S.water?{level:S.water.level,at:Date.now()}:null,geo:HOME_GEO});if(gdst)gdst.cfgAt=Date.now();renderAutoAll()}
+  catch(e){toast('Réglages non envoyés au relais : '+e.message)}}
+async function gWater(id,min){try{if(gDemo())demoWater(id,min);else gdSet(await gReq('/water','POST',{id,seconds:min*60}));toast(`${valveName(id)} : arrosage ${min} min lancé`)}catch(e){toast(e.message)}renderAutoAll()}
+async function gStop(id){try{if(gDemo())demoStop(id);else gdSet(await gReq('/stop','POST',{id}));toast(valveName(id)+' arrêtée')}catch(e){toast(e.message)}renderAutoAll()}
+
+/* ---- décision affichée pour chaque vanne ---- */
+function rainNext24(){if(!wx||!wx.hours||!wx.hours.length)return null;return wx.hours.slice(0,24).reduce((a,h)=>a+(+h.mm||0),0)}
+function decideNow(id){const z=zc(id),c=autoCfg(),log=(gdst&&gdst.log)||[],sen=z.sensor&&gSensors().find(s=>s.id===z.sensor);
+  const lastRun=Math.max(0,...log.filter(e=>e.type==='water'&&e.valve===id).map(e=>e.at));
+  const busy=gValves().some(v=>v.id!==id&&isRun(v));
+  return autoDecide(z,{soil:sen?sen.soil:null,lastRun,busy,tankEst:c.pump.kind!=='none'&&S.water?S.water.level:null,tankMin:c.tankMin},{h:new Date().getHours(),ms:Date.now()},{rain24:rainNext24()})}
+
+/* ---- écran ---- */
+function openAuto(focus){auto={open:focus||null,dur:{},setup:!gLinked(),tok:auto&&auto.tok||null};$('#autoView').hidden=false;updateNoteBtn();renderAuto();$('#autoView').scrollTop=0;
+  if(focus)setTimeout(()=>{const el=document.getElementById('az-'+focus.replace(/[^\w-]/g,'_'));if(el)el.scrollIntoView({block:'start'})},30);if(gLinked())gSync(false)}
+function closeAuto(){if(!auto)return;auto=null;$('#autoView').hidden=true;if(typeof updateNoteBtn==='function')updateNoteBtn()}
+function renderAutoAll(){if(auto)renderAuto();if(tab==='weather'&&!bed&&!inv)renderWeather();if(tab==='today'&&!bed&&!inv)renderToday()}
+function newToken(){const a=new Uint8Array(18);crypto.getRandomValues(a);return Array.from(a,b=>'abcdefghjkmnpqrstuvwxyz23456789'[b%31]).join('')}
+const AU_BACK='<button class="iconbtn" data-au="back" aria-label="Retour"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>';
+function autoSetupHTML(){const c=GDN.get(),tok=c.token||(auto.tok||(auto.tok=newToken()));
+  return`<div class="panel" id="au-setup"><h3>Relier ton GARDENA smart system</h3>
+  <p class="note" style="color:var(--ink)">L'app ne parle pas directement à GARDENA. Un petit relais gratuit chez Cloudflare garde ta clé, ouvre les vannes quand tu le demandes et applique tes règles toutes les 30 minutes, même app fermée. Compte une vingtaine de minutes, plus simple sur un ordinateur.</p>
+  <ol class="austeps">
+   <li><b>Clé GARDENA.</b> Sur <a href="https://developer.husqvarnagroup.cloud" target="_blank" rel="noopener">developer.husqvarnagroup.cloud</a>, connecte-toi avec ton compte GARDENA (le même que l'app GARDENA), crée une application et relie-lui <b>Authentication API</b> et <b>GARDENA smart system API</b>. Garde l'<b>Application key</b> et l'<b>Application secret</b>.</li>
+   <li><b>Relais.</b> Sur <a href="https://dash.cloudflare.com" target="_blank" rel="noopener">dash.cloudflare.com</a> (compte gratuit) : Workers &amp; Pages → Create → Worker → Deploy. Puis <b>Edit code</b>, remplace tout par le code du relais et Deploy.<div class="row" style="margin-top:6px"><button class="btn small" data-au="copycode">Copier le code du relais</button><a class="btn small" href="${WORKER_URL}" target="_blank" rel="noopener">Ouvrir le code</a></div></li>
+   <li><b>Stockage.</b> Storage &amp; Databases → KV → Create, nomme-le « potager ». Dans ton Worker : Settings → Bindings → Add → KV namespace, nom de variable <code>POTAGER</code>.</li>
+   <li><b>Secrets.</b> Worker → Settings → Variables and Secrets, trois entrées de type <b>Secret</b> : <code>GARDENA_KEY</code> (Application key), <code>GARDENA_SECRET</code> (Application secret) et <code>APP_TOKEN</code> avec ce code :<div class="row" style="margin-top:6px"><code class="autok">${esc(tok)}</code><button class="btn small" data-au="copytok">Copier</button></div></li>
+   <li><b>Automatique.</b> Worker → Settings → Trigger events → Cron : <code>*/30 * * * *</code></li>
+   <li><b>Ici.</b> Colle l'adresse du Worker (elle finit par <code>workers.dev</code>) et teste.</li></ol>
+  <p class="note">Les intitulés de Cloudflare peuvent varier un peu. La clé GARDENA ne quitte jamais le relais ; l'app ne garde que l'adresse et le code d'accès, sur cet appareil.</p>
+  <label class="field"><span class="lbl">Adresse du relais</span><input id="au-url" value="${esc(c.url||'')}" placeholder="https://potager.xxx.workers.dev" autocomplete="off" spellcheck="false" inputmode="url"></label>
+  <label class="field"><span class="lbl">Code d'accès (APP_TOKEN)</span><input id="au-tok" value="${esc(tok)}" autocomplete="off" spellcheck="false"></label>
+  <p class="alert" id="au-err" hidden></p>
+  <div class="row"><button class="btn primary" data-au="link">Relier et tester</button>${c.url||c.demo?`<button class="btn danger" data-au="unlink">${c.demo?'Quitter la démo':'Délier'}</button>`:''}${gLinked()?'<button class="btn" data-au="setup">Fermer</button>':'<button class="btn" data-au="demo">Essayer en démo</button>'}</div></div>`}
+function zoneCard(v){const id=v.id,z=zc(id),key=id.replace(/[^\w-]/g,'_'),run=isRun(v),sen=z.sensor&&gSensors().find(s=>s.id===z.sensor),d=decideNow(id),open=auto.open===id;
+  const objsL=(z.objs||[]).map(obj).filter(Boolean),log=(gdst.log||[]),last=log.find(e=>e.type==='water'&&e.valve===id),dur=auto.dur[id]||z.min||15;
+  const ML={off:'À la demande',sensor:'Auto · sonde',program:'Auto · programme'};
+  let h=`<div class="aucard${run?' run':''}" id="az-${key}"><div class="auhead"><div style="min-width:0"><b>${esc(v.name)}</b><span class="note" style="display:block">${objsL.length?objsL.map(o=>esc(fullName(o))).join(', '):'Aucune planche liée'}</span></div><span class="aumode ${z.mode}">${ML[z.mode]||ML.off}</span></div>`;
+  if(sen&&sen.soil!=null)h+=`<div class="augauge"><span class="lbl">Humidité du sol</span><div class="g"><span style="width:${clamp(sen.soil,0,100)}%"></span>${z.mode==='sensor'?`<i style="left:${clamp(z.thr,0,100)}%" title="seuil"></i>`:''}</div><b class="mono">${num(sen.soil,0)} %</b></div>`;
+  if(run){const st=(last&&last.end===v.end?v.end-last.min*60000:v.end-dur*60000);
+    h+=`<div class="aurun"><div class="bar"><span data-bar-s="${st}" data-bar-e="${v.end||0}" style="width:${v.end?clamp((Date.now()-st)/(v.end-st)*100,0,100):50}%"></span></div><div class="row between"><span>Arrosage en cours${v.end?` · reste <b class="mono" data-end="${v.end}">${fmtLeft(v.end-Date.now())}</b>`:''}</span><button class="btn small danger" data-au="stop" data-id="${id}">Arrêter</button></div></div>`}
+  else h+=`<div class="audec ${d.go?'go':d.skip?'skip':d.ok?'ok':d.off?'off':'wait'}"><i></i><span>${esc(d.why)}</span></div>
+    <div class="autimer"><div class="seg" role="group" aria-label="Durée">${[5,10,15,30,60].map(m=>`<button data-au="dur" data-id="${id}" data-m="${m}" aria-pressed="${dur===m}">${m} min</button>`).join('')}<input class="aumin" type="number" min="1" max="90" step="1" data-au-dur="${id}" value="${[5,10,15,30,60].includes(dur)?'':dur}" placeholder="autre" aria-label="Autre durée en minutes"></div>
+    <button class="btn primary" data-au="go" data-id="${id}">Arroser ${dur} min</button></div>`;
+  h+=`<div class="row between"><span class="note">${last?`Dernier arrosage ${whenTxt(last.at)} · ${num(last.min,0)} min${last.how==='auto'?' auto':''}`:'Pas encore arrosé par GARDENA'}</span><button class="btn small" data-au="rules" data-id="${id}">${open?'Fermer':'Réglages'}</button></div>`;
+  if(open){const pl=plantables(),hrs=z.hours||[6];
+    h+=`<div class="aurules"><div><span class="lbl">Fonctionnement</span><div class="seg" style="margin-top:6px">${[['off','À la demande'],['sensor','Selon la sonde'],['program','Programme']].map(([k,l])=>`<button data-au="mode" data-id="${id}" data-m="${k}" aria-pressed="${z.mode===k}">${l}</button>`).join('')}</div></div>
+    ${z.mode==='sensor'?`<div class="grid2"><label class="field"><span class="lbl">Sonde</span><select data-zf="sensor" data-id="${id}"><option value="">Choisir…</option>${gSensors().map(s=>`<option value="${s.id}" ${s.id===z.sensor?'selected':''}>${esc(s.name)}${s.soil!=null?' · '+num(s.soil,0)+' %':''}</option>`).join('')}</select></label>
+      <label class="field"><span class="lbl">Arroser sous <b class="mono" data-thr="${id}">${z.thr} %</b></span><input type="range" min="10" max="60" step="1" data-zf="thr" data-id="${id}" value="${z.thr}"></label></div>`:''}
+    ${z.mode==='program'?`<label class="field" style="max-width:200px"><span class="lbl">Tous les (jours)</span><input type="number" min="1" max="14" step="1" data-zf="every" data-id="${id}" value="${z.every}"></label>`:''}
+    ${z.mode!=='off'?`<div><span class="lbl">Créneaux (dans les 2 h qui suivent)</span><div class="seg" style="margin-top:6px">${[5,6,7,8,9,18,19,20,21].map(x=>`<button data-au="hour" data-id="${id}" data-m="${x}" aria-pressed="${hrs.includes(x)}">${x} h</button>`).join('')}</div></div>
+    <div class="grid3"><label class="field"><span class="lbl">Durée (min)</span><input type="number" min="1" max="90" step="1" data-zf="min" data-id="${id}" value="${z.min}"></label>
+      <label class="field"><span class="lbl">Sauter si pluie ≥ (mm)</span><input type="number" min="0" max="50" step="0.5" data-zf="skipRain" data-id="${id}" value="${z.skipRain}"></label>
+      <label class="field"><span class="lbl">Écart mini (h)</span><input type="number" min="1" max="168" step="1" data-zf="gap" data-id="${id}" value="${z.gap}"></label></div>
+    <p class="note">Pluie prévue : 0 pour ne jamais sauter. Écart mini : temps minimum entre deux arrosages auto, le temps que l'eau descende jusqu'à la sonde.</p>`:''}
+    <label class="field" style="max-width:220px"><span class="lbl">Débit de la ligne (L/min)</span><input type="number" min="0.5" max="60" step="0.5" data-zf="flow" data-id="${id}" value="${z.flow}"></label>
+    <div><span class="lbl">Planches arrosées par cette vanne</span><div class="qlist" style="margin-top:6px">${pl.map(o=>{const other=zoneOfObj(o.id);return`<label><input type="checkbox" data-zo="${o.id}" data-id="${id}" ${(z.objs||[]).includes(o.id)?'checked':''}><span><b>${esc(fullName(o))}</b>${other&&other!==id?`<span class="note" style="display:block">déjà sur ${esc(valveName(other))}</span>`:''}</span></label>`}).join('')}</div></div></div>`}
+  return h+`</div>`}
+function renderAuto(){if(!auto)return;const c=GDN.get(),v=$('#autoView');
+  const sub=c.demo?'Démo · appareils fictifs':!gLinked()?'Pas encore relié':gdBusy&&!gdst?'Lecture…':gdst&&gdst.err?'Problème de liaison':gdst&&gdst.state?`GARDENA${gdst.state.location?' · '+esc(gdst.state.location):''} · lu ${gdst.state.at?'à '+hhmm(gdst.state.at):''}`:'…';
+  let b='';
+  if(!gLinked()||auto.setup)b+=autoSetupHTML();
+  if(gLinked()&&gdst&&gdst.err)b+=`<div class="alert"><span>${esc(gdst.err)}</span></div>`;
+  if(gLinked()&&gdst&&gdst.state){const st=gdst.state,vs=gValves(),run=vs.filter(isRun),a=autoCfg(),log=gdst.log||[];
+    if(run.length>1)b+=`<div class="row between"><span class="lbl">${run.length} vannes ouvertes</span><button class="btn small danger" data-au="stopall">Tout arrêter</button></div>`;
+    b+=`<div class="stack"><div class="section-t"><span class="lbl">Vannes</span><span class="mono note">${vs.length}</span></div>${vs.map(zoneCard).join('')||'<p class="note">Aucune vanne trouvée sur ce compte GARDENA.</p>'}</div>`;
+    if(st.sensors.length)b+=`<div class="stack"><span class="lbl">Sondes</span><div class="hvlist">${st.sensors.map(s=>{const used=vs.filter(v=>zc(v.id).sensor===s.id).map(v=>v.name);return`<div class="prod"><div class="top" style="cursor:default"><span><b>${esc(s.name)}</b><span class="note" style="display:block">${[s.soilT!=null?'sol '+num(s.soilT,0)+' °C':'',s.air!=null?'air '+num(s.air,0)+' °C':'',s.light!=null?'lumière '+num(s.light,0)+' lx':'',s.battery!=null?'pile '+s.battery+' %':''].filter(Boolean).join(' · ')}${used.length?' · pilote '+used.map(esc).join(', '):''}</span></span><span class="q">${s.soil!=null?num(s.soil,0)+' <small>%</small>':'–'}</span></div></div>`}).join('')}</div></div>`;
+    const pk=a.pump.kind,w=S.water||{level:0,cap:1};
+    b+=`<div class="panel"><h3>Pompe et cuve</h3><div class="seg">${[['auto','Pompe automatique'],['socket','Sur prise GARDENA'],['valve','Pompe GARDENA smart'],['none','Réseau, sans cuve']].map(([k,l])=>`<button data-au="pump" data-m="${k}" aria-pressed="${pk===k}">${l}</button>`).join('')}</div>
+      ${pk==='socket'?`<label class="field"><span class="lbl">Prise de la pompe</span><select data-pf="id"><option value="">Choisir…</option>${st.sockets.map(s=>`<option value="${s.id}" ${s.id===a.pump.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></label>`:''}
+      ${pk==='valve'?`<label class="field"><span class="lbl">Pompe</span><select data-pf="id"><option value="">Choisir…</option>${st.valves.map(s=>`<option value="${s.id}" ${s.id===a.pump.id?'selected':''}>${esc(s.name)}${s.pump?' (pompe)':''}</option>`).join('')}</select></label>`:''}
+      <p class="note">${pk==='auto'?'Pompe à pression : elle démarre seule quand une vanne s\'ouvre.':pk==='socket'?'La prise s\'allume avec la vanne et s\'éteint une minute après.':pk==='valve'?'La pompe GARDENA est lancée en même temps que la vanne.':'Pas de cuve : le niveau n\'est pas suivi.'}</p>
+      ${pk!=='none'?`<div class="augauge"><span class="lbl">Cuve (estimation)</span><div class="g water"><span style="width:${clamp(w.level/Math.max(1,w.cap)*100,0,100)}%"></span>${a.tankMin?`<i style="left:${clamp(a.tankMin/Math.max(1,w.cap)*100,0,100)}%"></i>`:''}</div><b class="mono">${num(w.level,0)} L</b></div>
+      <label class="field" style="max-width:240px"><span class="lbl">Ne plus arroser sous (L)</span><input type="number" min="0" step="50" data-pf="tankMin" value="${a.tankMin}"></label>
+      <p class="note">Chaque arrosage retire débit × durée. Corrige le niveau réel dans Eau &amp; météo quand tu le relèves.</p>`:''}</div>`;
+    b+=`<div class="stack"><span class="lbl">Historique</span>${log.length?`<div class="aulog">${log.slice(0,25).map(e=>{const n=esc(valveName(e.valve));const t=e.type==='water'?`<b>${n}</b> · ${num(e.min,0)} min · ${e.how==='auto'?'automatique':'manuel'}${e.why?`<span class="note" style="display:block">${esc(e.why)}</span>`:''}`:e.type==='stop'?`<b>${n}</b> arrêtée${e.left>0?` (${e.left} min avant la fin)`:''}`:e.type==='skip'?`<b>${n}</b> · ${esc(e.why||'sauté')}`:`<span style="color:var(--danger)">${esc(e.msg||'Erreur')}</span>`;
+      return`<div class="${e.type}"><i></i><span>${t}</span><span class="mono note">${whenTxt(e.at).replace("aujourd'hui à ",'')}</span></div>`}).join('')}</div>`:'<p class="note">Rien pour l\'instant.</p>'}</div>`;
+    if(!auto.setup)b+=`<div class="row between"><span class="note">${c.demo?'Mode démo : rien ne s\'ouvre pour de vrai.':`Relais ${esc((c.url||'').replace(/^https?:\/\//,''))}${gdst.cfgAt?' · règles envoyées à '+hhmm(gdst.cfgAt):''}`}</span><button class="btn small" data-au="setup">${c.demo?'Relier GARDENA':'Connexion'}</button></div>`}
+  else if(gLinked()&&!gdst)b+=`<p class="note">Lecture des appareils…</p>`;
+  v.innerHTML=`<div class="bedhead">${AU_BACK}<div style="min-width:0;flex:1"><div class="brand" style="font-size:17px">Arrosage automatique</div><div class="note">${sub}</div></div>${gLinked()?`<button class="btn small" data-au="sync">${gdBusy?'…':'Actualiser'}</button>`:''}</div><div class="bedbody">${b}</div>`}
+/* petite carte réutilisée dans Eau & météo et Aujourd'hui */
+function autoCard(compact){if(!gLinked())return compact?'':`<button class="tcard aucta" data-wact="auto"><div class="row between"><h3>Arrosage automatique</h3><span class="chev">›</span></div><span class="note">Relie ton GARDENA smart system pour arroser à distance avec minuteur, ou selon tes sondes.</span></button>`;
+  const vs=gValves(),run=vs.filter(isRun),autos=vs.filter(v=>zc(v.id).mode!=='off');
+  if(compact&&!run.length)return'';
+  const lines=run.map(v=>`<span class="aurow"><i class="on"></i><b>${esc(v.name)}</b> arrose${v.end?` · reste <b class="mono" data-end="${v.end}">${fmtLeft(v.end-Date.now())}</b>`:''}</span>`);
+  if(!compact){const next=autos.map(v=>({v,d:decideNow(v.id)})).filter(x=>!isRun(x.v));lines.push(...next.slice(0,3).map(x=>`<span class="aurow"><i class="${x.d.go||x.d.due?'due':x.d.skip?'skip':'ok'}"></i><b>${esc(x.v.name)}</b> · ${esc(x.d.why)}</span>`));
+    if(!lines.length)lines.push(`<span class="note">${vs.length} vanne${vs.length>1?'s':''} · aucune en automatique</span>`)}
+  return`<button class="tcard aucta" ${compact?'data-tgo="auto"':'data-wact="auto"'}><div class="row between"><h3>${run.length?'Arrosage en cours':'Arrosage automatique'}${gDemo()?' <span class="note">· démo</span>':''}</h3><span class="chev">›</span></div>${gdst&&gdst.err&&!compact?`<span class="note" style="color:var(--danger)">${esc(gdst.err)}</span>`:''}${lines.join('')}</button>`}
+
+$('#autoView').addEventListener('click',async e=>{const b=e.target.closest('[data-au]');if(!b||!auto)return;const a=b.dataset.au,id=b.dataset.id;
+  if(a==='back'){closeAuto();refresh();return}
+  if(a==='sync'){gSync(true);return}
+  if(a==='setup'){auto.setup=!auto.setup;renderAuto();if(auto.setup)$('#autoView').scrollTop=0;return}
+  if(a==='demo'){GDN.set({demo:true});gdst=demoInit();demoSetup();auto.setup=false;renderAuto();$('#autoView').scrollTop=0;return toast('Démo : appareils fictifs, rien ne s\'ouvre pour de vrai')}
+  if(a==='unlink'){const was=GDN.get();GDN.set({});gdst=null;if(was.demo){const c=autoCfg();Object.keys(c.zones).filter(k=>k.startsWith('demo')).forEach(k=>delete c.zones[k]);if(String(c.pump.id).startsWith('demo'))c.pump={kind:'auto',id:''};save()}auto.setup=true;renderAuto();return toast(was.demo?'Démo fermée':'Relais délié de cet appareil')}
+  if(a==='copytok'){try{await navigator.clipboard.writeText($('#au-tok').value.trim());toast('Code copié')}catch(err){toast('Copie impossible : sélectionne le code à la main')}return}
+  if(a==='copycode'){try{const r=await fetch('gardena-worker.js');if(!r.ok)throw 0;await navigator.clipboard.writeText(await r.text());toast('Code du relais copié')}catch(err){window.open(WORKER_URL,'_blank')}return}
+  if(a==='link'){const url=$('#au-url').value.trim(),token=$('#au-tok').value.trim(),err=$('#au-err');
+    if(!/^https:\/\//.test(url)){err.hidden=false;err.textContent='L\'adresse doit commencer par https://';return}
+    b.disabled=true;b.textContent='Test…';
+    try{const j=await gReq('/status?fresh=1','GET',null,{url,token});GDN.set({url,token});
+      const c=autoCfg();Object.keys(c.zones).filter(k=>k.startsWith('demo')).forEach(k=>delete c.zones[k]);if(String(c.pump.id).startsWith('demo'))c.pump={kind:'auto',id:''};
+      S.autoSeen=(j.log||[]).map(x=>x.id);save();gdSet(j);auto.setup=false;pushCfg();renderAuto();$('#autoView').scrollTop=0;
+      toast(`GARDENA relié : ${j.state.valves.length} vanne${j.state.valves.length>1?'s':''}, ${j.state.sensors.length} sonde${j.state.sensors.length>1?'s':''}`)}
+    catch(x){err.hidden=false;err.textContent=x.message;b.disabled=false;b.textContent='Relier et tester'}return}
+  if(a==='dur'){auto.dur[id]=+b.dataset.m;renderAuto();return}
+  if(a==='go'){const m=auto.dur[id]||zc(id).min||15;b.disabled=true;await gWater(id,m);return}
+  if(a==='stop'){b.disabled=true;await gStop(id);return}
+  if(a==='stopall'){for(const v of gValves().filter(isRun))await gStop(v.id);return}
+  if(a==='rules'){auto.open=auto.open===id?null:id;renderAuto();return}
+  if(a==='mode'){setZ(id,{mode:b.dataset.m});renderAuto();return}
+  if(a==='hour'){const h=+b.dataset.m,cur=zc(id).hours||[];let n=cur.includes(h)?cur.filter(x=>x!==h):[...cur,h].sort((x,y)=>x-y);if(!n.length)n=[h];setZ(id,{hours:n});renderAuto();return}
+  if(a==='pump'){const c=autoCfg();c.pump={kind:b.dataset.m,id:b.dataset.m===c.pump.kind?c.pump.id:''};save();pushCfgSoon();renderAuto();return}});
+$('#autoView').addEventListener('input',e=>{const t=e.target;if(t.dataset.zf==='thr'){const l=document.querySelector(`[data-thr="${t.dataset.id}"]`);if(l)l.textContent=t.value+' %'}});
+$('#autoView').addEventListener('change',e=>{const t=e.target,id=t.dataset.id;
+  if(t.dataset.auDur!=null){const m=clamp(Math.round(+t.value||0),1,90);if(+t.value>0){auto.dur[t.dataset.auDur]=m;renderAuto()}return}
+  if(t.dataset.zf){const f=t.dataset.zf,v=f==='sensor'?t.value:+t.value;if(f!=='sensor'&&isNaN(v))return;setZ(id,{[f]:v});if(f!=='thr')renderAuto();return}
+  if(t.dataset.zo){const z=zc(id),s=new Set(z.objs||[]);if(t.checked){s.add(t.dataset.zo);const c=autoCfg();Object.keys(c.zones).forEach(k=>{if(k!==id&&c.zones[k].objs)c.zones[k].objs=c.zones[k].objs.filter(x=>x!==t.dataset.zo)})}else s.delete(t.dataset.zo);setZ(id,{objs:[...s]});renderAuto();return}
+  if(t.dataset.pf){const c=autoCfg();if(t.dataset.pf==='tankMin')c.tankMin=Math.max(0,+t.value||0);else c.pump.id=t.value;save();pushCfgSoon();renderAuto()}});
+/* compte à rebours, et relecture quand un arrosage se termine */
+let auEndSeen=0;
+setInterval(()=>{const n=Date.now();document.querySelectorAll('[data-end]').forEach(el=>{el.textContent=fmtLeft(+el.dataset.end-n)});
+  document.querySelectorAll('[data-bar-e]').forEach(el=>{const s=+el.dataset.barS,e=+el.dataset.barE;if(e>s)el.style.width=clamp((n-s)/(e-s)*100,0,100)+'%'});
+  if(gdst&&gdst.state){const ended=gdst.state.valves.some(v=>v.end&&v.end<=n&&v.activity!=='CLOSED');if(ended&&n-auEndSeen>20000){auEndSeen=n;if(gDemo())demoTick();else{gdst.state.valves.forEach(v=>{if(v.end&&v.end<=n){v.activity='CLOSED';v.end=null}});setTimeout(()=>gSync(true),4000)}renderAutoAll()}}},1000);
+setInterval(()=>{if(!document.hidden&&gLinked()&&(auto||tab==='weather'||tab==='today'))gSync(false)},60000);
+setTimeout(()=>{if(gLinked())gSync(false)},400);
+
 /* ================= Météo vivante sur le plan (jamais en mode édition) ================= */
 const wxPlanOn=()=>{try{return localStorage.getItem('potager-wxplan')!=='off'}catch(e){return true}};
 const liveWx=()=>wxPlanOn()&&!editMode&&!shapeEdit&&tab==='plan'&&!!wx;
@@ -1970,7 +2210,7 @@ function renderWxLayer(){const el=$('#wxlayer');if(!el)return;
 
 /* ================= Bouton « + Noter » ================= */
 let q=null;
-function updateNoteBtn(){const b=$('#noteBtn');if(b)b.hidden=tab==='plan'||!!bed||!!inv||!!q}
+function updateNoteBtn(){const b=$('#noteBtn');if(b)b.hidden=tab==='plan'||!!bed||!!inv||!!q||!!auto}
 function openQ(step='menu'){q={step,photo:null};$('#qback').hidden=false;$('#qsheet').hidden=false;renderQ();updateNoteBtn()}
 function closeQ(){q=null;$('#qback').hidden=true;$('#qsheet').hidden=true;$('#qsheet').innerHTML='';updateNoteBtn()}
 const qPlanches=()=>plantables().filter(o=>o.zones.some(z=>z.crop));
@@ -2032,7 +2272,7 @@ gesture(sheet,{start:(e)=>{if(!sheetMode||sheet.scrollTop>2)return null;if(e.tar
   move:(st,dx,dy)=>{if(dy<=0){sheet.style.transform='';return false}sheet.classList.add('dragging');sheet.style.transform=`translateY(${dy}px)`;return true},
   end:(st,dx,dy,cancel)=>{sheet.classList.remove('dragging');if(!cancel&&dy>90){sheet.style.transform=`translateY(100%)`;setTimeout(()=>{sheet.style.transform='';sheetMode=null;selId=null;if(shapeEdit===null)renderSheet();renderPlan()},180)}else sheet.style.transform=''}});
 /* planche et abri : glisser depuis le bord gauche pour revenir */
-[['#bedView'],['#invView']].forEach(([sel])=>{const el=$(sel);gesture(el,{start:(e,t)=>t.clientX<28?{want:'x'}:null,
+[['#bedView'],['#invView'],['#autoView']].forEach(([sel])=>{const el=$(sel);gesture(el,{start:(e,t)=>t.clientX<28?{want:'x'}:null,
   move:(st,dx)=>{if(dx<=0)return false;el.classList.add('dragging');el.style.transform=`translateX(${dx}px)`;return true},
   end:(st,dx,dy,cancel)=>{el.classList.remove('dragging');if(!cancel&&dx>90){el.style.transform='translateX(100%)';setTimeout(()=>{el.style.transform='';const b=el.querySelector('.bedhead .iconbtn');if(b)b.click()},180)}else el.style.transform=''}})});
 /* Aujourd'hui : glisser une ligne à gauche (arrosé / récolte), tirer vers le bas pour actualiser */
