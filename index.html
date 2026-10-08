@@ -1,0 +1,1611 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Atelier Potager</title>
+<meta name="description" content="Plan, plantations, récoltes et journal du potager.">
+<meta name="theme-color" content="#2c6a39">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Potager">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+:root{padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;font:14px/1.45 system-ui,-apple-system,sans-serif}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<style>
+/* Layout: one-screen app — header, full-bleed plan canvas with a bottom sheet, bottom tab bar. Plan reads like a surveyor's sheet on sage paper. */
+:root{
+  --bg:#e9ede1; --surface:#fafbf6; --surface-2:#f1f3ea; --ink:#1d271b; --muted:#5d6955; --line:#cdd4c1;
+  --accent:#2c6a39; --accent-ink:#ffffff; --sun:#d9951c; --grid:rgba(44,106,57,.10); --grid-strong:rgba(44,106,57,.22);
+  --ground:#dfe6cf; --soil:#8b6a48; --soil-edge:#5e4529; --water:#3a82b5; --leaf:#5c9a45; --leaf-dark:#2f5d2b;
+  --gravel:#cdc6b5; --wood:#a3713f; --danger:#b8392b; --ok:#2e8547; --halo:#fafbf6; --shade:rgba(22,32,60,.30); --frost:#3a6fb5;
+  --f-display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --f-body:"Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121812; --surface:#1a221a; --surface-2:#212b20; --ink:#e3e9d8; --muted:#9aa68f; --line:#2f3b2d;
+  --accent:#86c470; --accent-ink:#0e170d; --sun:#f0b445; --grid:rgba(134,196,112,.08); --grid-strong:rgba(134,196,112,.18);
+  --ground:#1f2a1d; --soil:#6b5038; --soil-edge:#3f2c1a; --water:#4f9bd0; --leaf:#4c8a3a; --leaf-dark:#2c5226;
+  --gravel:#4b4840; --wood:#8a6038; --danger:#ee6a58; --ok:#6fca7a; --halo:#1a221a; --shade:rgba(0,0,0,.45); --frost:#7fb0ee; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#121812; --surface:#1a221a; --surface-2:#212b20; --ink:#e3e9d8; --muted:#9aa68f; --line:#2f3b2d;
+  --accent:#86c470; --accent-ink:#0e170d; --sun:#f0b445; --grid:rgba(134,196,112,.08); --grid-strong:rgba(134,196,112,.18);
+  --ground:#1f2a1d; --soil:#6b5038; --soil-edge:#3f2c1a; --water:#4f9bd0; --leaf:#4c8a3a; --leaf-dark:#2c5226;
+  --gravel:#4b4840; --wood:#8a6038; --danger:#ee6a58; --ok:#6fca7a; --halo:#1a221a; --shade:rgba(0,0,0,.45); --frost:#7fb0ee; color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+button:disabled{cursor:default}
+:focus-visible{outline:2px solid var(--sun);outline-offset:2px}
+.app{height:100%;display:grid;grid-template-rows:auto 1fr auto;grid-template-columns:minmax(0,1fr);max-width:1100px;margin:0 auto;position:relative}
+
+.top{display:flex;align-items:center;gap:8px;padding-block:10px;padding-inline:16px;border-bottom:1px solid var(--line);background:var(--surface)}
+.top>div:first-child{min-width:0;flex:1 1 auto}
+.brand{font-family:var(--f-display);font-weight:700;font-size:19px;letter-spacing:-.01em;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand small{display:block;font-family:var(--f-mono);font-weight:400;font-size:11px;color:var(--muted);letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill{font-size:11px;text-transform:uppercase;letter-spacing:.08em;padding:2px 8px;border-radius:99px;background:var(--sun);color:#1d1404;font-weight:700}
+.iconbtn{display:grid;place-items:center;width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);flex:none}
+.iconbtn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8}
+.iconbtn:disabled{opacity:.35}
+.iconbtn.on{background:var(--sun);border-color:var(--sun);color:#1d1404}
+
+main{position:relative;min-height:0;overflow:hidden}
+.view{position:absolute;inset:0;overflow:auto}
+
+#map{width:100%;height:100%;display:block;touch-action:none;background:var(--bg);user-select:none;-webkit-user-select:none}
+.ground{fill:var(--ground)} .bound{fill:none;stroke:var(--accent);stroke-width:1.5}
+.dimtxt{fill:var(--muted);font-family:var(--f-mono)}
+.obj{cursor:grab}
+.obj text{font-family:var(--f-body);font-weight:700;fill:var(--ink);paint-order:stroke;stroke:var(--halo);stroke-width:3px;stroke-linejoin:round;pointer-events:none}
+.s-soil{fill:var(--soil);stroke:var(--soil-edge)} .s-wood{fill:var(--soil);stroke:var(--wood)}
+.s-water{fill:var(--water);fill-opacity:.85;stroke:var(--water)} .s-water-l{fill:var(--water);fill-opacity:.25;stroke:var(--water)}
+.s-leaf{fill:var(--leaf);fill-opacity:.35;stroke:var(--leaf-dark)} .s-leaf-solid{fill:var(--leaf-dark);stroke:var(--leaf-dark)}
+.s-trunk{fill:var(--wood)} .s-gravel{fill:var(--gravel);stroke:var(--line)} .s-serre{fill:var(--water);fill-opacity:.10;stroke:var(--water);stroke-dasharray:6 4}
+.s-wood-solid{fill:var(--wood);stroke:var(--soil-edge)} .s-fence{fill:var(--wood);stroke:none} .s-plug{fill:var(--sun);stroke:var(--ink)}
+.s-roof{stroke:var(--soil-edge);fill:none} .s-zone-line{stroke:var(--halo);stroke-opacity:.7}
+.selbox{fill:none;stroke:var(--sun);stroke-width:2;stroke-dasharray:6 4;pointer-events:none}
+.selbox.locked{stroke:var(--muted);stroke-dasharray:2 3}
+.handle{fill:var(--sun);stroke:var(--surface);stroke-width:2;cursor:nwse-resize}
+.badge circle{stroke:var(--surface);stroke-width:1.5} .badge text{fill:#fff;font-family:var(--f-mono);font-weight:600;stroke:none}
+.badge.red circle{fill:var(--danger)} .badge.amber circle{fill:var(--sun)} .badge.amber text{fill:#1d1404}
+.obj.lift{filter:drop-shadow(0 6px 8px rgba(0,0,0,.35))}
+.obj.lift .selbox{stroke-dasharray:none;stroke-width:3}
+.shadepoly{fill:var(--shade);pointer-events:none}
+.edgehit{stroke:transparent;stroke-width:24px;pointer-events:stroke;cursor:move;fill:none}
+.vtx{fill:var(--surface);stroke:var(--accent);stroke-width:2.5;cursor:move} .vtx.sel{fill:var(--sun);stroke:var(--ink)} .mid{fill:var(--accent);fill-opacity:.55;cursor:copy}
+.edgetxt{fill:var(--accent);font-family:var(--f-mono);font-weight:600;paint-order:stroke;stroke:var(--bg);stroke-width:3px}
+.guide{stroke:var(--sun);stroke-width:1.5;stroke-dasharray:4 3;pointer-events:none}
+#shadeL,#overL{pointer-events:none}
+#map.editing{box-shadow:inset 0 0 0 3px var(--sun)}
+.modetag{position:absolute;left:50%;bottom:72px;transform:translateX(-50%);font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;background:var(--sun);color:#1d1404;padding:3px 10px;border-radius:99px;pointer-events:none}
+.cs-head{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}
+.cs-head .nm{font-family:var(--f-display);font-weight:700;font-size:20px;line-height:1.15;text-wrap:balance}
+.quick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.quick .btn{min-height:46px;padding:0 8px;font-size:13.5px}
+.linkbtn{border:0;background:none;color:var(--muted);font-size:13px;text-decoration:underline;text-underline-offset:3px;padding:4px 0;justify-self:start}
+.info{display:grid;gap:8px;padding:12px;border-radius:14px;background:var(--surface-2)}
+.ilist{display:grid;gap:8px}
+.irow{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center}
+.irow>i{width:12px;height:12px;border-radius:50%;display:block}
+.irow>i.drop{background:var(--water);border-radius:50% 50% 50% 0;transform:rotate(-45deg)}
+.irow b{display:block}
+.st{font-family:var(--f-mono);font-size:13px;white-space:nowrap}
+.st.ready{color:var(--ok);font-weight:600}.st.blocked{color:var(--danger);font-size:12px}
+.badge.shade circle{fill:var(--muted)} .badge.green circle{fill:var(--ok)} .badge.blue circle{fill:var(--water)}
+.helpgrid{display:grid;gap:10px}
+.hrow{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:start}
+.hrow .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--surface-2);font-weight:700;font-family:var(--f-mono)}
+.hrow .ic svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8}
+.dot-b{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:12px;font-family:var(--f-mono);font-weight:600}
+.abhome{display:grid;gap:12px}
+.tsec{display:grid;gap:10px;scroll-margin-top:8px}
+.tsec-h{display:flex;align-items:center;gap:10px;padding-top:6px;border-top:2px solid var(--line)}
+.tsec-h svg{width:22px;height:22px;stroke:var(--accent);fill:none;stroke-width:1.8;flex:none}
+.tsec-h h2{font-size:19px!important}
+.tsec-h .n{font-family:var(--f-mono);font-size:13px;background:var(--surface-2);border-radius:99px;padding:1px 8px}
+.tcard{display:grid;gap:10px;padding:14px;border-radius:16px;border:1px solid var(--line);background:var(--surface)}
+.tcard h3{display:flex;align-items:center;gap:8px}
+.tcard h3 .n{font-family:var(--f-mono);font-size:13px;font-weight:600;background:var(--surface-2);border-radius:99px;padding:1px 8px}
+.tcard.frost{border-color:var(--frost)} .tcard.urgent{border-color:var(--sun)}
+.trow{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:8px 0;border-top:1px dashed var(--line);text-align:left;background:none;border-left:0;border-right:0;border-bottom:0;width:100%}
+.trow:first-of-type{border-top:0}
+.trow>i{width:12px;height:12px;border-radius:50%;display:block}
+.pest{display:grid;gap:2px;padding:8px 0;border-top:1px dashed var(--line)}
+.sugg{display:grid;gap:8px}
+.sg{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.sg>i{width:12px;height:12px;border-radius:50%;display:block}
+.sg .rs{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.rs span{font-size:11.5px;padding:1px 7px;border-radius:99px;background:var(--surface-2);border:1px solid var(--line)}
+.rs .ok{border-color:var(--ok);color:var(--ok)} .rs .warn{border-color:var(--sun)} .rs .bad{border-color:var(--danger);color:var(--danger)}
+.tl{display:grid;gap:10px}
+.tlhead,.tlrow{display:grid;grid-template-columns:78px 1fr;gap:8px;align-items:center}
+.mths{display:grid;grid-template-columns:repeat(12,1fr);font-family:var(--f-mono);font-size:10px;color:var(--muted);text-align:center}
+.track{position:relative;height:24px;background:var(--surface-2);border-radius:6px;overflow:hidden}
+.track .b{position:absolute;top:3px;bottom:3px;border-radius:5px;font-size:11px;font-weight:700;color:#fff;padding:0 6px;white-space:nowrap;overflow:hidden;line-height:18px;text-shadow:0 1px 1px rgba(0,0,0,.35)}
+.track .b.pl{background:transparent!important;border:2px dashed;color:var(--ink);text-shadow:none;line-height:14px}
+.track .now{position:absolute;top:0;bottom:0;width:2px;background:var(--sun)}
+.tlrow .zl{font-size:12.5px;font-weight:700;line-height:1.2}
+.nexts{grid-column:1/-1;display:grid;gap:6px}
+.plrow{display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;padding:6px 8px;border:1px dashed var(--line);border-radius:10px}
+.plrow>i{width:10px;height:10px;border-radius:50%;display:block}
+.plrow.cur{border-style:solid}
+.abcard{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:18px;border-radius:16px;border:1px solid var(--line);background:var(--surface);text-align:left;width:100%}
+.abcard svg{width:34px;height:34px;stroke:var(--accent);fill:none;stroke-width:1.7}
+.abcard b{display:block;font-family:var(--f-display);font-size:20px}
+.chev{color:var(--muted);font-size:22px}
+.prod{display:grid;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--surface)}
+.prod:last-child{border-bottom:0}
+.prod .top{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;cursor:pointer;border:0;background:none;padding:0;text-align:left;width:100%}
+.prod .q{font-family:var(--f-mono);font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+.prod .q small{font-size:12px;color:var(--muted);font-weight:400}
+.low{display:inline-block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:#1d1404;background:var(--sun);padding:1px 7px;border-radius:99px;margin-left:6px}
+.out{background:var(--danger);color:#fff}
+.mv{display:grid;grid-template-columns:auto 1fr auto;gap:10px;font-size:13px;padding:4px 0;border-top:1px dashed var(--line)}
+.mv .d{font-family:var(--f-mono);color:var(--muted)} .mv .v{font-family:var(--f-mono)}
+.bednav{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.bednav button{flex:none;min-height:34px;padding:0 12px;border-radius:99px;border:1px solid var(--line);background:var(--surface);font-size:13px;font-weight:700}
+.kv{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;font-size:14px}
+.kv .k{color:var(--muted)}
+
+.fab{position:absolute;right:16px;bottom:16px;display:flex;gap:8px;align-items:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px;padding:0 16px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-weight:700}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:disabled{opacity:.45}
+.btn.danger{color:var(--danger)} .btn.danger.armed{background:var(--danger);color:#fff;border-color:var(--danger)}
+.btn.on{background:var(--sun);border-color:var(--sun);color:#1d1404}
+.btn.small{min-height:34px;padding:0 12px;font-size:13px;border-radius:10px}
+.btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2}
+.hint{position:absolute;left:50%;top:12px;transform:translateX(-50%);font-family:var(--f-mono);font-size:12px;background:var(--ink);color:var(--surface);padding:4px 10px;border-radius:8px;pointer-events:none;white-space:nowrap;z-index:3}
+.hint.low{top:84px}
+.ctxbar{position:absolute;left:16px;right:16px;top:12px;display:flex;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 10px}
+.ctxbar .t{min-width:0;flex:1} .ctxbar .t b{display:block;font-family:var(--f-display);font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inserre .ground{fill:var(--water);fill-opacity:.10}
+.compass{position:absolute;left:16px;top:12px;width:48px;height:48px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;padding:0}
+.compass svg{width:40px;height:40px}
+.compass .n{fill:var(--danger)} .compass .s{fill:var(--muted)} .compass text{fill:var(--ink);font-family:var(--f-mono);font-size:9px;font-weight:600}
+.sunbar{position:absolute;left:74px;right:16px;top:12px;display:grid;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 12px;font-size:13px}
+.sunbar .row{flex-wrap:nowrap}
+.sunbar select{min-height:32px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);padding:0 6px;font-size:13px}
+.sunbar input[type=range]{flex:1;min-width:0;accent-color:var(--sun)}
+
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:62%;overflow:auto;background:var(--surface);border-top:1px solid var(--line);border-radius:18px 18px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,.12);padding-block:6px 18px;padding-inline:16px;z-index:4}
+.grab{width:42px;height:4px;border-radius:4px;background:var(--line);margin:4px auto 10px}
+h3{font-family:var(--f-display);font-weight:700;font-size:17px;margin:0;text-wrap:balance}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.row.between{justify-content:space-between}
+.stack{display:grid;gap:12px}
+.lbl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+.field{display:grid;gap:4px;min-width:0}
+.field input,.field select,.field textarea{min-height:40px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);padding:0 10px;width:100%;min-width:0}
+.field textarea{padding:8px 10px;min-height:64px;resize:vertical}
+.field input:disabled{opacity:.55}
+.field input[type=number],.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.field input[type=range]{padding:0;background:none;border:0;accent-color:var(--accent)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.span2{grid-column:span 2} .span3{grid-column:1/-1}
+.typegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.typebtn{display:grid;gap:6px;justify-items:center;padding:10px 6px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);font-size:12.5px;font-weight:700;text-align:center}
+.typebtn svg{width:46px;height:30px}
+.namein{font-family:var(--f-display);font-weight:700;font-size:18px;border:0;border-bottom:1px dashed var(--line);background:transparent;padding:4px 0;width:100%;min-width:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;border:1px solid var(--line);background:var(--surface-2);font-size:13px}
+button.chip{min-height:32px}
+.chip i{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
+.chip.good{border-color:var(--ok)} .chip.bad{border-color:var(--danger);color:var(--danger)}
+.chip .x{border:0;background:none;padding:0;margin:-6px -8px -6px 0;min-width:30px;min-height:30px;color:var(--muted);font-size:18px;line-height:1}
+.note{font-size:13px;color:var(--muted);margin:0}
+.alert{display:grid;gap:4px;padding:10px 12px;border-radius:12px;border:1px solid var(--danger);color:var(--danger);font-size:13.5px}
+.alert b{color:var(--ink)}
+.alert.amber{border-color:var(--sun);color:var(--ink)}
+.alert.frost{border-color:var(--frost);color:var(--ink)}
+.alert.okay{border-color:var(--ok);color:var(--ink)}
+.sunline{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--f-mono);font-size:13px}
+.sunline b{font-weight:600;color:var(--sun)}
+
+.bed{position:absolute;inset:0;background:var(--bg);overflow:auto;z-index:5}
+.bedhead{position:sticky;top:0;z-index:2;display:flex;gap:12px;align-items:center;padding-block:10px;padding-inline:16px;background:var(--surface);border-bottom:1px solid var(--line)}
+.bedbody{display:grid;gap:14px;padding-block:14px 28px;padding-inline:16px;max-width:760px;margin:0 auto}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;display:grid;gap:12px;min-width:0;scroll-margin-top:72px}
+.strip,.cellgrid{width:100%;height:auto;display:block;touch-action:manipulation}
+.strip .z{cursor:pointer} .strip .zsel{fill:none;stroke:var(--sun);stroke-width:3}
+.cellgrid rect.c{cursor:pointer;stroke:var(--soil-edge);stroke-width:1}
+.cellgrid rect.c.empty{fill:var(--soil)} .cellgrid rect.c.on{stroke:var(--sun);stroke-width:3}
+.axis{fill:var(--muted);font-family:var(--f-mono);font-size:11px}
+.celldetail{display:grid;gap:10px;padding:12px;border-radius:12px;background:var(--surface-2)}
+.big{font-family:var(--f-display);font-weight:700;font-size:20px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{min-height:34px;padding:0 12px;border-radius:99px;border:1px solid var(--line);background:var(--surface-2);font-size:13px;font-weight:700}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.jlist{display:grid;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.jent{display:grid;grid-template-columns:auto 1fr auto;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);align-items:start}
+.jent:last-child{border-bottom:0}
+.jent .d{font-family:var(--f-mono);font-size:12px;color:var(--muted);white-space:nowrap;padding-top:2px}
+.jent .k{font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.jent .k.traitement{color:var(--danger)} .jent .k.recolte{color:var(--ok)} .jent .k.arrosage{color:var(--water)} .jent .k.amendement{color:var(--wood)} .jent .k.maladie{color:var(--sun)} .jent .k.semis{color:var(--accent)}
+.diag{display:grid;gap:10px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--surface-2)}
+.diag h4{margin:0;font-family:var(--f-display);font-size:18px}
+.conf{font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--line)}
+.conf.élevée{background:var(--ok);color:#fff}.conf.moyenne{background:var(--sun);color:#1d1404}
+.opt{display:grid;gap:4px;padding:10px;border-radius:10px;background:var(--surface);border:1px solid var(--line)}
+.diag ul{margin:0;padding-left:18px;display:grid;gap:3px;font-size:14px}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp 1s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.jent img{display:block;margin-top:6px;max-width:160px;border-radius:8px}
+.jent .del{border:0;background:none;color:var(--muted);font-size:18px;line-height:1;padding:2px 4px}
+.photoprev{display:flex;gap:10px;align-items:center}
+.photoprev img{width:64px;height:64px;object-fit:cover;border-radius:8px}
+
+.page{display:grid;gap:18px;padding-block:16px 28px;padding-inline:16px;max-width:760px;margin:0 auto}
+.page h2{font-family:var(--f-display);font-weight:700;font-size:24px;letter-spacing:-.01em;margin:0;text-wrap:balance}
+.section-t{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.hv{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px 14px;border:0;border-bottom:1px solid var(--line);background:var(--surface);cursor:pointer;text-align:left;width:100%}
+.hvlist{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.hvlist .hv:last-child{border-bottom:0}
+.hv .dot{width:14px;height:14px;border-radius:50%}
+.hv .t{font-weight:700} .hv .s{font-size:13px;color:var(--muted)}
+.bar{height:5px;border-radius:5px;background:var(--surface-2);overflow:hidden;margin-top:6px}
+.bar span{display:block;height:100%;background:var(--accent)}
+.due{font-family:var(--f-mono);font-size:13px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.due.ready{color:var(--ok);font-weight:600} .due.blocked{color:var(--danger);font-weight:600}
+.crop{display:grid;gap:10px;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.months{display:grid;grid-template-columns:repeat(12,1fr);gap:3px;max-width:340px}
+.months span{font-family:var(--f-mono);font-size:10.5px;text-align:center;padding:3px 0;border-radius:4px;background:var(--surface-2);color:var(--muted)}
+.months span.on{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.months span.now{position:relative;font-weight:700;color:var(--ink)}
+.months span.now::after{content:"";position:absolute;left:50%;bottom:-5px;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:var(--sun)}
+.months span.on.now{color:var(--accent-ink)}
+.mlbl{width:86px;flex:none;font-size:11px;font-weight:700;color:var(--muted);line-height:1.15}
+.search{min-height:44px;border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:0 14px;width:100%}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.stat{padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--surface);display:grid;gap:2px}
+.stat .v{font-family:var(--f-display);font-weight:700;font-size:24px;font-variant-numeric:tabular-nums}
+.stat .v small{font-size:14px;color:var(--muted);font-weight:500}
+.hbars{display:grid;gap:8px}
+.hbar{display:grid;grid-template-columns:110px 1fr auto;gap:10px;align-items:center;font-size:13.5px}
+.hbar .track{height:12px;border-radius:6px;background:var(--surface-2);overflow:hidden}
+.hbar .track span{display:block;height:100%;border-radius:6px}
+.hbar .val{font-family:var(--f-mono);font-variant-numeric:tabular-nums;min-width:58px;text-align:right}
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table.cmp{border-collapse:collapse;width:100%;font-size:13.5px;background:var(--surface)}
+table.cmp th,table.cmp td{padding:8px 12px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+table.cmp th:first-child,table.cmp td:first-child{text-align:left}
+table.cmp td{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+table.cmp td:first-child{font-family:var(--f-body)}
+table.cmp tr:last-child td{border-bottom:0}
+.up{color:var(--ok)} .down{color:var(--danger)}
+.chart{width:100%;height:auto;display:block}
+.chart .ax{fill:var(--muted);font-family:var(--f-mono);font-size:10px}
+.chart .gl{stroke:var(--line);stroke-width:1}
+.chart .b1{fill:var(--water)} .chart .b2{fill:var(--sun)}
+.legend{display:flex;gap:14px;font-size:12.5px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+
+.tabs{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--line);background:var(--surface);padding:2px 12px max(env(safe-area-inset-bottom,0px),16px)}
+.tabs button{display:grid;justify-items:center;gap:3px;padding:8px 2px 6px;border:0;background:none;color:var(--muted);font-size:11.5px;font-weight:700;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tabs button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8}
+.tabs button[aria-current="page"]{color:var(--accent)}
+.toast{position:absolute;left:50%;bottom:84px;transform:translateX(-50%);z-index:20;display:flex;gap:12px;align-items:center;background:var(--ink);color:var(--surface);padding:10px 14px;border-radius:12px;font-size:14px;max-width:calc(100% - 32px)}
+.toast button{border:0;background:none;color:var(--sun);font-weight:700}
+@media (min-width:760px){ .sheet{left:auto;right:16px;bottom:16px;width:380px;border-radius:18px;border:1px solid var(--line);max-height:calc(100% - 32px)} .sunbar{right:auto;width:420px}}
+@media (prefers-reduced-motion:no-preference){ .sheet{animation:up .18s ease-out} @keyframes up{from{transform:translateY(16px);opacity:.6}} }
+</style>
+
+<div class="app">
+  <header class="top">
+    <div><div class="brand">Atelier Potager<small id="gInfo"></small></div></div>
+    <span class="pill" id="exPill" hidden>Exemple</span>
+    <button class="iconbtn" id="undoBtnH" aria-label="Annuler l'action" title="Annuler l'action"><svg viewBox="0 0 24 24"><path d="M9 7L4 12l5 5"/><path d="M4 12h11a5 5 0 0 1 0 10h-3"/></svg></button>
+    <button class="iconbtn" id="redoBtnH" aria-label="Rétablir l'action" title="Rétablir l'action"><svg viewBox="0 0 24 24"><path d="M15 7l5 5-5 5"/><path d="M20 12H9a5 5 0 0 0 0 10h3"/></svg></button>
+    <button class="iconbtn" id="menuBtn" aria-label="Menu du potager"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  </header>
+  <main>
+    <section class="view" id="v-today" hidden></section>
+    <section class="view" id="v-plan">
+      <svg id="map" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="g1" width="100" height="100" patternUnits="userSpaceOnUse"><path d="M100 0H0V100" fill="none" style="stroke:var(--grid)" stroke-width="1" vector-effect="non-scaling-stroke"/></pattern>
+          <pattern id="g5" width="500" height="500" patternUnits="userSpaceOnUse"><path d="M500 0H0V500" fill="none" style="stroke:var(--grid-strong)" stroke-width="1" vector-effect="non-scaling-stroke"/></pattern>
+        </defs>
+        <g id="groundL"></g><g id="layer"></g><g id="shadeL"></g><g id="overL"></g><g id="editL"></g>
+      </svg>
+      <button class="compass" id="compass" aria-label="Orientation du nord"><svg viewBox="-20 -20 40 40"><g id="needle"><path class="n" d="M0 -15L5 0H-5Z"/><path class="s" d="M0 15L5 0H-5Z"/></g><text id="ntxt" text-anchor="middle" dominant-baseline="central">N</text></svg></button>
+      <div class="sunbar" id="sunbar" hidden></div>
+      <div class="sunbar" id="shapebar" hidden></div>
+      <div class="ctxbar" id="ctxbar" hidden></div>
+      <div class="hint" id="hint" hidden></div>
+      <div class="modetag" id="modetag" hidden>Mode édition</div>
+      <div class="fab" id="fab">
+        <button class="btn" id="sunBtn" aria-label="Afficher les ombres"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
+        <button class="btn" id="fitBtn" aria-label="Recentrer le plan"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+        <button class="btn" id="editBtn" aria-label="Modifier le plan" title="Modifier le plan"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/></svg></button>
+        <button class="btn" id="addBtn" hidden><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Ajouter</button>
+        <button class="btn primary" id="doneBtn" hidden>Terminer</button>
+      </div>
+      <div class="sheet" id="sheet" hidden></div>
+    </section>
+    <section class="view" id="v-harvest" hidden></section>
+    <section class="view" id="v-weather" hidden></section>
+    <section class="view" id="v-crops" hidden></section>
+    <section class="bed" id="bedView" hidden></section>
+    <section class="bed" id="invView" hidden></section>
+    <div class="toast" id="toast" hidden></div>
+  </main>
+  <nav class="tabs">
+    <button data-tab="today"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>Aujourd'hui</button>
+    <button data-tab="plan" aria-current="page"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 3v18M14 3v18"/></svg>Plan</button>
+    <button data-tab="harvest"><svg viewBox="0 0 24 24"><path d="M4 9h16l-2 11H6z"/><path d="M8 9a4 4 0 0 1 8 0"/></svg>Récoltes</button>
+    <button data-tab="weather"><svg viewBox="0 0 24 24"><path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z"/></svg>Eau & gel</button>
+    <button data-tab="crops"><svg viewBox="0 0 24 24"><path d="M5 20c0-8 5-14 15-15-1 10-7 15-15 15zM5 20l7-7"/></svg>Cultures</button>
+  </nav>
+  <input type="file" id="importIn" accept="application/json,.json" hidden>
+</div>
+
+<script>
+/* ================= Données cultures ================= */
+/* m : mois de semis direct ou de plantation en place · sg : mois de semis en godets (à l'abri) */
+const PLANTS=[
+ {id:'tomate',n:'Tomate',f:'Solanacées',c:'#d64b3a',rang:60,pl:50,j:80,m:[5,6],sg:[2,3,4]},
+ {id:'pdt',n:'Pomme de terre',f:'Solanacées',c:'#b8925a',rang:60,pl:35,j:100,m:[3,4,5],sg:[]},
+ {id:'poivron',n:'Poivron',f:'Solanacées',c:'#e0a020',rang:50,pl:40,j:90,m:[5,6],sg:[2,3]},
+ {id:'aubergine',n:'Aubergine',f:'Solanacées',c:'#7a4bb0',rang:60,pl:50,j:100,m:[5,6],sg:[2,3]},
+ {id:'carotte',n:'Carotte',f:'Apiacées',c:'#ee8a2a',rang:25,pl:5,j:100,m:[3,4,5,6,7],sg:[]},
+ {id:'persil',n:'Persil',f:'Apiacées',c:'#4f9a3a',rang:25,pl:15,j:75,m:[3,4,5,6,7],sg:[2,3]},
+ {id:'celeri',n:'Céleri',f:'Apiacées',c:'#9cc46a',rang:40,pl:35,j:140,m:[5,6],sg:[2,3,4]},
+ {id:'fenouil',n:'Fenouil',f:'Apiacées',c:'#c3d67f',rang:40,pl:25,j:90,m:[6,7],sg:[5,6]},
+ {id:'laitue',n:'Laitue',f:'Astéracées',c:'#78c258',rang:30,pl:30,j:60,m:[4,5,6,7,8],sg:[2,3,4,5,6,7]},
+ {id:'laitue_h',n:"Laitue d'hiver",f:'Astéracées',c:'#5fa84a',rang:30,pl:30,j:180,m:[9,10],sg:[8,9]},
+ {id:'oignon',n:'Oignon',f:'Amaryllidacées',c:'#c9a04a',rang:25,pl:10,j:120,m:[3,4,9,10],sg:[2,8]},
+ {id:'ail',n:'Ail',f:'Amaryllidacées',c:'#e2d6bc',rang:25,pl:10,j:240,m:[10,11,2,3],sg:[]},
+ {id:'poireau',n:'Poireau',f:'Amaryllidacées',c:'#5e9f6a',rang:30,pl:15,j:150,m:[5,6,7],sg:[2,3,4]},
+ {id:'haricot',n:'Haricot',f:'Fabacées',c:'#3d7a3a',rang:40,pl:10,j:70,m:[5,6,7],sg:[]},
+ {id:'pois',n:'Petit pois',f:'Fabacées',c:'#8cc14c',rang:40,pl:5,j:90,m:[2,3,4],sg:[]},
+ {id:'feve',n:'Fève',f:'Fabacées',c:'#6f8f4a',rang:40,pl:15,j:150,m:[10,11,2,3],sg:[1,2]},
+ {id:'courgette',n:'Courgette',f:'Cucurbitacées',c:'#4a8a3a',rang:100,pl:100,j:60,m:[5,6],sg:[4,5]},
+ {id:'concombre',n:'Concombre',f:'Cucurbitacées',c:'#5aa04a',rang:100,pl:60,j:70,m:[5,6],sg:[4,5]},
+ {id:'potiron',n:'Potiron',f:'Cucurbitacées',c:'#e07a20',rang:150,pl:150,j:120,m:[5,6],sg:[4,5]},
+ {id:'mais',n:'Maïs doux',f:'Poacées',c:'#e8c840',rang:70,pl:30,j:100,m:[5,6],sg:[4,5]},
+ {id:'betterave',n:'Betterave',f:'Amaranthacées',c:'#9a2a4a',rang:30,pl:10,j:80,m:[4,5,6,7],sg:[]},
+ {id:'epinard',n:'Épinard',f:'Amaranthacées',c:'#2e6a3a',rang:30,pl:10,j:50,m:[3,4,8,9,10],sg:[]},
+ {id:'blette',n:'Blette',f:'Amaranthacées',c:'#c94a6a',rang:40,pl:30,j:70,m:[4,5,6,7],sg:[3,4]},
+ {id:'chou',n:'Chou',f:'Brassicacées',c:'#6a8aa0',rang:60,pl:50,j:120,m:[4,5,6,7],sg:[2,3,4,5,6]},
+ {id:'radis',n:'Radis',f:'Brassicacées',c:'#e05a7a',rang:15,pl:3,j:28,m:[3,4,5,6,7,8,9],sg:[]},
+ {id:'basilic',n:'Basilic',f:'Lamiacées',c:'#3a8a5a',rang:30,pl:25,j:60,m:[5,6],sg:[3,4,5]},
+ {id:'fraise',n:'Fraisier',f:'Rosacées',c:'#c8303a',rang:40,pl:30,j:300,m:[3,4,8,9],sg:[]},
+ {id:'mache',n:'Mâche',f:'Valérianacées',c:'#6aa04a',rang:15,pl:8,j:70,m:[8,9,10],sg:[]},
+];
+const P=Object.fromEntries(PLANTS.map(p=>[p.id,p]));
+const GOOD=[['tomate','basilic'],['tomate','carotte'],['tomate','persil'],['tomate','oignon'],['tomate','ail'],['tomate','laitue'],['tomate','poireau'],['tomate','celeri'],
+['carotte','poireau'],['carotte','oignon'],['carotte','ail'],['carotte','laitue'],['carotte','radis'],['carotte','pois'],['carotte','haricot'],
+['laitue','radis'],['laitue','fraise'],['laitue','concombre'],['laitue','poireau'],['laitue','betterave'],['laitue','chou'],['laitue','oignon'],
+['poireau','celeri'],['poireau','fraise'],['oignon','betterave'],['oignon','fraise'],['ail','fraise'],['ail','betterave'],
+['haricot','pdt'],['haricot','mais'],['haricot','celeri'],['haricot','concombre'],['haricot','courgette'],['haricot','chou'],['haricot','blette'],['haricot','potiron'],['haricot','aubergine'],
+['pois','radis'],['pois','laitue'],['pois','mais'],['pois','concombre'],['courgette','mais'],['courgette','radis'],['concombre','mais'],['concombre','radis'],['potiron','mais'],
+['betterave','chou'],['betterave','celeri'],['radis','epinard'],['epinard','fraise'],['epinard','chou'],['chou','celeri'],['poivron','basilic'],['aubergine','basilic'],
+['feve','pdt'],['feve','mais'],['mache','poireau'],['mache','oignon']];
+const BAD=[['tomate','pdt'],['tomate','fenouil'],['tomate','chou'],['haricot','oignon'],['haricot','ail'],['haricot','poireau'],['haricot','fenouil'],
+['pois','oignon'],['pois','ail'],['pois','poireau'],['feve','oignon'],['feve','ail'],['ail','chou'],['laitue','persil'],['laitue','celeri'],
+['pdt','courgette'],['pdt','concombre'],['pdt','potiron'],['chou','fraise'],['fenouil','carotte']];
+/* la laitue d'hiver a les mêmes voisins que la laitue */
+[GOOD,BAD].forEach(L=>L.slice().forEach(([a,b])=>{if(a==='laitue')L.push(['laitue_h',b]);if(b==='laitue')L.push([a,'laitue_h'])}));
+const REL={};const rk=(a,b)=>a<b?a+'|'+b:b+'|'+a;
+GOOD.forEach(([a,b])=>REL[rk(a,b)]=1);BAD.forEach(([a,b])=>REL[rk(a,b)]=-1);
+const compat=(a,b)=>a===b?0:(REL[rk(a,b)]||0);
+const FROST_SENSITIVE=new Set(['tomate','poivron','aubergine','courgette','concombre','potiron','mais','haricot','basilic']);
+const ROT_YEARS=3; /* même famille interdite sur les 3 saisons précédentes (rotation de 4 ans) */
+/* Pluie mensuelle moyenne (mm), ordre de grandeur pour la Hesbaye */
+const RAIN=[69,58,63,47,63,72,75,78,62,66,70,80];
+/* Besoin indicatif d'arrosage d'un potager (L/m²/semaine) par mois */
+const NEED=[0,0,2,5,10,15,20,18,10,4,0,0];
+const LAT=50.55*Math.PI/180;
+
+const TYPES={
+ planche:{l:'Planche de culture',w:120,h:500,plant:true,ht:0},
+ bac:{l:'Bac de culture',w:100,h:200,plant:true,ht:40},
+ serre:{l:'Serre',w:300,h:500,ht:250},
+ allee:{l:'Allée',w:80,h:500},
+ cuve:{l:'Cuve de stockage',w:120,h:120,round:true,ht:150},
+ eau:{l:"Point d'eau",w:60,h:60,round:true},
+ arbre:{l:'Arbre',w:400,h:400,round:true,ht:600},
+ haie:{l:'Haie',w:500,h:60,ht:200},
+ cloture:{l:'Clôture',w:500,h:10,ht:150},
+ prise:{l:'Prise électrique',w:30,h:30},
+ compost:{l:'Composteur',w:120,h:120,ht:100},
+ abri:{l:'Abri de jardin',w:250,h:200,ht:250},
+};
+const JT={arrosage:'Arrosage',semis:'Semis',amendement:'Amendement',traitement:'Traitement',maladie:'Maladie',recolte:'Récolte',note:'Note'};
+const MONTHS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+const MSHORT=['J','F','M','A','M','J','J','A','S','O','N','D'];
+
+/* ================= Utilitaires ================= */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uid=()=>Math.random().toString(36).slice(2,9);
+const TODAY=new Date();TODAY.setHours(12,0,0,0);
+const YEAR=TODAY.getFullYear();
+const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const parse=s=>{const[y,m,d]=String(s).split('-').map(Number);return new Date(y,(m||1)-1,d||1,12)};
+const addD=(s,n)=>{const d=parse(s);d.setDate(d.getDate()+n);return d};
+const days=(a,b)=>Math.round((b-a)/864e5);
+const fdate=d=>d.toLocaleDateString('fr-BE',{day:'numeric',month:'short',year:d.getFullYear()!==YEAR?'numeric':undefined});
+const m2=cm=>(cm/100).toLocaleString('fr-BE',{minimumFractionDigits:2,maximumFractionDigits:2});
+const num=(v,d=1)=>Number(v).toLocaleString('fr-BE',{maximumFractionDigits:d});
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const snap=(v,s=5)=>Math.round(v/s)*s;
+const doyOf=d=>Math.round((d-new Date(d.getFullYear(),0,1,12))/864e5)+1;
+const dateOfDoy=n=>{const d=new Date(YEAR,0,1,12);d.setDate(n);return d};
+const yearOf=z=>parse(z.date||iso(TODAY)).getFullYear();
+
+/* ================= Géométrie des planches ================= */
+function zoneGrid(o,z){
+  const p=P[z.crop];if(!p)return null;
+  const W=Math.min(o.w,o.h);
+  const cols=Math.max(1,Math.floor(z.len/Math.max(p.pl,15))),rows=Math.max(1,Math.floor(W/Math.max(p.rang,15)));
+  const cellL=z.len/cols,cellW=W/rows;
+  return{cols,rows,cellL,cellW,per:Math.max(1,Math.round(cellL/p.pl))*Math.max(1,Math.round(cellW/p.rang))};
+}
+function fillZone(o,z,date,frac=1){const g=zoneGrid(o,z);if(!g)return;for(let r=0;r<g.rows;r++)for(let c=0;c<Math.ceil(g.cols*frac);c++)if(!z.cells[r+'-'+c])z.cells[r+'-'+c]=date}
+function trimCells(o,z){const g=zoneGrid(o,z);if(!g){z.cells={};return}for(const k in z.cells){const[r,c]=k.split('-').map(Number);if(r>=g.rows||c>=g.cols)delete z.cells[k]}}
+const zoneArea=(o,z)=>z.len*Math.min(o.w,o.h)/1e4;
+/* contenance d'une cuve cylindrique : π r² h, en litres */
+const cuveL=o=>Math.PI*(o.w/2)**2*(+o.height||0)/1000;
+function tankCap(){const cs=allObjs().filter(o=>o.type==='cuve'&&+o.height>0);return cs.length?{n:cs.length,cap:Math.round(cs.reduce((s,o)=>s+cuveL(o),0))}:null}
+
+/* ================= Données exemple ================= */
+function sample(){
+  const d=(m,dd,y=YEAR)=>`${y}-${String(m).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
+  const objs=[];
+  const add=(type,x,yy,w,h,ex={})=>{const o={id:uid(),type,x,y:yy,w,h,rot:0,name:TYPES[type].l,height:TYPES[type].ht||0,locked:false,...ex};if(TYPES[type].plant){o.zones=o.zones||[];o.grown=o.grown||[];o.journal=o.journal||[]}objs.push(o);return o};
+  add('haie',0,0,1800,60,{name:'Haie de charmes',locked:true});
+  add('abri',20,300,150,220,{name:'Abri à outils'});
+  const plan=[[['tomate',400,d(5,10)],['basilic',200,d(5,20)]],[['carotte',300,d(4,15)],['poireau',300,d(5,1)]],[['haricot',300,d(6,1)],['oignon',300,d(3,20)]],[['ail',600,d(10,2),.5]],[['mache',300,d(9,15)],['epinard',300,d(9,10)]],[]];
+  const past=[[['pdt',YEAR-1],['carotte',YEAR-2]],[['haricot',YEAR-1],['chou',YEAR-2]],[['chou',YEAR-1]],[['tomate',YEAR-1],['oignon',YEAR-2]],[['courgette',YEAR-1]],[['laitue',YEAR-1]]];
+  const J=[
+    [['recolte',d(8,12),{crop:'tomate',kg:4.2}],['recolte',d(9,2),{crop:'tomate',kg:3.1}],['traitement',d(10,1),{pid:'bouillie',prod:'Bouillie bordelaise',qty:0.2,unit:'kg',dar:14,t:'Mildiou sur 3 pieds'}],['arrosage',d(9,20),{t:'Arrosoir, 40 L'}],['maladie',d(9,30),{crop:'tomate',t:'Taches brunes sur les feuilles du bas, duvet blanc au revers',diag:{diagnostic:'Mildiou de la tomate',confiance:'moyenne'}}],['recolte',d(8,20,YEAR-1),{crop:'pdt',kg:18}]],
+    [['amendement',d(3,10),{pid:'compost',prod:'Compost mûr',qty:120,unit:'kg',t:'2 brouettes'}],['semis',d(4,15),{pid:'g-car',prod:'Carotte « Nantaise »',crop:'carotte',qty:3,unit:'g'}],['recolte',d(8,25),{crop:'carotte',kg:6}],['recolte',d(8,10,YEAR-1),{crop:'haricot',kg:2.8}]],
+    [['recolte',d(8,1),{crop:'oignon',kg:5}],['recolte',d(8,15),{crop:'haricot',kg:3.4}]],
+    [['recolte',d(9,1,YEAR-1),{crop:'tomate',kg:6.5}],['amendement',d(10,1),{pid:'corne',prod:'Corne broyée',qty:0.5,unit:'kg',t:'Avant plantation de l\'ail'}],['note',d(10,2),{t:'Ail violet de Cadours, caïeux à 10 cm'}]],
+    [['recolte',d(8,5,YEAR-1),{crop:'courgette',kg:12}],['semis',d(9,15),{pid:'g-mache',prod:'Mâche « Verte de Cambrai »',crop:'mache',qty:4,unit:'g'}]],[]];
+  plan.forEach((zs,i)=>{const o=add('planche',200+i*170,250,120,600,{name:'Planche '+(i+1)});o._i=i;
+    o.zones=zs.map(([c,len,date,frac])=>{const z={id:uid(),crop:c,len,date,cells:{}};fillZone(o,z,date,frac||1);return z});
+    if(!zs.length)o.zones=[{id:uid(),crop:null,len:600,date:iso(TODAY),cells:{}}];
+    o.grown=[...past[i].map(([c,y])=>({y,crop:c})),...zs.map(([c,,date])=>({y:parse(date).getFullYear(),crop:c}))];
+    o.journal=J[i].map(([k,dd,ex])=>({id:uid(),k,d:dd,...ex}));if(i===2)o.zones[0].next=[{id:uid(),crop:'feve',date:d(10,20)}];delete o._i});
+  add('allee',200,880,970,80,{name:'Allée principale'});
+  const se=add('serre',1300,250,300,600,{name:'Serre tunnel'});
+  const ip=(name,x,zs)=>{const o={id:uid(),type:'planche',x,y:20,w:90,h:560,rot:0,name,height:0,locked:false,grown:[],journal:[],zones:[]};
+    o.zones=zs.map(([c,len,date])=>{const z={id:uid(),crop:c,len,date,cells:{}};fillZone(o,z,date);o.grown.push({y:parse(date).getFullYear(),crop:c});return z});return o};
+  se.inner={objs:[ip('Planche S1',20,[['tomate',560,d(5,2)]]),{id:uid(),type:'allee',x:110,y:20,w:80,h:560,rot:0,name:'Allée',height:0,locked:false},ip('Planche S2',190,[['poivron',280,d(5,5)],['basilic',280,d(5,5)]])]};
+  se.inner.objs[0].grown.push({y:YEAR-1,crop:'concombre'});se.inner.objs[0].journal.push({id:uid(),k:'arrosage',d:d(10,5),t:'Arrosoir, 20 L'});se.inner.objs[2].journal.push({id:uid(),k:'arrosage',d:d(10,5),t:'Arrosoir, 20 L'});se.inner.objs[0].journal.push({id:uid(),k:'recolte',d:d(8,30),crop:'tomate',kg:9.4});
+  add('cuve',1650,110,110,110,{name:'Cuve à eau'});
+  add('eau',1210,1010,60,60,{name:'Robinet'});
+  add('prise',1255,895,30,30,{name:'Prise'});
+  add('arbre',1300,900,260,260,{name:'Pommier',height:450});
+  add('compost',1640,1010,120,120,{name:'Compost'});
+  add('cloture',0,1190,1800,10,{name:'Clôture',locked:true});
+  const stock=[
+    {id:'compost',name:'Compost mûr',cat:'amendement',unit:'kg',min:50,moves:[{d:d(2,20),q:400,k:'achat'}]},
+    {id:'corne',name:'Corne broyée',cat:'amendement',unit:'kg',min:0.5,moves:[{d:d(3,1),q:2.5,k:'achat'}]},
+    {id:'purin',name:"Purin d'ortie",cat:'amendement',unit:'L',min:2,moves:[{d:d(5,15),q:10,k:'achat'},{d:d(8,30),q:-8.5,k:'correction'}]},
+    {id:'bouillie',name:'Bouillie bordelaise',cat:'traitement',unit:'kg',min:0.25,dar:14,moves:[{d:d(4,2),q:1,k:'achat'}]},
+    {id:'savon',name:'Savon noir',cat:'traitement',unit:'L',min:0.2,dar:0,moves:[{d:d(4,2),q:1,k:'achat'}]},
+    {id:'g-tom',name:'Tomate',variety:'Cœur de bœuf',crop:'tomate',cat:'graine',unit:'graines',min:10,exp:YEAR+2,moves:[{d:d(2,1),q:40,k:'achat'}]},
+    {id:'g-lait',name:"Laitue d'hiver",variety:"Merveille d'hiver",crop:'laitue_h',cat:'graine',unit:'graines',min:50,exp:YEAR+1,moves:[{d:d(8,20),q:300,k:'achat'}]},
+    {id:'g-mache',name:'Mâche',variety:'Verte de Cambrai',crop:'mache',cat:'graine',unit:'g',min:3,exp:YEAR+1,moves:[{d:d(8,20),q:10,k:'achat'}]},
+    {id:'g-feve',name:'Fève',variety:"Aguadulce",crop:'feve',cat:'graine',unit:'g',min:50,exp:YEAR+2,moves:[{d:d(9,1),q:250,k:'achat'}]},
+    {id:'g-car',name:'Carotte',variety:'Nantaise',crop:'carotte',cat:'graine',unit:'g',min:2,exp:YEAR-1,moves:[{d:d(3,1,YEAR-2),q:8,k:'achat'}]}];
+  const nursery=[{id:uid(),crop:'laitue_h',pid:'g-lait',qty:30,n:24,d:d(9,5),st:'cours'},{id:uid(),crop:'laitue_h',pid:'g-lait',qty:30,n:24,d:d(9,28),st:'cours'}];
+  return{v:8,stock,nursery,rain:[{id:uid(),d:d(10,6),mm:8},{id:uid(),d:d(9,29),mm:3},{id:uid(),d:d(9,27),mm:14}],name:'Potager exemple',w:1800,h:1200,north:0,water:{roof:40,cap:1000,level:650},frost:null,objs,example:true};
+}
+function migrate(s){
+  if(!s||!Array.isArray(s.objs))return null;
+  if(s.example&&s.v!==8)return sample();
+  s.v=8;s.stock=s.stock||[];s.nursery=s.nursery||[];s.north=s.north||0;s.rain=s.rain||[];s.shape=s.shape||null;s.water=s.water||{roof:40,cap:1000,level:500};
+  const mig=o=>{if(o.inner&&Array.isArray(o.inner.objs))o.inner.objs.forEach(mig);if(o.height==null)o.height=(TYPES[o.type]||{}).ht||0;if(o.locked==null)o.locked=false;
+    if(TYPES[o.type]&&TYPES[o.type].plant){o.zones=o.zones||[];o.journal=o.journal||[];
+      if(!o.grown){o.grown=[];o.zones.forEach(z=>z.crop&&o.grown.push({y:yearOf(z),crop:z.crop}))}}};
+  s.objs.forEach(mig);if(s.example)s.objs.forEach(o=>{if(o.type==='cuve'&&o.name==='Cuve 1000 L')o.name='Cuve à eau'});return s;
+}
+
+/* ================= État, historique, stockage ================= */
+const KEY='atelier-potager-v1',KEYAT='atelier-potager-at';
+let localAt=0;try{localAt=+localStorage.getItem(KEYAT)||0}catch(e){}
+function load(){try{return migrate(JSON.parse(localStorage.getItem(KEY)))}catch(e){return null}}
+let past=[],future=[],lastJSON='',lastPush=0;
+function persist(){try{localStorage.setItem(KEY,lastJSON);localStorage.setItem(KEYAT,String(localAt))}catch(e){}}
+function save(coalesce){const j=JSON.stringify(S);if(j!==lastJSON){const now=Date.now();
+  if(!(coalesce&&now-lastPush<1500&&past.length)){past.push(lastJSON);if(past.length>80)past.shift()}
+  lastPush=coalesce?now:0;future=[];lastJSON=j;localAt=now;persist();schedulePush()}renderHeader()}
+function restore(j){lastJSON=j;S=migrate(JSON.parse(j));localAt=Date.now();persist();schedulePush();if(selId&&!obj(selId)){selId=null;if(sheetMode==='obj')sheetMode=null}renderHeader();refresh()}
+function undo(){if(!past.length)return;future.push(lastJSON);restore(past.pop());toast('Action annulée')}
+function redo(){if(!future.length)return;past.push(lastJSON);restore(future.pop());toast('Action rétablie')}
+let S=load()||sample();lastJSON=JSON.stringify(S);
+let view={cx:S.w/2,cy:S.h/2,z:.3};
+let selId=null,sheetMode=null,tab='plan',bed=null;
+let shade={on:false,doy:doyOf(TODAY),hour:15};
+let holdT=null,lifted=null,guides=null;
+let shapeEdit=null,editMode=false;
+/* forme du terrain : polygone libre ou rectangle G().w × G().h */
+const rectPts=()=>[{x:0,y:0},{x:G().w,y:0},{x:G().w,y:G().h},{x:0,y:G().h}];
+const terrainPts=()=>G().shape&&G().shape.length>=3?G().shape:rectPts();
+const polyArea=pts=>{let a=0;pts.forEach((p,i)=>{const q=pts[(i+1)%pts.length];a+=p.x*q.y-q.x*p.y});return a/2};
+/* garde le terrain en coordonnées positives : décale le terrain, les objets et la vue ensemble */
+function normalizeShape(){if(!G().shape)return;const dx=-Math.min(...G().shape.map(p=>p.x)),dy=-Math.min(...G().shape.map(p=>p.y));if(!dx&&!dy)return;
+  G().shape.forEach(p=>{p.x+=dx;p.y+=dy});G().objs.forEach(o=>{o.x+=dx;o.y+=dy});view.cx+=dx;view.cy+=dy}
+function updateBox(){if(!G().shape)return;G().w=Math.max(100,...G().shape.map(p=>p.x));G().h=Math.max(100,...G().shape.map(p=>p.y))}
+/* contexte : le potager (S) ou l'intérieur d'une serre */
+let ctx=null;
+function G(){if(ctx){const s=S.objs.find(o=>o.id===ctx);if(s&&s.type==='serre'){s.inner=s.inner||{objs:[]};s.inner.w=s.w;s.inner.h=s.h;s.inner.shape=null;return s.inner}ctx=null}return S}
+const allObjs=()=>{const a=[...S.objs];S.objs.forEach(o=>{if(o.inner&&o.inner.objs)a.push(...o.inner.objs)});return a};
+const serreOf=o=>S.objs.find(q=>q.inner&&q.inner.objs&&q.inner.objs.includes(o))||null;
+const homeOf=o=>{const s=serreOf(o);return s?s.inner:S};
+const fullName=o=>{const s=serreOf(o);return s?s.name+' › '+o.name:o.name};
+const obj=id=>allObjs().find(o=>o.id===id);
+const plantables=()=>allObjs().filter(o=>TYPES[o.type]&&TYPES[o.type].plant);
+
+/* ================= Synchronisation (compte Claude) ================= */
+let DOC=null,syncState='local',pushT=null,ASSETS=null,DL=null;
+function schedulePush(){if(!DOC)return;clearTimeout(pushT);pushT=setTimeout(pushRemote,1200)}
+async function pushRemote(){if(!DOC)return;try{await DOC.set({state:JSON.parse(lastJSON),updatedAt:localAt});syncState='ok'}catch(e){syncState='error';if(e&&e.code==='quota_exceeded')toast('Stockage en ligne plein : supprime des photos');}renderSyncLine()}
+async function initCaps(){
+  if(!window.claude||!window.claude.use)return;
+  try{ASSETS=await window.claude.use('assets')}catch(e){}
+  try{DL=await window.claude.use('downloads')}catch(e){}
+  try{SAMPLE=await window.claude.use('sample');if(SAMPLE){const l=await SAMPLE.limits().catch(()=>null);SAMPLE_IMG=!!(l&&l.images)}if(bed&&bed.jk==='maladie')renderBed()}catch(e){}
+  try{
+    const[db,user]=await Promise.all([window.claude.use('db'),window.claude.use('user')]);
+    if(!db||!user){renderSyncLine();return}
+    const id=await user.id();if(!id){renderSyncLine();return}
+    DOC=db.doc('data/users/'+id+'/garden');syncState='wait';renderSyncLine();
+    DOC.onSnapshot(snap=>{
+      if(!snap.exists){if(!snap.metadata.fromCache)pushRemote();return}
+      const d=snap.data()||{};
+      if(d.updatedAt>localAt&&d.state){const j=JSON.stringify(d.state);if(j!==lastJSON){past.push(lastJSON);future=[];lastJSON=j;S=migrate(JSON.parse(j));lastJSON=JSON.stringify(S);if(selId&&!obj(selId))selId=null;refresh()}localAt=d.updatedAt;persist()}
+      else if(d.updatedAt<localAt&&!snap.metadata.fromCache)schedulePush();
+      syncState='ok';renderSyncLine();renderHeader();
+    },()=>{syncState='error';renderSyncLine()});
+  }catch(e){syncState='error';renderSyncLine()}
+}
+function syncText(){return{local:'Enregistré sur cet appareil uniquement',wait:'Connexion à ton compte…',ok:'Synchronisé avec ton compte Claude',error:'Synchronisation interrompue, enregistré sur cet appareil'}[syncState]}
+function renderSyncLine(){const el=$('#syncLine');if(el)el.textContent=syncText()}
+
+/* ================= Compagnonnage & rotation ================= */
+function aabb(o){const a=o.rot*Math.PI/180,c=Math.abs(Math.cos(a)),s=Math.abs(Math.sin(a));const bw=o.w*c+o.h*s,bh=o.w*s+o.h*c,cx=o.x+o.w/2,cy=o.y+o.h/2;return{x0:cx-bw/2,y0:cy-bh/2,x1:cx+bw/2,y1:cy+bh/2}}
+function gap(a,b){const A=aabb(a),B=aabb(b);return Math.hypot(Math.max(0,B.x0-A.x1,A.x0-B.x1),Math.max(0,B.y0-A.y1,A.y0-B.y1))}
+const neighbors=o=>homeOf(o).objs.filter(p=>p!==o&&TYPES[p.type]&&TYPES[p.type].plant&&gap(o,p)<=80);
+function conflicts(o){
+  const out=new Map();const mine=o.zones.filter(z=>z.crop);
+  mine.forEach((z,i)=>mine.slice(i+1).forEach(z2=>{if(compat(z.crop,z2.crop)<0)out.set(rk(z.crop,z2.crop)+'|in',{a:z.crop,b:z2.crop,where:'dans la même planche'})}));
+  neighbors(o).forEach(n=>mine.forEach(z=>n.zones.forEach(z2=>{if(z2.crop&&compat(z.crop,z2.crop)<0)out.set(rk(z.crop,z2.crop)+n.id,{a:z.crop,b:z2.crop,where:'avec '+n.name})})));
+  return[...out.values()];
+}
+function rotIssue(o,crop,Y){if(!crop||crop==='fraise'||!P[crop])return null;const f=P[crop].f;
+  return(o.grown||[]).filter(g=>g.y<Y&&g.y>=Y-ROT_YEARS&&P[g.crop]&&g.crop!=='fraise'&&P[g.crop].f===f).sort((a,b)=>b.y-a.y)[0]||null}
+function rotIssues(o){const out=[];o.zones.forEach(z=>{const r=rotIssue(o,z.crop,yearOf(z));if(r)out.push({crop:z.crop,prev:r})});return out}
+function recordGrown(o,crop,y){if(!crop)return;o.grown=o.grown||[];if(!o.grown.some(g=>g.y===y&&g.crop===crop))o.grown.push({y,crop})}
+function advice(present){
+  const good=new Set(),bad=new Set();
+  present.forEach(c=>PLANTS.forEach(p=>{const r=compat(c,p.id);if(r>0)good.add(p.id);if(r<0)bad.add(p.id)}));
+  bad.forEach(b=>good.delete(b));present.forEach(c=>good.delete(c));
+  return{good:[...good],bad:[...bad]};
+}
+const chip=(id,cls='',btn=false)=>btn?`<button class="chip ${cls}" data-act="setcrop" data-crop="${id}"><i style="background:${P[id].c}"></i>${P[id].n}</button>`:`<span class="chip ${cls}"><i style="background:${P[id].c}"></i>${P[id].n}</span>`;
+function blockUntil(o){let t=null;(o.journal||[]).forEach(e=>{if(e.k==='traitement'&&e.dar>0){const u=addD(e.d,+e.dar);if(u>TODAY&&(!t||u>t))t=u}});return t}
+
+/* ================= Soleil & ombres ================= */
+function sunPos(doy,hour){const d=23.44*Math.sin(2*Math.PI*(284+doy)/365)*Math.PI/180,H=(hour-12)*15*Math.PI/180;
+  const alt=Math.asin(Math.sin(LAT)*Math.sin(d)+Math.cos(LAT)*Math.cos(d)*Math.cos(H));
+  const az=Math.atan2(Math.sin(H),Math.cos(H)*Math.sin(LAT)-Math.tan(d)*Math.cos(LAT))+Math.PI;return{alt,az}}
+function shadowVec(sp,h){if(sp.alt<.04)return null;const L=Math.min(h/Math.tan(sp.alt),4000),t=sp.az+Math.PI+S.north*Math.PI/180;return{x:Math.sin(t)*L,y:-Math.cos(t)*L}}
+function basePts(o){const cx=o.x+o.w/2,cy=o.y+o.h/2;
+  if(TYPES[o.type].round)return Array.from({length:18},(_,i)=>{const a=i/18*2*Math.PI;return{x:cx+Math.cos(a)*o.w/2,y:cy+Math.sin(a)*o.w/2}});
+  const a=o.rot*Math.PI/180,c=Math.cos(a),s=Math.sin(a);return[[-1,-1],[1,-1],[1,1],[-1,1]].map(([i,j])=>{const lx=i*o.w/2,ly=j*o.h/2;return{x:cx+lx*c-ly*s,y:cy+lx*s+ly*c}})}
+function hull(pts){pts=pts.slice().sort((a,b)=>a.x-b.x||a.y-b.y);const cr=(o,a,b)=>(a.x-o.x)*(b.y-o.y)-(a.y-o.y)*(b.x-o.x);const lo=[],up=[];
+  for(const p of pts){while(lo.length>=2&&cr(lo[lo.length-2],lo[lo.length-1],p)<=0)lo.pop();lo.push(p)}
+  for(const p of pts.reverse()){while(up.length>=2&&cr(up[up.length-2],up[up.length-1],p)<=0)up.pop();up.push(p)}
+  return lo.slice(0,-1).concat(up.slice(0,-1))}
+function shadowPoly(o,sp){const h=+o.height||0;if(h<=0)return null;const v=shadowVec(sp,h);if(!v)return null;const b=basePts(o);
+  const k0=o.type==='arbre'?.3:0;return hull([...b.map(p=>({x:p.x+v.x*k0,y:p.y+v.y*k0})),...b.map(p=>({x:p.x+v.x,y:p.y+v.y}))])}
+function inPoly(pt,poly){let ins=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a.y>pt.y)!==(b.y>pt.y)&&pt.x<(b.x-a.x)*(pt.y-a.y)/(b.y-a.y)+a.x)ins=!ins}return ins}
+function sunHoursAt(c,home,excl,doy){let n=0;const casters=home.objs.filter(q=>q!==excl&&+q.height>0);
+  for(let h=3.25;h<=20.75;h+=.5){const sp=sunPos(doy,h);if(sp.alt<.04)continue;if(!casters.some(q=>{const p=shadowPoly(q,sp);return p&&inPoly(c,p)}))n+=.5}return n}
+function sunHours(o,doy){return sunHoursAt({x:o.x+o.w/2,y:o.y+o.h/2},homeOf(o),o,doy)}
+/* ---- besoin en soleil des cultures (heures de soleil direct par jour) ---- */
+const SUN_NEED={laitue_h:3,tomate:6,poivron:6,aubergine:6,courgette:6,concombre:6,potiron:6,mais:6,haricot:6,basilic:6,fraise:6,pdt:6,
+  carotte:4,betterave:4,poireau:4,oignon:5,ail:5,pois:4,feve:4,chou:4,celeri:4,fenouil:5,blette:4,persil:3,laitue:3,epinard:3,mache:3,radis:3};
+const sunLabel=n=>n>=6?'plein soleil':n>=4?'soleil ou mi-ombre':'supporte la mi-ombre';
+function zoneCenter(o,zi){let off=0;for(let i=0;i<zi;i++)off+=o.zones[i].len;const L=Math.max(o.w,o.h),u=off+o.zones[zi].len/2-L/2,horiz=o.w>=o.h;
+  const lx=horiz?u:0,ly=horiz?0:u,a=o.rot*Math.PI/180;return{x:o.x+o.w/2+lx*Math.cos(a)-ly*Math.sin(a),y:o.y+o.h/2+lx*Math.sin(a)+ly*Math.cos(a)}}
+/* jour représentatif : le milieu de la culture, ramené entre avril et mi-septembre */
+function growDoy(crop,date){const p=P[crop];let d=doyOf(parse(date||iso(TODAY)))+Math.round((p?p.j:60)/2);d=((d-1)%365)+1;
+  if(d>=91&&d<=258)return d;return d>258&&d<=330?258:91}
+let sunCache=new Map(),sunCacheFor=null;
+function sunCheck(o,zi,crop,date){if(serreOf(o)||!crop||!SUN_NEED[crop])return null;if(sunCacheFor!==lastJSON){sunCache=new Map();sunCacheFor=lastJSON}
+  const doy=growDoy(crop,date),key=o.id+'|'+zi+'|'+doy;let h=sunCache.get(key);if(h==null){h=sunHoursAt(zoneCenter(o,zi),homeOf(o),o,doy);sunCache.set(key,h)}const need=SUN_NEED[crop];
+  return{h,need,doy,lvl:h>=need?'ok':h>=need-1.5?'juste':'insuffisant'}}
+function sunIssues(o){const out=[];o.zones.forEach((z,i)=>{const c=sunCheck(o,i,z.crop,z.date);if(c&&c.lvl!=='ok')out.push({crop:z.crop,...c})});return out}
+function sunMax(doy){let n=0;for(let h=3.25;h<=20.75;h+=.5)if(sunPos(doy,h).alt>=.04)n+=.5;return n}
+
+/* ================= En-tête, onglets, toast ================= */
+function renderHeader(){$('#gInfo').textContent=`${S.name} · ${m2(S.w)} × ${m2(S.h)} m`;$('#exPill').hidden=!S.example;$('#undoBtnH').disabled=!past.length;$('#redoBtnH').disabled=!future.length;
+  $('#needle').setAttribute('transform',`rotate(${S.north})`)}
+$('#undoBtnH').onclick=undo;$('#redoBtnH').onclick=redo;
+addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)){e.preventDefault();e.shiftKey?redo():undo()}});
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+function setTab(t){tab=t;closeBed();closeInv();document.querySelectorAll('.tabs button').forEach(b=>{if(b.dataset.tab===t)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
+  ['today','plan','harvest','weather','crops'].forEach(v=>$('#v-'+v).hidden=v!==t);refresh()}
+let toastT;
+function toast(msg,canUndo){clearTimeout(toastT);const el=$('#toast');
+  el.innerHTML=`<span>${esc(msg)}</span>${canUndo?'<button id="undoBtn">Annuler</button>':''}`;el.hidden=false;
+  if(canUndo)$('#undoBtn').onclick=()=>{el.hidden=true;undo()};
+  toastT=setTimeout(()=>el.hidden=true,4500);}
+function refresh(){if(inv)renderInv();if(bed)renderBed();if(tab==='plan'){renderPlan();renderSheet();renderSunbar();renderShapebar();renderCtxbar()}else{$('#shapebar').hidden=true;$('#ctxbar').hidden=true}if(tab==='harvest')renderHarvest();if(tab==='weather')renderWeather();if(tab==='crops')renderCrops();if(tab==='today')renderToday()}
+
+/* ================= Plan ================= */
+const svg=$('#map');
+function shapeSVG(o){
+  const w=o.w,h=o.h,x=-w/2,y=-h/2,ns='vector-effect="non-scaling-stroke"';
+  switch(o.type){
+    case 'planche':case 'bac':{
+      let s=`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${o.type==='bac'?2:6}" class="${o.type==='bac'?'s-wood':'s-soil'}" stroke-width="${o.type==='bac'?3:1}" ${ns}/>`;
+      const horiz=w>=h,W=Math.min(w,h);let off=0;
+      const R=(u,v,du,dv)=>horiz?[x+u,y+v,du,dv]:[x+v,y+u,dv,du];
+      o.zones.forEach((z,i)=>{const g=zoneGrid(o,z),p=P[z.crop];
+        if(p){const[a,b,c,d]=R(off,0,z.len,W);s+=`<rect x="${a}" y="${b}" width="${c}" height="${d}" fill="${p.c}" fill-opacity=".22"/>`;
+          for(const k in z.cells){const[r,cc]=k.split('-').map(Number);const[cx,cy]=R(off+(cc+.5)*g.cellL,(r+.5)*g.cellW,0,0);s+=`<circle cx="${cx}" cy="${cy}" r="${Math.min(g.cellL,g.cellW)*.32}" fill="${p.c}"/>`}}
+        off+=z.len;
+        if(i<o.zones.length-1){const[a,b,c,d]=R(off,0,0,W);s+=`<line x1="${a}" y1="${b}" x2="${a+c}" y2="${b+d}" class="s-zone-line" stroke-width="2" ${ns}/>`}});
+      return s;}
+    case 'serre':return`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" class="s-serre" stroke-width="2" ${ns}/>`;
+    case 'allee':return`<rect x="${x}" y="${y}" width="${w}" height="${h}" class="s-gravel" stroke-width="1" ${ns}/>`;
+    case 'cuve':return`<circle r="${w/2}" class="s-water" stroke-width="2" ${ns}/><circle r="${w/2*.6}" fill="none" style="stroke:var(--surface)" stroke-opacity=".5" stroke-width="1" ${ns}/>`;
+    case 'eau':return`<circle r="${w/2}" class="s-water-l" stroke-width="2" ${ns}/><circle r="${w/5}" class="s-water"/>`;
+    case 'arbre':return`<circle r="${w/2}" class="s-leaf" stroke-width="1.5" stroke-dasharray="4 3" ${ns}/><circle r="${Math.max(8,w*.06)}" class="s-trunk"/>`;
+    case 'haie':return`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${Math.min(w,h)/2}" class="s-leaf-solid" fill-opacity=".8"/>`;
+    case 'cloture':{let s=`<rect x="${x}" y="${y}" width="${w}" height="${h}" class="s-fence"/>`;const L=Math.max(w,h),n=Math.floor(L/200);for(let i=0;i<=n;i++){const t=-L/2+i*(L/Math.max(n,1));s+=w>=h?`<rect x="${t-6}" y="${-Math.max(h,12)/2-2}" width="12" height="${Math.max(h,12)+4}" class="s-wood-solid"/>`:`<rect y="${t-6}" x="${-Math.max(w,12)/2-2}" height="12" width="${Math.max(w,12)+4}" class="s-wood-solid"/>`}return s}
+    case 'prise':return`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" class="s-plug" stroke-width="1" ${ns}/><circle cx="${-w*.18}" r="${w*.09}" style="fill:var(--ink)"/><circle cx="${w*.18}" r="${w*.09}" style="fill:var(--ink)"/>`;
+    case 'compost':return`<rect x="${x}" y="${y}" width="${w}" height="${h}" class="s-wood-solid" stroke-width="1" ${ns}/><path d="M${x} ${y+h/3}H${-x}M${x} ${y+2*h/3}H${-x}" class="s-roof" stroke-width="1" ${ns}/>`;
+    case 'abri':return`<rect x="${x}" y="${y}" width="${w}" height="${h}" class="s-wood-solid" stroke-width="1.5" ${ns}/><path d="M${x} ${y}L${-x} ${-y}M${-x} ${y}L${x} ${-y}" class="s-roof" stroke-width="1" ${ns}/>`;
+  }return'';
+}
+function objSVG(o){
+  const fs=12/view.z,sel=o.id===selId;let lab='';
+  const vert=o.h>o.w*1.4,span=(vert?o.h:o.w)*view.z,thick=Math.min(o.w,o.h)*view.z;
+  if(span>o.name.length*6.5&&thick>13&&o.type!=='prise')lab=`<text text-anchor="middle" dominant-baseline="central" font-size="${fs}" transform="${vert?'rotate(-90)':''}">${esc(o.name)}</text>`;
+  let badge='';const st=planStatus(o);if(st){const r=10/view.z;badge=`<g class="badge ${st.c}" transform="translate(${o.w/2} ${-o.h/2})"><title>${st.l}</title><circle r="${r}" vector-effect="non-scaling-stroke"/><text text-anchor="middle" dominant-baseline="central" font-size="${(st.c==='blue'?9:11)/view.z}" transform="rotate(${-o.rot})">${st.t}</text></g>`}
+  let selS='';if(sel){const p=6/view.z;selS=`<rect class="selbox${o.locked?' locked':''}" x="${-o.w/2-p}" y="${-o.h/2-p}" width="${o.w+2*p}" height="${o.h+2*p}" vector-effect="non-scaling-stroke"/>`+(o.locked||!editMode?'':`<circle class="handle" data-handle="1" cx="${o.w/2+p}" cy="${o.h/2+p}" r="${11/view.z}" vector-effect="non-scaling-stroke"/>`)}
+  return`<g data-id="${o.id}" class="obj${o.id===lifted?' lift':''}" transform="translate(${o.x+o.w/2} ${o.y+o.h/2}) rotate(${o.rot})">${shapeSVG(o)}${lab}${badge}${selS}</g>`;
+}
+function renderPlan(){
+  const r=svg.getBoundingClientRect(),W=r.width||360,H=r.height||500;
+  svg.setAttribute('viewBox',`${view.cx-W/2/view.z} ${view.cy-H/2/view.z} ${W/view.z} ${H/view.z}`);
+  const fs=11/view.z;
+  const tp=terrainPts(),pts=tp.map(q=>q.x+','+q.y).join(' '),sg=Math.sign(polyArea(tp))||1;
+  let edges='';tp.forEach((a,i)=>{const b=tp[(i+1)%tp.length],L=Math.hypot(b.x-a.x,b.y-a.y);if(L*view.z<40)return;const nx=(b.y-a.y)/L*sg,ny=-(b.x-a.x)/L*sg,o=14/view.z;
+    edges+=`<text class="${shapeEdit?'edgetxt':'dimtxt'}" x="${(a.x+b.x)/2+nx*o}" y="${(a.y+b.y)/2+ny*o}" text-anchor="middle" dominant-baseline="central" font-size="${fs}">${m2(L)} m</text>`});
+  $('#groundL').innerHTML=`<clipPath id="tclip"><polygon points="${pts}"/></clipPath><g clip-path="url(#tclip)"><rect class="ground" width="${G().w}" height="${G().h}"/><rect width="${G().w}" height="${G().h}" fill="url(#g1)"/><rect width="${G().w}" height="${G().h}" fill="url(#g5)"/></g><polygon class="bound" points="${pts}" vector-effect="non-scaling-stroke"/>${edges}`;
+  let ed='';if(shapeEdit){const r=11/view.z;tp.forEach((a,i)=>{const b=tp[(i+1)%tp.length];ed+=`<line class="edgehit" data-edge="${i}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" vector-effect="non-scaling-stroke"/>`});tp.forEach((a,i)=>{const b=tp[(i+1)%tp.length];ed+=`<circle class="mid" data-mid="${i}" cx="${(a.x+b.x)/2}" cy="${(a.y+b.y)/2}" r="${r*.7}"/>`});
+    tp.forEach((a,i)=>ed+=`<circle class="vtx${shapeEdit.sel===i?' sel':''}" data-vtx="${i}" cx="${a.x}" cy="${a.y}" r="${r}" vector-effect="non-scaling-stroke"/>`)}
+  $('#editL').innerHTML=ed;
+  const order=['allee','haie','cloture','serre','arbre','abri','compost','cuve','eau','bac','planche','prise'];
+  const list=[...G().objs].sort((a,b)=>(a.id===selId)-(b.id===selId)||order.indexOf(a.type)-order.indexOf(b.type));
+  $('#layer').innerHTML=list.map(objSVG).join('');
+  let sh='';if(shade.on&&!ctx){const sp=sunPos(shade.doy,shade.hour);if(sp.alt>=.04)G().objs.forEach(o=>{const p=shadowPoly(o,sp);if(p)sh+=`<polygon class="shadepoly" points="${p.map(q=>q.x.toFixed(1)+','+q.y.toFixed(1)).join(' ')}"/>`})}
+  $('#shadeL').innerHTML=sh;
+  let ov='';if(guides){guides.forEach(g=>ov+=`<line class="guide" x1="${g[0]}" y1="${g[1]}" x2="${g[2]}" y2="${g[3]}" vector-effect="non-scaling-stroke"/>`)}
+  $('#overL').innerHTML=ov;
+}
+function fit(){const r=svg.getBoundingClientRect();const sh=sheetMode&&innerWidth<760?r.height*.45:0;view.z=Math.min((r.width-90)/G().w,(r.height-sh-90)/G().h);view.cx=G().w/2;view.cy=G().h/2+sh/2/view.z-20/view.z;renderPlan()}
+
+/* guides d'alignement */
+function alignSnap(o){
+  const thr=8/view.z,A=aabb(o),xs=[A.x0,(A.x0+A.x1)/2,A.x1],ys=[A.y0,(A.y0+A.y1)/2,A.y1];let bx=null,by=null;
+  const T=G().objs.filter(q=>q!==o).map(aabb);T.push({x0:0,y0:0,x1:G().w,y1:G().h});
+  for(const B of T){const tx=[B.x0,(B.x0+B.x1)/2,B.x1],ty=[B.y0,(B.y0+B.y1)/2,B.y1];
+    for(const a of xs)for(const t of tx){const d=t-a;if(Math.abs(d)<thr&&(!bx||Math.abs(d)<Math.abs(bx.d)))bx={d,v:t,B}}
+    for(const a of ys)for(const t of ty){const d=t-a;if(Math.abs(d)<thr&&(!by||Math.abs(d)<Math.abs(by.d)))by={d,v:t,B}}}
+  if(bx)o.x+=bx.d;if(by)o.y+=by.d;const A2=aabb(o),g=[];
+  if(bx)g.push([bx.v,Math.min(A2.y0,bx.B.y0),bx.v,Math.max(A2.y1,bx.B.y1)]);
+  if(by)g.push([Math.min(A2.x0,by.B.x0),by.v,Math.max(A2.x1,by.B.x1),by.v]);
+  return g;
+}
+function nearest(o){let best=null;G().objs.forEach(q=>{if(q===o||q.type==='allee')return;const d=gap(o,q);if(!best||d<best.d)best={d,q}});return best}
+
+/* pointeur : appui long = déplacer, glisser = vue, deux doigts = zoom */
+const ptrs=new Map();let drag=null,pinch=null;
+function world(x,y){const r=svg.getBoundingClientRect();return{x:view.cx+(x-r.left-r.width/2)/view.z,y:view.cy+(y-r.top-r.height/2)/view.z}}
+function showHint(t){const h=$('#hint');h.textContent=t;h.hidden=false;h.classList.toggle('low',(shade.on&&!ctx)||!!shapeEdit||!!ctx)}
+svg.addEventListener('pointerdown',e=>{
+  svg.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size===2){const[a,b]=[...ptrs.values()];pinch={d0:Math.hypot(a.x-b.x,a.y-b.y),z0:view.z,m:world((a.x+b.x)/2,(a.y+b.y)/2)};clearTimeout(holdT);if(drag&&drag.mode==='move'){drag.o.x=drag.s.x;drag.o.y=drag.s.y}drag=null;lifted=null;guides=null;return}
+  if(shapeEdit){if(!G().shape)G().shape=rectPts();const v=e.target.closest('[data-vtx]'),m=e.target.closest('[data-mid]');
+    if(v){shapeEdit.sel=+v.dataset.vtx;drag={mode:'vtx',i:shapeEdit.sel,sx:e.clientX,sy:e.clientY};renderPlan();renderShapebar();return}
+    if(m){const i=+m.dataset.mid+1,a=G().shape[i-1],b=G().shape[i%G().shape.length];G().shape.splice(i,0,{x:snap((a.x+b.x)/2,10),y:snap((a.y+b.y)/2,10)});shapeEdit.sel=i;drag={mode:'vtx',i,sx:e.clientX,sy:e.clientY,inserted:true};renderPlan();renderShapebar();return}
+    const ed=e.target.closest('[data-edge]');if(ed){const i=+ed.dataset.edge,n=G().shape.length;shapeEdit.sel=null;drag={mode:'edge',i,p0:world(e.clientX,e.clientY),s:[{...G().shape[i]},{...G().shape[(i+1)%n]}],sx:e.clientX,sy:e.clientY};renderShapebar();return}
+    drag={mode:'pan',sx:e.clientX,sy:e.clientY,c0:{x:view.cx,y:view.cy}};return}
+  const h=e.target.closest('[data-handle]'),g=e.target.closest('[data-id]'),p=world(e.clientX,e.clientY);
+  if(h&&selId){const o=obj(selId);drag={mode:'resize',o,p0:p,s:{...o},sx:e.clientX,sy:e.clientY}}
+  else if(g&&!editMode){const o=obj(g.dataset.id);selId=o.id;drag={mode:'hold',o,p0:p,s:{x:o.x,y:o.y},sx:e.clientX,sy:e.clientY,c0:{x:view.cx,y:view.cy}};renderPlan()}
+  else if(g){const o=obj(g.dataset.id);selId=o.id;
+    drag={mode:'hold',o,p0:p,s:{x:o.x,y:o.y},sx:e.clientX,sy:e.clientY,c0:{x:view.cx,y:view.cy}};renderPlan();
+    holdT=setTimeout(()=>{if(!drag||drag.mode!=='hold')return;
+      if(o.locked){drag.mode='done';toast('Objet verrouillé : déverrouille-le dans son menu');return}
+      drag.mode='move';drag.moved=true;lifted=o.id;sheetMode=null;renderSheet();try{navigator.vibrate&&navigator.vibrate(15)}catch(_){}showHint('Glisse pour déplacer');renderPlan()},380)}
+  else drag={mode:'pan',sx:e.clientX,sy:e.clientY,c0:{x:view.cx,y:view.cy}};
+});
+svg.addEventListener('pointermove',e=>{
+  if(!ptrs.has(e.pointerId))return;ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pinch&&ptrs.size===2){const[a,b]=[...ptrs.values()],r=svg.getBoundingClientRect();view.z=clamp(pinch.z0*Math.hypot(a.x-b.x,a.y-b.y)/pinch.d0,.04,6);
+    view.cx=pinch.m.x-((a.x+b.x)/2-r.left-r.width/2)/view.z;view.cy=pinch.m.y-((a.y+b.y)/2-r.top-r.height/2)/view.z;renderPlan();return}
+  if(!drag||drag.mode==='done')return;
+  if(drag.mode==='hold'){if(Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)<6)return;clearTimeout(holdT);drag.mode='pan'}
+  if(!drag.moved&&Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)<5)return;drag.moved=true;
+  const p=world(e.clientX,e.clientY),o=drag.o;
+  if(drag.mode==='pan'){view.cx=drag.c0.x-(e.clientX-drag.sx)/view.z;view.cy=drag.c0.y-(e.clientY-drag.sy)/view.z}
+  else if(drag.mode==='vtx'){const sh=G().shape,n=sh.length,pv=sh[(drag.i-1+n)%n],nx=sh[(drag.i+1)%n],thr=10/view.z;
+    const q={x:snap(p.x,10),y:snap(p.y,10)};
+    for(const a of[pv,nx]){if(Math.abs(q.x-a.x)<thr)q.x=a.x;if(Math.abs(q.y-a.y)<thr)q.y=a.y}
+    sh[drag.i]=q;showHint(`${m2(Math.hypot(q.x-pv.x,q.y-pv.y))} m · ${m2(Math.hypot(q.x-nx.x,q.y-nx.y))} m`)}
+  else if(drag.mode==='edge'){const[a,b]=drag.s,L=Math.hypot(b.x-a.x,b.y-a.y)||1,sg=Math.sign(polyArea(G().shape))||1,nx=(b.y-a.y)/L*sg,ny=-(b.x-a.x)/L*sg;
+    const t=snap((p.x-drag.p0.x)*nx+(p.y-drag.p0.y)*ny,10),n=G().shape.length;
+    G().shape[drag.i]={x:Math.round(a.x+nx*t),y:Math.round(a.y+ny*t)};G().shape[(drag.i+1)%n]={x:Math.round(b.x+nx*t),y:Math.round(b.y+ny*t)};
+    showHint(`${t>=0?'Agrandi':'Réduit'} de ${m2(Math.abs(t))} m`)}
+  else if(drag.mode==='move'){o.x=snap(drag.s.x+p.x-drag.p0.x);o.y=snap(drag.s.y+p.y-drag.p0.y);guides=alignSnap(o);
+    const n=nearest(o);showHint(n?`${n.d<1?'Contact':'Écart '+Math.round(n.d)+' cm'} · ${n.q.name}`:'Glisse pour déplacer')}
+  else if(drag.mode==='resize'){const a=o.rot*Math.PI/180,dx=p.x-drag.p0.x,dy=p.y-drag.p0.y,lx=dx*Math.cos(a)+dy*Math.sin(a),ly=-dx*Math.sin(a)+dy*Math.cos(a),s=drag.s;
+    let w=Math.max(10,snap(s.w+lx)),h=Math.max(10,snap(s.h+ly));if(TYPES[o.type].round)w=h=Math.max(w,h);
+    const tlx=s.x+s.w/2+(-s.w/2)*Math.cos(a)-(-s.h/2)*Math.sin(a),tly=s.y+s.h/2+(-s.w/2)*Math.sin(a)+(-s.h/2)*Math.cos(a);
+    const cx=tlx+(w/2)*Math.cos(a)-(h/2)*Math.sin(a),cy=tly+(w/2)*Math.sin(a)+(h/2)*Math.cos(a);
+    o.w=w;o.h=h;o.x=cx-w/2;o.y=cy-h/2;if(o.zones)o.zones.forEach(z=>trimCells(o,z));
+    showHint(TYPES[o.type].round?`⌀ ${m2(w)} m`:`${m2(w)} × ${m2(h)} m`)}
+  renderPlan();
+});
+function endPtr(e){ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;clearTimeout(holdT);
+  if(drag&&ptrs.size===0){
+    if(drag.mode==='hold'){if(!editMode&&drag.o.type==='abri'){openInv()}else if(!ctx&&drag.o.type==='serre'&&!editMode){enterSerre(drag.o.id)}else{sheetMode='obj';renderSheet();keepAboveSheet(drag.o)}}
+    else if(drag.mode==='pan'&&!drag.moved){if(shapeEdit){shapeEdit.sel=null;renderShapebar()}else{selId=null;sheetMode=null;renderSheet()}renderPlan()}
+    else if((drag.mode==='vtx'&&(drag.moved||drag.inserted))||(drag.mode==='edge'&&drag.moved)){normalizeShape();updateBox();save();renderShapebar()}
+    else if(drag.moved&&(drag.mode==='move'||drag.mode==='resize')){fitZones(drag.o);save();if(sheetMode)renderSheet()}
+    drag=null;guides=null;$('#hint').hidden=true;lifted=null;renderPlan()}}
+svg.addEventListener('pointerup',endPtr);svg.addEventListener('pointercancel',endPtr);
+svg.addEventListener('wheel',e=>{e.preventDefault();const p=world(e.clientX,e.clientY),r=svg.getBoundingClientRect();view.z=clamp(view.z*Math.exp(-e.deltaY*.0015),.04,6);
+  view.cx=p.x-(e.clientX-r.left-r.width/2)/view.z;view.cy=p.y-(e.clientY-r.top-r.height/2)/view.z;renderPlan()},{passive:false});
+addEventListener('resize',()=>tab==='plan'&&renderPlan());
+function fitZones(o){if(!o||!o.zones)return;const L=Math.max(o.w,o.h);let used=0;o.zones.forEach(z=>{z.len=Math.min(z.len,Math.max(20,L-used));used+=z.len;trimCells(o,z)});o.zones=o.zones.filter((z,i)=>i===0||o.zones.slice(0,i).reduce((s,q)=>s+q.len,0)<L-10)}
+
+/* ombres */
+$('#sunBtn').onclick=()=>{shade.on=!shade.on;$('#sunBtn').classList.toggle('on',shade.on);renderSunbar();renderPlan()};
+function renderSunbar(){const el=$('#sunbar');el.hidden=!shade.on||tab!=='plan'||!!shapeEdit||!!ctx;if(el.hidden)return;
+  const sp=sunPos(shade.doy,shade.hour),alt=Math.round(sp.alt*180/Math.PI),d=dateOfDoy(shade.doy),hh=Math.floor(shade.hour),mm=Math.round((shade.hour-hh)*60);
+  const opts=MONTHS.map((m,i)=>{const n=doyOf(new Date(YEAR,i,21,12));return`<option value="${n}" ${Math.abs(n-shade.doy)<15?'selected':''}>21 ${m.slice(0,4)}.</option>`}).join('');
+  el.innerHTML=`<div class="row"><select id="sb-d" aria-label="Date">${opts}</select><input id="sb-h" type="range" min="4" max="21" step="0.25" value="${shade.hour}" aria-label="Heure solaire"><span class="mono" style="min-width:44px">${hh} h ${String(mm).padStart(2,'0')}</span></div>
+  <span class="note">${alt>2?`Soleil à ${alt}° · heure solaire (en été, ajoute ≈ 1 h 40 à la montre)`:'Soleil couché à cette heure'}</span>`;}
+$('#sunbar').addEventListener('input',e=>{if(e.target.id==='sb-h'){shade.hour=+e.target.value;renderSunbar();renderPlan()}});
+$('#sunbar').addEventListener('change',e=>{if(e.target.id==='sb-d'){shade.doy=+e.target.value;renderSunbar();renderPlan()}});
+function renderShapebar(){const el=$('#shapebar');el.hidden=!shapeEdit||tab!=='plan';$('#sunbar').hidden=!!shapeEdit||!shade.on||tab!=='plan';updateModeUI();if(el.hidden)return;
+  const tp=terrainPts(),A=Math.abs(polyArea(tp))/1e4;
+  el.innerHTML=`<div class="row between"><b>Forme du terrain</b><span class="mono">${num(A)} m² · ${tp.length} côtés</span></div>
+  <span class="note">Glisse un côté pour l'écarter ou le rapprocher, un point rond pour déplacer un coin. Tire un point vert au milieu d'un côté pour créer un coin.</span>
+  <div class="row" style="flex-wrap:wrap;gap:6px">${shapeEdit.sel!=null&&tp.length>3?'<button class="btn small danger" data-sh="del">Supprimer le point</button>':''}<button class="btn small" data-sh="rect">Rectangle</button><button class="btn small" data-sh="L">En L</button><button class="btn small" data-sh="trap">Trapèze</button><button class="btn small primary" data-sh="done">Terminer</button></div>`}
+function enterSerre(id){shapeEdit=null;ctx=id;selId=null;sheetMode=null;G();renderSheet();fit();renderCtxbar();renderSunbar()}
+function exitSerre(){const id=ctx;ctx=null;selId=id;sheetMode=null;renderSheet();fit();renderCtxbar();renderSunbar()}
+function renderCtxbar(){const el=$('#ctxbar');const inS=!!ctx&&!!G()&&!!ctx&&tab==='plan';el.hidden=!inS;$('#compass').hidden=!!ctx;updateModeUI();svg.classList.toggle('inserre',!!ctx);
+  if(!inS)return;const se=obj(ctx);el.innerHTML=`<button class="iconbtn" data-cx="back" aria-label="Retour au potager"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><div class="t"><b>${esc(se.name)}</b><span class="mono note">Serre · ${m2(se.w)} × ${m2(se.h)} m</span></div><button class="btn small" data-cx="props">Réglages</button>`}
+$('#ctxbar').addEventListener('click',e=>{const b=e.target.closest('[data-cx]');if(!b)return;if(b.dataset.cx==='back')exitSerre();else{setEdit(true);selId=ctx;sheetMode='obj';renderSheet();renderPlan()}});
+function startShapeEdit(){if(!G().shape){G().shape=rectPts();save()}shapeEdit={sel:null};selId=null;sheetMode=null;renderSheet();fit();renderShapebar()}
+$('#shapebar').addEventListener('click',e=>{const b=e.target.closest('[data-sh]');if(!b)return;const a=b.dataset.sh,W=G().w,H=G().h;
+  if(a==='done'){shapeEdit=null;renderShapebar();renderPlan();return}
+  if(a==='del'&&shapeEdit.sel!=null&&G().shape.length>3){G().shape.splice(shapeEdit.sel,1);shapeEdit.sel=null}
+  if(a==='rect')G().shape=rectPts();
+  if(a==='L')G().shape=[{x:0,y:0},{x:W,y:0},{x:W,y:snap(H/2,10)},{x:snap(W/2,10),y:snap(H/2,10)},{x:snap(W/2,10),y:H},{x:0,y:H}];
+  if(a==='trap')G().shape=[{x:snap(W*.15,10),y:0},{x:snap(W*.85,10),y:0},{x:W,y:H},{x:0,y:H}];
+  if(a!=='del')shapeEdit.sel=null;updateBox();save();renderShapebar();renderPlan()});
+$('#compass').onclick=()=>{selId=null;sheetMode='menu';renderSheet();renderPlan()};
+
+/* ================= Feuille du bas ================= */
+const sheet=$('#sheet');
+const ICON={planche:'<rect x="4" y="10" width="38" height="10" rx="2" fill="#8b6a48"/><circle cx="10" cy="15" r="2" fill="#78c258"/><circle cx="17" cy="15" r="2" fill="#78c258"/><circle cx="24" cy="15" r="2" fill="#78c258"/><circle cx="31" cy="15" r="2" fill="#78c258"/><circle cx="38" cy="15" r="2" fill="#78c258"/>',
+ bac:'<rect x="10" y="5" width="26" height="20" fill="#8b6a48" stroke="#a3713f" stroke-width="3"/>',serre:'<rect x="6" y="5" width="34" height="20" rx="4" fill="#3a82b5" fill-opacity=".15" stroke="#3a82b5" stroke-dasharray="3 2"/>',
+ allee:'<rect x="2" y="11" width="42" height="8" fill="#cdc6b5"/>',cuve:'<circle cx="23" cy="15" r="11" fill="#3a82b5"/>',eau:'<circle cx="23" cy="15" r="9" fill="#3a82b5" fill-opacity=".3" stroke="#3a82b5"/><circle cx="23" cy="15" r="3.5" fill="#3a82b5"/>',
+ arbre:'<circle cx="23" cy="15" r="12" fill="#5c9a45" fill-opacity=".4" stroke="#2f5d2b" stroke-dasharray="3 2"/><circle cx="23" cy="15" r="2.5" fill="#a3713f"/>',haie:'<rect x="2" y="10" width="42" height="10" rx="5" fill="#2f5d2b"/>',
+ cloture:'<rect x="2" y="14" width="42" height="2.5" fill="#a3713f"/><rect x="5" y="11" width="3" height="9" fill="#a3713f"/><rect x="21.5" y="11" width="3" height="9" fill="#a3713f"/><rect x="38" y="11" width="3" height="9" fill="#a3713f"/>',
+ prise:'<rect x="15" y="7" width="16" height="16" rx="3" fill="#d9951c"/><circle cx="20" cy="15" r="1.8"/><circle cx="26" cy="15" r="1.8"/>',compost:'<rect x="12" y="4" width="22" height="22" fill="#a3713f"/><path d="M12 11h22M12 18h22" stroke="#5e4529"/>',
+ abri:'<rect x="8" y="4" width="30" height="22" fill="#a3713f"/><path d="M8 4l30 22M38 4L8 26" stroke="#5e4529"/>'};
+const alertsHTML=o=>{const cf=conflicts(o),ri=rotIssues(o);let h='';
+  if(cf.length)h+=`<div class="alert">${cf.map(c=>`<span><b>${P[c.a].n}</b> et <b>${P[c.b].n}</b> se gênent ${esc(c.where)}.</span>`).join('')}</div>`;
+  if(ri.length)h+=`<div class="alert amber">${ri.map(r=>`<span>Rotation : <b>${P[r.crop].n}</b> revient sur des ${P[r.crop].f.toLowerCase()} (${P[r.prev.crop].n.toLowerCase()} en ${r.prev.y}). Attends ${ROT_YEARS+1} ans entre deux cultures de la même famille.</span>`).join('')}</div>`;
+  const si=sunIssues(o);if(si.length)h+=`<div class="alert amber">${si.map(x=>`<span>${x.lvl==='insuffisant'?'Pas assez de soleil':'Soleil un peu juste'} pour <b>${P[x.crop].n.toLowerCase()}</b> : ${num(x.h)} h vers le ${fdate(dateOfDoy(x.doy))}, il lui en faut ${x.need} ou plus.</span>`).join('')}</div>`;
+  const bu=blockUntil(o);if(bu)h+=`<div class="alert"><span>Récolte bloquée jusqu'au <b>${fdate(bu)}</b> (délai après traitement).</span></div>`;
+  return h};
+function sunLine(o){if(serreOf(o))return`<p class="note">Sous serre : ensoleillement non calculé.</p>`;const a=sunHours(o,172),b=sunHours(o,80);return`<div class="sunline"><span>21 juin <b>${num(a)} h</b>/${num(sunMax(172))}</span><span>21 mars <b>${num(b)} h</b>/${num(sunMax(80))}</span></div>`}
+/* ---- eau reçue : arrosage noté ou pluie (sauf sous serre) ---- */
+const RAIN_MIN=5; /* mm : en dessous, la pluie ne compte pas comme un arrosage */
+function lastWater(o){
+  const m=(o.journal||[]).filter(x=>x.k==='arrosage').sort((a,b)=>b.d.localeCompare(a.d))[0];
+  const r=serreOf(o)?null:(S.rain||[]).filter(x=>x.mm==null||x.mm>=RAIN_MIN).sort((a,b)=>b.d.localeCompare(a.d))[0];
+  let best=null;if(m)best={d:m.d,src:'main'};if(r&&(!best||r.d>best.d))best={d:r.d,src:'pluie',mm:r.mm};
+  if(best)best.ago=days(parse(best.d),TODAY);return best}
+function waterText(w){if(!w)return'Aucune eau notée';const when=w.ago===0?"aujourd'hui":w.ago===1?'hier':'il y a '+w.ago+' jours';
+  return w.src==='pluie'?`Pluie${w.mm!=null?' ('+num(w.mm)+' mm)':''} ${when}`:`Arrosé à la main ${when}`}
+function thirstLimit(){const m=TODAY.getMonth()+1;return m>=5&&m<=9?4:(m===4||m===10)?7:null}
+function isPlanted(o){return o.zones.some(z=>z.crop&&Object.keys(z.cells).length)}
+function thirsty(o){const lim=thirstLimit();if(!lim||!isPlanted(o))return false;const w=lastWater(o);return!w||w.ago>=lim}
+function planStatus(o){/* un seul indicateur par planche, le plus utile d'abord */
+  if(o.type==='abri'){const n=(S.stock||[]).filter(isLow).length;return n?{c:'amber',t:'!',l:n+' produit'+(n>1?'s':'')+' en stock bas'}:null}
+  if(!TYPES[o.type].plant)return null;
+  const pl=plantings().filter(x=>x.o===o);
+  if(pl.some(x=>x.left<=0&&!x.bu))return{c:'green',t:'✓',l:'Prêt à récolter'};
+  if(thirsty(o))return{c:'blue',t:'💧',l:'À arroser'};
+  if(conflicts(o).length)return{c:'red',t:'!',l:'Mauvais voisinage'};
+  if(sunIssues(o).some(x=>x.lvl==='insuffisant'))return{c:'shade',t:'☀',l:'Pas assez de soleil'};
+  if(rotIssues(o).length)return{c:'amber',t:'↻',l:'Rotation à revoir'};
+  return null}
+function cultureSheet(o){const t=TYPES[o.type],inS=!!serreOf(o);
+  let h=`<div class="stack"><div class="cs-head"><div style="min-width:0"><span class="lbl">${t.l}${inS?' · sous serre':''}</span><div class="nm">${esc(o.name)}</div></div><button class="iconbtn" data-act="close" aria-label="Fermer"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`;
+  if(t.plant){
+    const pl=plantings().filter(x=>x.o===o);
+    h+=`<div class="info"><span class="lbl">Ce qu'il y a dedans</span>`;
+    if(pl.length)h+=`<div class="ilist">${pl.map(x=>{const st=x.bu&&x.left<=0?`<span class="st blocked">Attendre le ${fdate(x.bu)}</span>`:x.left<=0?`<span class="st ready">Prêt</span>`:`<span class="st">dans ${x.left} j</span>`;
+      return`<div class="irow"><i style="background:${x.p.c}"></i><div style="min-width:0"><b>${x.p.n}</b><span class="note">≈ ${x.n} plant${x.n>1?'s':''} · semé le ${fdate(parse(x.d))} · récolte ${fdate(x.hv)}</span></div>${st}</div>`}).join('')}</div>`;
+    else h+=`<p class="note">Vide pour l'instant. Ouvre la planche pour choisir quoi planter.</p>`;
+    h+=`</div>`;
+    const w=lastWater(o),th=thirsty(o);
+    h+=`<div class="info"><span class="lbl">Eau</span><div class="irow"><i class="drop"></i><div><b>${waterText(w)}</b>${th?`<span class="note" style="color:var(--water)">Pense à arroser : rien depuis ${w?w.ago:'longtemps'}${w?' jours':''}.</span>`:inS?`<span class="note">Sous serre, seule l'eau que tu apportes compte.</span>`:''}</div></div>
+      <div class="row"><button class="btn small" data-act="water">J'ai arrosé</button>${inS?'':'<button class="btn small" data-act="rain">Il a plu</button>'}</div></div>`;
+    const al=alertsHTML(o);if(al)h+=`<div class="info"><span class="lbl">À savoir</span>${al}</div>`;
+    h+=`<button class="btn primary" data-act="openbed">Plantation, voisins et journal</button>`;
+  }else{
+    if(o.type==='cuve')h+=`<div class="kv"><span class="k">Contenance</span><b class="mono">${num(cuveL(o),0)} L</b></div><div class="kv"><span class="k">Eau en réserve (toutes cuves)</span><span class="mono">${num(S.water.level,0)} L</span></div><button class="btn" data-act="gowater">Voir le bilan d'eau</button>`;
+    else if(+o.height>0)h+=`<div class="kv"><span class="k">Hauteur</span><span class="mono">${m2(o.height)} m</span></div>`;
+    if(o.type==='serre')h+=`<button class="btn primary" data-act="enterserre">Ouvrir la serre</button>`;
+  }
+  h+=`<button class="linkbtn" data-act="toedit">Modifier la taille ou la position</button></div>`;
+  return h}
+/* ---- inventaire : stock = entrées (achats, corrections) − utilisations notées au journal ---- */
+const CAT={graine:'Graines',amendement:'Amendements',traitement:'Traitements'};
+const JCAT=k=>k==='semis'?'graine':k;
+const isProdJ=k=>k==='traitement'||k==='amendement'||k==='semis';
+const prodUses=p=>{const out=[];plantables().forEach(o=>(o.journal||[]).forEach(e=>{if(e.pid===p.id&&+e.qty>0)out.push({o,e})}));(S.nursery||[]).forEach(n=>{if(n.pid===p.id&&+n.qty>0)out.push({o:null,e:{d:n.d,qty:n.qty},lab:'Semis en godets · '+(P[n.crop]?P[n.crop].n:'')})});return out};
+const seedLabel=p=>`${esc(p.name)}${p.variety?' « '+esc(p.variety)+' »':''}`;
+const expired=p=>p.cat==='graine'&&p.exp&&+p.exp<YEAR;
+const stockOf=p=>(p.moves||[]).reduce((s,m)=>s+(+m.q||0),0)-prodUses(p).reduce((s,u)=>s+(+u.e.qty||0),0);
+const isLow=p=>{const q=stockOf(p);return q<=0?'out':(p.min!=null&&q<=+p.min)?'low':null};
+const fq=(q,u)=>`${num(Math.max(0,q),2)} ${u}`;
+function addRain(mm,d){S.rain=S.rain||[];S.rain.push({id:uid(),d:d||iso(TODAY),mm:mm==null||isNaN(mm)?null:mm});S.rain.sort((a,b)=>b.d.localeCompare(a.d));if(S.rain.length>200)S.rain.length=200}
+/* sur téléphone, remonte la vue pour que l'objet touché reste visible au-dessus du menu */
+function keepAboveSheet(o){if(innerWidth>=760)return;const r=svg.getBoundingClientRect(),top=r.height-sheet.offsetHeight,sy=(o.y+o.h/2-view.cy)*view.z+r.height/2;
+  if(sy>top-40||sy<60){view.cy=o.y+o.h/2-(Math.max(80,top*.5)-r.height/2)/view.z;renderPlan()}}
+function setEdit(on){editMode=on;if(!on){lifted=null}updateModeUI();renderPlan()}
+function updateModeUI(){const busy=!!sheetMode||!!shapeEdit;$('#fab').hidden=busy;$('#map').classList.toggle('editing',editMode&&!shapeEdit);
+  $('#modetag').hidden=!editMode||busy||tab!=='plan';$('#editBtn').hidden=editMode;$('#addBtn').hidden=!editMode;$('#doneBtn').hidden=!editMode;$('#sunBtn').hidden=editMode||!!ctx}
+function renderSheet(){
+  updateModeUI();sheet.hidden=!sheetMode;if(!sheetMode)return;
+  let h='<div class="grab"></div>';
+  if(sheetMode==='add'){
+    h+=`<div class="stack"><div class="row between"><h3>Ajouter au potager</h3><button class="btn small" data-act="close">Fermer</button></div>
+    <button class="btn primary" data-act="series">Série de planches avec allées</button>
+    <div class="typegrid">${Object.entries(TYPES).filter(([k])=>!(ctx&&(k==='serre'||k==='arbre'||k==='haie'))).map(([k,t])=>`<button class="typebtn" data-act="add" data-type="${k}"><svg viewBox="0 0 46 30">${ICON[k]}</svg>${t.l}</button>`).join('')}</div>
+    <p class="note">L'objet apparaît au centre de l'écran. Maintiens le doigt dessus pour le soulever et le déplacer. Tire la poignée jaune pour le redimensionner.</p></div>`;
+  }else if(sheetMode==='series'){
+    h+=`<div class="stack"><div class="row between"><h3>Série de planches</h3><button class="btn small" data-act="add-back">Retour</button></div>
+    <div class="grid2"><label class="field"><span class="lbl">Nombre</span><input id="sr-n" type="number" min="1" max="40" value="4"></label>
+    <label class="field"><span class="lbl">Orientation</span><select id="sr-o"><option value="v">Planches verticales</option><option value="h">Planches horizontales</option></select></label>
+    <label class="field"><span class="lbl">Longueur (cm)</span><input id="sr-l" type="number" min="50" step="10" value="500"></label>
+    <label class="field"><span class="lbl">Largeur (cm)</span><input id="sr-w" type="number" min="30" step="5" value="120"></label>
+    <label class="field"><span class="lbl">Allée entre (cm)</span><input id="sr-g" type="number" min="0" step="5" value="50"></label></div>
+    <p class="note">Repère courant : planche de 75 à 120 cm, allée de 40 à 60 cm pour passer à genoux ou avec une brouette.</p>
+    <button class="btn primary" data-act="series-go">Placer la série</button></div>`;
+  }else if(sheetMode==='help'){
+    const ic=p=>`<span class="ic"><svg viewBox="0 0 24 24">${p}</svg></span>`;
+    h+=`<div class="stack"><div class="row between"><h3>Comment ça marche</h3><button class="btn small primary" data-act="close">Compris</button></div>
+    <div class="helpgrid">
+      <div class="hrow">${ic('<path d="M9 11V5a2 2 0 0 1 4 0v6M13 9a2 2 0 0 1 4 0v4a6 6 0 0 1-6 6h-1a5 5 0 0 1-4-2l-3-4 1.5-1.5L9 14"/>')}<div><b>Touche une planche</b><br><span class="note">Tu vois ce qu'elle contient, quand c'est prêt et quand elle a reçu de l'eau.</span></div></div>
+      <div class="hrow">${ic('<path d="M4 20h4L19 9l-4-4L4 16z"/>')}<div><b>Crayon en bas à droite</b><br><span class="note">Mode édition pour ajouter, déplacer (appui long) ou redimensionner. « Terminer » pour revenir.</span></div></div>
+      <div class="hrow">${ic('<path d="M7 7l10 10M7 17L17 7"/><circle cx="7" cy="7" r="2"/><circle cx="17" cy="17" r="2"/>')}<div><b>Deux doigts</b><br><span class="note">Pour zoomer. Un doigt pour faire glisser la vue.</span></div></div>
+      <div class="hrow">${ic('<path d="M9 7L4 12l5 5"/><path d="M4 12h11a5 5 0 0 1 0 10h-3"/>')}<div><b>Flèche en haut</b><br><span class="note">Annule la dernière action, quelle qu'elle soit.</span></div></div>
+    </div>
+    <span class="lbl">Pastilles sur les planches</span>
+    <div class="helpgrid">
+      <div class="hrow"><span class="dot-b" style="background:var(--ok)">✓</span><span>Quelque chose est prêt à récolter</span></div>
+      <div class="hrow"><span class="dot-b" style="background:var(--water)">💧</span><span>À arroser : ni pluie ni arrosage depuis plusieurs jours</span></div>
+      <div class="hrow"><span class="dot-b" style="background:var(--danger)">!</span><span>Deux cultures voisines se gênent</span></div>
+      <div class="hrow"><span class="dot-b" style="background:var(--muted)">☀</span><span>Une culture manque de soleil à cet endroit</span></div>
+      <div class="hrow"><span class="dot-b" style="background:var(--sun);color:#1d1404">↻</span><span>Même famille qu'une saison récente : rotation à revoir</span></div>
+    </div>
+    <p class="note">Aujourd'hui : tout ce qui demande une action. Récoltes : ce qui est prêt et ce qui arrive. Eau & gel : pluie, cuve, risque de gel. Cultures : fiches et calendrier de semis.</p></div>`;
+  }else if(sheetMode==='menu'){
+    h+=`<div class="stack"><div class="row between"><h3>Potager</h3><button class="btn small" data-act="close">Fermer</button></div>
+    <label class="field"><span class="lbl">Nom</span><input id="g-name" value="${esc(S.name)}"></label>
+    ${S.shape?`<div class="row between"><span><span class="lbl">Terrain</span><br><span class="mono">${num(Math.abs(polyArea(S.shape))/1e4)} m² · ${S.shape.length} côtés</span></span><span class="row"><button class="btn small" data-act="shape-rect">Revenir au rectangle</button></span></div>`:
+    `<div class="grid2"><label class="field"><span class="lbl">Largeur du terrain (m)</span><input id="g-w" type="number" min="2" step="0.5" value="${S.w/100}"></label>
+    <label class="field"><span class="lbl">Longueur du terrain (m)</span><input id="g-h" type="number" min="2" step="0.5" value="${S.h/100}"></label></div>`}
+    <div class="row"><button class="btn" data-act="help">Comment ça marche</button><button class="btn" data-act="openinv">Inventaire</button></div>
+    ${ctx?'':`<button class="btn" data-act="shape-edit">${S.shape?'Modifier la forme du terrain':'Dessiner une forme libre'}</button>`}
+    <label class="field"><span class="lbl">Direction du nord sur le plan : <span class="mono">${S.north}°</span></span><input id="g-north" type="range" min="0" max="355" step="5" value="${S.north}"></label>
+    <p class="note">0° = le nord est en haut du plan. Tourne jusqu'à ce que l'aiguille rouge pointe vers le vrai nord, en t'aidant de la boussole du téléphone.</p>
+    <div class="alert okay"><span id="syncLine">${syncText()}</span></div>
+    <div class="row"><button class="btn small" data-act="export">Exporter une sauvegarde</button><button class="btn small" data-act="import">Importer une sauvegarde</button></div>
+    <div class="row"><button class="btn small" data-act="newgarden">Nouveau potager vide</button><button class="btn small" data-act="reload">Recharger l'exemple</button></div></div>`;
+  }else if(sheetMode==='obj'&&!editMode){
+    const o=obj(selId);if(!o){sheetMode=null;return renderSheet()}h+=cultureSheet(o);
+  }else if(sheetMode==='obj'){
+    const o=obj(selId);if(!o){sheetMode=null;return renderSheet()}const t=TYPES[o.type],L=o.locked?'disabled':'';
+    h+=`<div class="stack"><div class="row between" style="flex-wrap:nowrap"><div style="min-width:0;flex:1"><span class="lbl">${t.l}${o.locked?' · verrouillé':''}</span><input class="namein" id="o-name" value="${esc(o.name)}" aria-label="Nom"></div><button class="btn small" data-act="close">OK</button></div>`;
+    if(o.type==='serre'&&!ctx){const n=(o.inner&&o.inner.objs||[]).filter(q=>TYPES[q.type].plant).length;h+=`<button class="btn primary" data-act="enterserre">Ouvrir la serre</button><p class="note">${n?n+' planche'+(n>1?'s':'')+' à l\'intérieur.':'Vide pour l\'instant.'} En mode culture, un tap sur la serre l'ouvre directement.</p>`}
+    h+=t.round?`<div class="grid2"><label class="field"><span class="lbl">Diamètre (cm)</span><input id="o-w" type="number" min="10" step="5" value="${Math.round(o.w)}" ${L}></label>`:
+      `<div class="grid2"><label class="field"><span class="lbl">Largeur (cm)</span><input id="o-w" type="number" min="10" step="5" value="${Math.round(o.w)}" ${L}></label><label class="field"><span class="lbl">Longueur (cm)</span><input id="o-h" type="number" min="10" step="5" value="${Math.round(o.h)}" ${L}></label>`;
+    h+=(o.type!=='planche'&&o.type!=='allee'&&o.type!=='eau'&&o.type!=='prise')?`<label class="field"><span class="lbl">Hauteur (cm)</span><input id="o-ht" type="number" min="0" step="10" value="${Math.round(o.height||0)}"></label></div><p class="note">${o.type==='cuve'?`Contenance ≈ <b class="mono">${num(cuveL(o),0)} L</b>. `:''}La hauteur sert aussi à calculer l'ombre portée.</p>`:`</div>`;
+    if(!t.round&&!o.locked)h+=`<div class="row"><span class="lbl">Rotation</span><span class="mono">${o.rot}°</span><button class="btn small" data-act="rot" data-d="-15">−15°</button><button class="btn small" data-act="rot" data-d="15">+15°</button><button class="btn small" data-act="rot" data-d="90">90°</button><button class="btn small" data-act="rot0">0°</button></div>`;
+    h+=`<div class="row"><button class="btn small" data-act="lock">${o.locked?'Déverrouiller':'Verrouiller'}</button><button class="btn small" data-act="dup">Dupliquer</button>${o.locked?'':'<button class="btn small danger" data-act="del">Supprimer</button>'}</div>`;
+    h+=o.locked?`<p class="note">Verrouillé : l'objet ne peut plus être déplacé, redimensionné ni supprimé.</p>`:`<p class="note">Maintiens le doigt sur l'objet pour le soulever, puis glisse-le.</p>`;
+    h+=`</div>`;
+  }
+  sheet.innerHTML=h;
+}
+sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,o=obj(selId);
+  if(a==='close'){sheetMode=null;selId=null;renderSheet();renderPlan()}
+  if(a==='add-back'){sheetMode='add';renderSheet()}
+  if(a==='series'){sheetMode='series';renderSheet()}
+  if(a==='add'){const t=TYPES[b.dataset.type],r=svg.getBoundingClientRect(),c=world(r.left+r.width/2,r.top+r.height*.3);
+    const n={id:uid(),type:b.dataset.type,x:snap(clamp(c.x-t.w/2,0,G().w-t.w)),y:snap(clamp(c.y-t.h/2,0,G().h-t.h)),w:t.w,h:t.h,rot:0,name:t.l,height:t.ht||0,locked:false};
+    if(t.plant){n.zones=[{id:uid(),crop:null,len:Math.max(t.w,t.h),date:iso(TODAY),cells:{}}];n.grown=[];n.journal=[]}
+    G().objs.push(n);selId=n.id;sheetMode='obj';save();renderSheet();renderPlan()}
+  if(a==='series-go'){const n=clamp(+$('#sr-n').value||1,1,40),L=+$('#sr-l').value||500,W=+$('#sr-w').value||120,G=+$('#sr-g').value||0,v=$('#sr-o').value==='v';
+    const r=svg.getBoundingClientRect(),c=world(r.left+40,r.top+80);const x0=snap(clamp(c.x,0,G().w)),y0=snap(clamp(c.y,0,G().h));
+    const k=G().objs.filter(o=>o.type==='planche').length;
+    for(let i=0;i<n;i++){const w=v?W:L,h=v?L:W;G().objs.push({id:uid(),type:'planche',x:v?x0+i*(W+G):x0,y:v?y0:y0+i*(W+G),w,h,rot:0,name:'Planche '+(k+i+1),height:0,locked:false,grown:[],journal:[],zones:[{id:uid(),crop:null,len:L,date:iso(TODAY),cells:{}}]})}
+    sheetMode=null;save();renderSheet();renderPlan();toast(`${n} planches placées, allées de ${G} cm`,true)}
+  if(a==='rot'&&o){o.rot=((o.rot+ +b.dataset.d)%360+360)%360;save();renderSheet();renderPlan()}
+  if(a==='rot0'&&o){o.rot=0;save();renderSheet();renderPlan()}
+  if(a==='lock'&&o){o.locked=!o.locked;save();renderSheet();renderPlan()}
+  if(a==='dup'&&o){const n=JSON.parse(JSON.stringify(o));n.id=uid();n.x+=30;n.y+=30;n.name=o.name+' (copie)';n.locked=false;if(n.zones)n.zones.forEach(z=>z.id=uid());if(n.journal)n.journal=[];G().objs.push(n);selId=n.id;save();renderSheet();renderPlan()}
+  if(a==='del'&&o){if(!b.classList.contains('armed')){b.classList.add('armed');b.textContent='Confirmer la suppression';return}
+    {const H=homeOf(o);H.objs=H.objs.filter(x=>x!==o);if(o.id===ctx){ctx=null;renderCtxbar();fit()}};selId=null;sheetMode=null;save();renderSheet();renderPlan();toast(`« ${o.name} » supprimé`,true)}
+  if(a==='openbed'&&o)openBed(o.id);
+  if(a==='journal'&&o)openBed(o.id,0,'arrosage',true);
+  if(a==='harvestlog'&&o)openBed(o.id,0,'recolte',true);
+  if(a==='rain'){addRain(null);save();renderSheet();renderPlan();toast('Pluie notée pour aujourd\'hui',true)}
+  if(a==='help'){sheetMode='help';renderSheet()}
+  if(a==='water'&&o){o.journal=o.journal||[];o.journal.push({id:uid(),k:'arrosage',d:iso(TODAY),t:''});save();renderSheet();renderPlan();toast('Arrosage noté pour aujourd\'hui',true)}
+  if(a==='gowater'){sheetMode=null;selId=null;setTab('weather')}
+  if(a==='toedit'){setEdit(true);renderSheet()}
+  if(a==='enterserre'&&o)enterSerre(o.id);
+  if(a==='openinv'){sheetMode=null;renderSheet();openInv()}
+  if(a==='shape-edit')startShapeEdit();
+  if(a==='shape-rect'){S.shape=null;save();renderSheet();renderPlan();toast('Terrain redevenu rectangulaire',true)}
+  if(a==='newgarden'){const gw=$('#g-w'),gh=$('#g-h');S={v:8,shape:null,rain:[],stock:S.stock||[],nursery:S.nursery||[],name:'Mon potager',w:Math.round((gw?+gw.value||12:12)*100),h:Math.round((gh?+gh.value||8:8)*100),north:S.north||0,water:S.water,frost:null,objs:[],example:false};selId=null;sheetMode='add';save();fit();renderSheet();toast('Nouveau potager créé',true)}
+  if(a==='reload'){S=sample();selId=null;sheetMode=null;save();fit();renderSheet();toast('Exemple rechargé',true)}
+  if(a==='export'&&!DL){const name=`potager-${iso(TODAY)}.json`,blob=new Blob([lastJSON],{type:'application/json'});
+    try{const f=new File([blob],name,{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Sauvegarde du potager'});return toast('Sauvegarde exportée')}}catch(err){if(err&&err.name==='AbortError')return}
+    try{const u=URL.createObjectURL(blob),l=document.createElement('a');l.href=u;l.download=name;document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);toast('Sauvegarde exportée')}catch(_){toast("L'export n'a pas abouti")}}
+  if(a==='export'&&DL){try{const r=await DL.save({filename:`potager-${iso(TODAY)}.json`,data:new Blob([lastJSON],{type:'application/json'})});if(r)toast('Sauvegarde exportée')}catch(err){if(err&&err.code!=='declined')toast("L'export n'a pas abouti")}}
+  if(a==='import')$('#importIn').click();
+});
+$('#importIn').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const s=migrate(JSON.parse(rd.result));if(!s)throw 0;S=s;S.example=false;selId=null;sheetMode=null;save();fit();refresh();toast('Sauvegarde importée',true)}catch(_){toast("Ce fichier n'est pas une sauvegarde du potager")}};rd.readAsText(f);e.target.value=''});
+sheet.addEventListener('input',e=>{const t=e.target;
+  if(t.id==='o-name'){const o=obj(selId);o.name=t.value;save(true);renderPlan()}
+  if(t.id==='g-name'){S.name=t.value||'Mon potager';save(true)}
+  if(t.id==='g-north'){S.north=+t.value;save(true);t.previousElementSibling.querySelector('.mono').textContent=S.north+'°';renderPlan()}});
+sheet.addEventListener('change',e=>{const t=e.target,o=obj(selId),v=parseFloat(t.value);
+  if(o&&(t.id==='o-w'||t.id==='o-h')&&!isNaN(v)){const f=t.id[2],cx=o.x+o.w/2,cy=o.y+o.h/2;o[f]=Math.max(10,v);if(TYPES[o.type].round)o.w=o.h=o[f];o.x=cx-o.w/2;o.y=cy-o.h/2;fitZones(o);save();renderPlan();renderSheet()}
+  if(o&&t.id==='o-ht'&&!isNaN(v)){o.height=Math.max(0,v);save();renderPlan();renderSheet()}
+  if(t.id==='g-w'||t.id==='g-h'){S[t.id[2]]=Math.max(200,Math.round(v*100));save();renderPlan()}
+  if(t.id==='g-north')renderSheet();
+});
+$('#editBtn').onclick=()=>{setEdit(true);sheetMode=null;renderSheet();toast('Mode édition : maintiens un objet pour le déplacer')};
+$('#doneBtn').onclick=()=>{setEdit(false);sheetMode=null;selId=null;renderSheet();renderPlan()};
+$('#addBtn').onclick=()=>{sheetMode='add';selId=null;renderSheet();renderPlan()};
+$('#fitBtn').onclick=fit;
+$('#menuBtn').onclick=()=>{setTab('plan');selId=null;sheetMode='menu';renderSheet();renderPlan()};
+
+/* ================= Planche : grille, rotation, journal ================= */
+function openBed(id,zi=0,jk='arrosage',toJournal=false){bed={id,zi,cell:null,jk,photo:null};$('#bedView').hidden=false;renderBed();$('#bedView').scrollTop=0;if(toJournal){const j=$('#jpanel');if(j)j.scrollIntoView({block:'start'})}}
+function closeBed(){bed=null;$('#bedView').hidden=true}
+const ROWS='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const photoSrc=ph=>ph?(ph.a?'/_blob/'+ph.a:ph.u):'';
+function renderBed(){
+  const o=obj(bed.id);if(!o)return closeBed();
+  const L=Math.max(o.w,o.h),W=Math.min(o.w,o.h);bed.zi=clamp(bed.zi,0,o.zones.length-1);const z=o.zones[bed.zi],Y=yearOf(z);
+  const used=o.zones.reduce((s,q)=>s+q.len,0),free=L-used;
+  let strip=`<rect width="${L}" height="${W}" rx="6" style="fill:var(--soil)"/>`,off=0;
+  o.zones.forEach((q,i)=>{const p=P[q.crop];strip+=`<g class="z" data-zone="${i}"><rect x="${off}" y="0" width="${q.len}" height="${W}" ${p?`fill="${p.c}" fill-opacity=".55"`:'fill="url(#hatchB)"'}/><text x="${off+q.len/2}" y="${W/2}" text-anchor="middle" dominant-baseline="central" font-size="${Math.min(W*.28,L*.04)}" style="fill:var(--surface);font-weight:700;font-family:var(--f-body)">${p?esc(p.n):'Libre'}</text></g>`;off+=q.len});
+  if(free>0)strip+=`<rect x="${off}" width="${free}" height="${W}" fill="url(#hatchB)"/>`;
+  let zo=0;for(let i=0;i<bed.zi;i++)zo+=o.zones[i].len;strip+=`<rect class="zsel" x="${zo+2}" y="2" width="${Math.max(1,z.len-4)}" height="${W-4}" rx="4" vector-effect="non-scaling-stroke"/>`;
+  const others=[...new Set([...o.zones.filter(q=>q!==z&&q.crop).map(q=>q.crop),...neighbors(o).flatMap(n=>n.zones.filter(q=>q.crop).map(q=>q.crop))])];
+  const adv=advice(others);
+  const zd=z.date&&parse(z.date)>TODAY?parse(z.date):TODAY,optOf=p=>{const s=others.reduce((m,c)=>Math.min(m,compat(c,p.id)),1),g=others.some(c=>compat(c,p.id)>0),ri=rotIssue(o,p.id,Y),sc=sunCheck(o,bed.zi,p.id,z.date);
+    const tags=[inSeason(p,zd)?'':'hors saison',s<0?'à éviter ici':g?'bon voisin':'',ri?'rotation '+ri.y:'',sc&&sc.lvl==='insuffisant'?'trop d\'ombre':sc&&sc.lvl==='juste'?'soleil juste':''].filter(Boolean).join(', ');return`<option value="${p.id}" ${z.crop===p.id?'selected':''}>${p.n}${tags?' · '+tags:''}</option>`};
+  const opts=`<optgroup label="De saison (${fdate(zd)})">${PLANTS.filter(p=>inSeason(p,zd)).map(optOf).join('')}</optgroup><optgroup label="Hors saison">${PLANTS.filter(p=>!inSeason(p,zd)).map(optOf).join('')}</optgroup>`;
+  const g=zoneGrid(o,z),p=P[z.crop];
+  let grid='',cellInfo='';
+  if(g){let s='';
+    for(let r=0;r<g.rows;r++){s+=`<text class="axis" x="-6" y="${(r+.5)*g.cellW}" text-anchor="end" dominant-baseline="central" font-size="${Math.min(g.cellW*.5,W*.12)}">${ROWS[r]||r}</text>`;
+      for(let c=0;c<g.cols;c++){const k=r+'-'+c,on=z.cells[k],sel=bed.cell===k;s+=`<rect class="c ${on?'':'empty'} ${sel?'on':''}" data-cell="${k}" x="${c*g.cellL+1}" y="${r*g.cellW+1}" width="${g.cellL-2}" height="${g.cellW-2}" rx="3" ${on?`fill="${p.c}"`:''} vector-effect="non-scaling-stroke"/>`}}
+    const ax=Math.min(g.cellW*.5,W*.12);
+    for(let c=0;c<g.cols;c+=Math.max(1,Math.ceil(g.cols/12)))s+=`<text class="axis" x="${(c+.5)*g.cellL}" y="-6" text-anchor="middle" font-size="${ax}">${c+1}</text>`;
+    const pl=W*.16;const n=Object.keys(z.cells).length;
+    grid=`<div class="row between"><span class="note">Grille ${g.cols} × ${g.rows} · case ${Math.round(g.cellL)} × ${Math.round(g.cellW)} cm · ≈ ${g.per} plant${g.per>1?'s':''} par case</span><span class="mono note">${n}/${g.cols*g.rows}</span></div><svg class="cellgrid" viewBox="${-pl} ${-pl} ${z.len+pl} ${W+pl}">${s}</svg>`;
+    if(bed.cell){const[r,c]=bed.cell.split('-').map(Number),d=z.cells[bed.cell],lab=(ROWS[r]||r)+(c+1);
+      if(d){const hv=addD(d,p.j),left=days(TODAY,hv);cellInfo=`<div class="celldetail"><div class="row between"><span class="big">Case ${lab} · ${p.n}</span><button class="btn small danger" data-act="unplant">Retirer</button></div>
+        <div class="grid2"><label class="field"><span class="lbl">Semé / planté le</span><input id="c-date" type="date" value="${d}"></label><div class="field"><span class="lbl">Récolte prévue</span><span class="mono" style="padding-top:9px">${fdate(hv)} · ${left>0?'dans '+left+' j':'prête'}</span></div></div></div>`}
+      else cellInfo=`<div class="celldetail"><span class="big">Case ${lab} · vide</span><div class="row"><button class="btn primary small" data-act="plantcell">Planter ${p.n.toLowerCase()} ici</button><button class="btn small" data-act="plantrow">Toute la ligne ${ROWS[r]||r}</button></div><p class="note">Date utilisée : ${fdate(parse(z.date||iso(TODAY)))}, réglable plus haut.</p></div>`}
+    else cellInfo=`<p class="note">Touche une case pour la planter ou voir sa date de récolte.</p>`;
+  }else grid=`<p class="note">Choisis une culture : la grille se calcule d'après l'espacement entre rangs et entre plants.</p>`;
+  const zr=rotIssue(o,z.crop,Y);
+  /* historique */
+  const years=[...new Set((o.grown||[]).map(x=>x.y))].sort((a,b)=>b-a);
+  const hist=years.length?years.map(y=>`<div class="row" style="align-items:flex-start"><span class="mono" style="min-width:44px;padding-top:4px">${y}</span><div class="chips">${o.grown.filter(x=>x.y===y).map(x=>P[x.crop]?`<span class="chip"><i style="background:${P[x.crop].c}"></i>${P[x.crop].n}<span class="note" style="font-size:11px">${P[x.crop].f}</span><button class="x" data-act="ungrow" data-y="${y}" data-crop="${x.crop}" aria-label="Retirer">×</button></span>`:'').join('')}</div></div>`).join(''):`<p class="note">Aucun historique. Ajoute ce qui a poussé ici les années précédentes.</p>`;
+  /* journal */
+  const bu=blockUntil(o);const zc=[...new Set(o.zones.filter(q=>q.crop).map(q=>q.crop))];
+  const jk=bed.jk;
+  let jform=`<div class="seg">${Object.entries(JT).map(([k,l])=>`<button data-act="jk" data-k="${k}" aria-pressed="${jk===k}">${l}</button>`).join('')}</div>
+  <div class="grid2"><label class="field"><span class="lbl">Date</span><input id="j-date" type="date" value="${iso(TODAY)}"></label>`;
+  if(jk==='recolte')jform+=`<label class="field"><span class="lbl">Poids (kg)</span><input id="j-kg" type="number" min="0" step="0.1" placeholder="0,0"></label><label class="field span2"><span class="lbl">Culture</span><select id="j-crop">${(zc.length?zc:PLANTS.map(q=>q.id)).map(c=>`<option value="${c}">${P[c].n}</option>`).join('')}</select></label>`;
+  else if(isProdJ(jk)){const zc0=z.crop;const prods=(S.stock||[]).filter(q=>q.cat===JCAT(jk)).sort((a,b)=>(b.crop===zc0)-(a.crop===zc0)),avail=prods.filter(q=>stockOf(q)>0&&!expired(q));
+    if(!avail.length)jform+=`<div class="alert amber span2"><span>${prods.length?'Plus rien en stock pour ':'Aucun produit dans l\'inventaire pour '}${jk==='traitement'?'les traitements':jk==='semis'?'les graines':'les amendements'}. Ajoute-le d'abord dans l'abri.</span><button class="btn small" data-act="openinv" style="justify-self:start">Ouvrir l'inventaire</button></div>`;
+    else{const cur=avail.find(q=>q.id===bed.pid)||avail[0];bed.pid=cur.id;
+      jform+=`<label class="field span2"><span class="lbl">${jk==='semis'?'Graines en stock':'Produit en stock'}</span><select id="j-pid">${prods.map(q=>{const st=stockOf(q),ex=expired(q);return`<option value="${q.id}" ${q.id===cur.id?'selected':''} ${st<=0||ex?'disabled':''}>${q.cat==='graine'&&P[q.crop]?P[q.crop].n+' · ':''}${esc(q.name)}${q.variety?' « '+esc(q.variety)+' »':''} · ${fq(st,q.unit)}${st<=0?' (épuisé)':ex?' (périmées)':''}</option>`}).join('')}</select></label>
+      <label class="field"><span class="lbl">Quantité (${cur.unit})</span><input id="j-qty" type="number" min="0" step="${cur.unit==='kg'?'0.05':['graines','sachet'].includes(cur.unit)?'1':'0.1'}" placeholder="max ${num(stockOf(cur),2)}"></label>`;
+      jform+=jk==='traitement'?`<label class="field"><span class="lbl">Délai avant récolte (j)</span><input id="j-dar" type="number" min="0" step="1" value="${cur.dar||0}"></label>`:`<span></span>`}}
+  else jform+=`<span></span>`;
+  jform+=`<label class="field span2"><span class="lbl">Note</span><textarea id="j-text" placeholder="${jk==='semis'?'ex. semis en ligne, 2 rangs':jk==='arrosage'?'ex. 40 L à l\'arrosoir':jk==='amendement'?'ex. compost, 2 brouettes':'Observation'}"></textarea></label></div>
+  <div class="photoprev">${bed.photo?`<img src="${photoSrc(bed.photo)}" alt="Photo jointe"><button class="btn small" data-act="photo-x">Retirer la photo</button>`:`<label class="btn small" for="j-photo">Ajouter une photo</label>`}<input id="j-photo" type="file" accept="image/*" hidden></div>`;
+  const noStock=isProdJ(jk)&&!(S.stock||[]).some(q=>q.cat===JCAT(jk)&&stockOf(q)>0&&!expired(q));
+  const blockRec=(jk==='recolte'&&bu)||noStock;
+  if(jk==='recolte'&&bu)jform+=`<div class="alert"><span>Récolte impossible avant le <b>${fdate(bu)}</b> : délai après traitement en cours.</span></div>`;
+  if(jk==='maladie')jform=jform.slice(0,jform.indexOf('</div>')+6)+diagHTML(o);
+  else jform+=`<button class="btn primary" data-act="jadd" ${blockRec?'disabled':''}>Ajouter au journal</button>`;
+  const jl=(o.journal||[]).slice().sort((a,b)=>b.d.localeCompare(a.d));
+  const jlist=jl.length?`<div class="jlist">${jl.map(e=>{let det='';
+    if(e.k==='recolte')det=`${P[e.crop]?P[e.crop].n:''} · <span class="mono">${num(e.kg)} kg</span>`;
+    if(e.k==='maladie')det=`${e.crop&&P[e.crop]?P[e.crop].n+' · ':''}<b>${esc(e.diag&&e.diag.diagnostic||'Symptômes notés')}</b>${e.diag&&e.diag.confiance?` <span class="conf ${esc(e.diag.confiance)}">${esc(e.diag.confiance)}</span>`:''}`;
+    if(isProdJ(e.k)){const u=addD(e.d,+e.dar||0);det=e.prod?`${e.crop&&P[e.crop]&&e.k==='semis'?P[e.crop].n+' · ':''}${esc(e.prod)}${+e.qty?` · <span class="mono">${num(e.qty,2)} ${e.unit||''}</span>`:''}${e.dose?' · '+esc(e.dose):''}${e.k==='traitement'&&+e.dar?` · DAR ${e.dar} j${u>TODAY?' → '+fdate(u):''}`:''}`:''}
+    return`<div class="jent"><span class="d">${fdate(parse(e.d))}</span><div style="min-width:0"><span class="k ${e.k}">${JT[e.k]}</span>${det?`<div>${det}</div>`:''}${e.t?`<div class="note" style="color:var(--ink)">${esc(e.t)}</div>`:''}${e.ph?`<img src="${photoSrc(e.ph)}" alt="Photo du ${fdate(parse(e.d))}" loading="lazy">`:''}</div><button class="del" data-act="jdel" data-id="${e.id}" aria-label="Supprimer l'entrée">×</button></div>`}).join('')}</div>`:`<p class="note">Le journal est vide.</p>`;
+
+  $('#bedView').innerHTML=`<svg width="0" height="0" style="position:absolute"><defs><pattern id="hatchB" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="16" height="16" style="fill:var(--soil)"/><line x1="0" y1="0" x2="0" y2="16" style="stroke:var(--soil-edge)" stroke-width="5"/></pattern></defs></svg>
+  <div class="bedhead"><button class="iconbtn" data-act="back" aria-label="Retour"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><div style="min-width:0"><div class="brand" style="font-size:17px">${esc(o.name)}</div><div class="mono note">${m2(L)} × ${m2(W)} m · ${o.zones.length} zone${o.zones.length>1?'s':''}${free>0?' · '+m2(free)+' m libres':''}</div></div></div>
+  <div class="bedbody">
+    <div class="bednav"><button data-jump="ppanel">Plantation</button><button data-jump="tpanel">Planning</button><button data-jump="vpanel">Voisins</button><button data-jump="rpanel">Rotation</button><button data-jump="jpanel">Journal</button></div>
+    <div class="panel" id="ppanel"><div class="row between"><h3>Zones de la planche</h3><button class="btn small" data-act="addzone">+ Zone</button></div>
+      <svg class="strip" viewBox="-4 -4 ${L+8} ${W+8}">${strip}</svg>${alertsHTML(o)}
+      <div><span class="lbl">Soleil direct au centre</span>${sunLine(o)}</div></div>
+    <div class="panel"><div class="row between"><h3>Zone ${bed.zi+1}${p?' · '+p.n:''}</h3>${o.zones.length>1?'<button class="btn small danger" data-act="delzone">Supprimer la zone</button>':''}</div>
+      <div class="grid3"><label class="field span3"><span class="lbl">Culture</span><select id="z-crop"><option value="">Choisir…</option>${opts}</select></label>
+      <label class="field"><span class="lbl">Longueur (cm)</span><input id="z-len" type="number" min="20" step="10" value="${Math.round(z.len)}"></label>
+      <label class="field span2"><span class="lbl">Date de semis</span><input id="z-date" type="date" value="${z.date||iso(TODAY)}"></label></div>
+      ${p&&!inSeason(p,parse(z.date||iso(TODAY)))&&!serreOf(o)?`<div class="alert amber"><span>Hors saison : ${p.n.toLowerCase()} se ${p.sg&&p.sg.length?'plante':'sème'} en place en ${seasonTxt(p)}${p.sg&&p.sg.length?` (godets : ${p.sg.map(x=>MABR[x-1]).join(', ')})`:''}. Vérifie la date de semis.</span></div>`:''}
+      ${zr?`<div class="alert amber"><span>Rotation : ${P[zr.crop].n.toLowerCase()} en ${zr.y}, même famille (${P[z.crop].f.toLowerCase()}).</span></div>`:''}
+      ${(()=>{const sc=sunCheck(o,bed.zi,z.crop,z.date);if(!sc)return serreOf(o)&&z.crop?'<p class="note">Sous serre : ensoleillement non calculé.</p>':'';
+        const txt=`<b>${num(sc.h)} h</b> de soleil direct sur cette zone vers le ${fdate(dateOfDoy(sc.doy))}. ${P[z.crop].n} : ${sunLabel(sc.need)}, ${sc.need} h ou plus.`;
+        return sc.lvl==='ok'?`<div class="alert okay"><span>☀ ${txt}</span></div>`:`<div class="alert amber"><span>☀ ${txt} ${sc.lvl==='insuffisant'?'Pas assez de soleil ici : préfère une culture qui supporte la mi-ombre, ou une autre planche.':'Un peu juste : la récolte sera plus tardive ou plus faible.'}</span></div>`})()}
+      ${p?`<p class="note">Rang ${p.rang} cm · plants ${p.pl} cm · récolte ≈ ${p.j} j après semis/plantation.${FROST_SENSITIVE.has(p.id)?' Sensible au gel.':''}</p>`:''}
+      ${grid}${cellInfo}
+      ${!z.crop?`<div><span class="lbl">Que planter ici ?</span><div style="margin-top:8px">${suggestHTML(o,bed.zi,iso(TODAY),'setcrop')}</div></div>`:''}
+      ${g?`<div class="row"><button class="btn small" data-act="fillzone">Planter toute la zone</button><button class="btn small" data-act="clearzone">Vider la zone</button></div>`:''}</div>
+    <div class="panel" id="tpanel"><h3>Planning de l'année ${YEAR}</h3>${timelineHTML(o)}</div>
+    <div class="panel" id="vpanel"><h3>Voisinage</h3>
+      ${others.length?`<div class="stack"><div><span class="lbl">Autour de cette zone</span><div class="chips" style="margin-top:6px">${others.map(c=>chip(c)).join('')}</div></div>
+      ${(()=>{const gs=adv.good.filter(c=>inSeason(P[c])),go=adv.good.filter(c=>!inSeason(P[c]));return`${gs.length?`<div><span class="lbl">Bons voisins à planter maintenant</span><div class="chips" style="margin-top:6px">${gs.map(c=>chip(c,'good',true)).join('')}</div></div>`:'<p class="note">Aucun bon voisin de saison à planter maintenant.</p>'}${go.length?`<p class="note">Bons voisins hors saison : ${go.map(c=>P[c].n.toLowerCase()).join(', ')}.</p>`:''}`})()}
+      ${adv.bad.length?`<div><span class="lbl">À éviter ici</span><div class="chips" style="margin-top:6px">${adv.bad.map(c=>chip(c,'bad')).join('')}</div></div>`:''}</div>
+      <p class="note">Voisins pris en compte : les autres zones de la planche et les planches à moins de 80 cm.</p>`:`<p class="note">Aucune culture autour. Les conseils apparaîtront dès qu'une zone ou une planche voisine sera plantée.</p>`}</div>
+    <div class="panel" id="rpanel"><h3>Rotation des cultures</h3>
+      <p class="note">Règle appliquée : pas deux fois la même famille sur ${ROT_YEARS+1} ans. Chaque culture choisie s'ajoute à l'historique automatiquement.</p>
+      <div class="stack">${hist}</div>
+      <div class="grid3"><label class="field"><span class="lbl">Année</span><select id="h-y">${[1,2,3,4,5].map(i=>`<option>${YEAR-i}</option>`).join('')}</select></label>
+      <label class="field span2"><span class="lbl">Culture</span><select id="h-c">${PLANTS.map(q=>`<option value="${q.id}">${q.n}</option>`).join('')}</select></label></div>
+      <button class="btn small" data-act="grow">Ajouter à l'historique</button></div>
+    <div class="panel" id="jpanel"><h3>Journal</h3>${jform}${jlist}</div>
+  </div>`;
+  if(bed.prefill&&bed.jk==='traitement'){const f=bed.prefill;bed.prefill=null;if($('#j-qty')&&f.qty)$('#j-qty').value=f.qty;if($('#j-dar')&&f.dar!=='')$('#j-dar').value=f.dar;if(f.t)$('#j-text').value=f.t}
+}
+const bedEl=$('#bedView');
+bedEl.addEventListener('click',async e=>{if(!bed)return;const jp=e.target.closest('[data-jump]');if(jp){const el=document.getElementById(jp.dataset.jump);if(el)el.scrollIntoView({block:'start',behavior:'smooth'});return}const o=obj(bed.id);if(!o)return;const z=o.zones[bed.zi];
+  const zn=e.target.closest('[data-zone]');if(zn){bed.zi=+zn.dataset.zone;bed.cell=null;return renderBed()}
+  const ce=e.target.closest('[data-cell]');if(ce){bed.cell=bed.cell===ce.dataset.cell?null:ce.dataset.cell;return renderBed()}
+  const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,L=Math.max(o.w,o.h);
+  if(a==='back'){closeBed();refresh();return}
+  if(a==='setcrop'){if(b.dataset.date&&parse(b.dataset.date)>TODAY)z.date=b.dataset.date;return setCrop(o,z,b.dataset.crop)}
+  if(a==='planfor'){const i=+b.dataset.zi;bed.plan=bed.plan===i?null:i;renderBed();const t=$('#tpanel');if(t)t.scrollIntoView({block:'start'});return}
+  if(a==='plannext'){const zz=o.zones[bed.plan];zz.next=zz.next||[];zz.next.push({id:uid(),crop:b.dataset.crop,date:b.dataset.date});bed.plan=null;save();renderBed();$('#tpanel').scrollIntoView({block:'start'});return toast(P[b.dataset.crop].n+' prévue',true)}
+  if(a==='delnext'){const zz=o.zones[+b.dataset.zi],n=(zz.next||[]).find(q=>q.id===b.dataset.id);zz.next=(zz.next||[]).filter(q=>q!==n);save();renderBed();return toast((n?P[n.crop].n:'Culture')+' retirée du planning',true)}
+  if(a==='endcrop'){const zz=o.zones[+b.dataset.zi],c=zz.crop;zz.crop=null;zz.cells={};bed.cell=null;save();renderBed();return toast(P[c].n+' : zone libérée',true)}
+  if(a==='startnext'){const zz=o.zones[+b.dataset.zi],n=(zz.next||[]).find(q=>q.id===b.dataset.id);if(!n)return;zz.next=zz.next.filter(q=>q!==n);zz.crop=n.crop;zz.cells={};zz.date=iso(TODAY);recordGrown(o,n.crop,YEAR);bed.zi=+b.dataset.zi;save();renderBed();return toast(P[n.crop].n+' lancée sur la zone '+(bed.zi+1)+' : plante les cases',true)}
+  if(a==='jk'){bed.jk=b.dataset.k;return renderBed()}
+  if(a==='openinv'){openInv(bed&&bed.jk==='semis'?'graines':'produits');return}
+  if(a==='d-photo-x'){const D=bed.diag;D.blob=null;D.url=null;D.ref=null;D.res=null;D.file=null;renderBed();return}
+  if(a==='d-run'){runDiag(o);return}
+  if(a==='d-apply'){const D=bed.diag;bed.jk='traitement';bed.pid=b.dataset.id;bed.prefill={qty:b.dataset.q,dar:b.dataset.dar,t:D.res?'Contre : '+D.res.diagnostic:''};renderBed();const j=$('#jpanel');if(j)j.scrollIntoView({block:'start'});return}
+  if(a==='d-buy'){const x=bed.diag.res.a_acheter[+b.dataset.i];S.stock=S.stock||[];if(!S.stock.some(q=>q.name.toLowerCase()===String(x.produit).toLowerCase())){S.stock.push({id:uid(),name:String(x.produit).slice(0,60),cat:x.type==='amendement'?'amendement':'traitement',unit:'L',min:0,dar:0,moves:[]});save();renderBed();toast('Ajouté à l\'inventaire comme « à acheter »',true)}else toast('Déjà dans l\'inventaire');return}
+  if(a==='d-save'){const D=bed.diag;const en={id:uid(),k:'maladie',d:D.date||iso(TODAY),crop:D.crop||null,t:(D.desc||'').trim()};
+    if(D.file){try{en.ph=await processPhoto(D.file)}catch(_){}}
+    if(D.res)en.diag={diagnostic:D.res.diagnostic,confiance:D.res.confiance};
+    o.journal=o.journal||[];o.journal.push(en);bed.diag={};save();renderBed();return toast('Observation enregistrée au journal',true)}
+  if(a==='photo-x'){bed.photo=null;return renderBed()}
+  if(a==='addzone'){const fr=L-o.zones.reduce((s,q)=>s+q.len,0);
+    if(fr>=20){o.zones.push({id:uid(),crop:null,len:fr,date:iso(TODAY),cells:{}});bed.zi=o.zones.length-1}
+    else{if(z.len<40)return toast('Zone trop courte pour être coupée en deux');const half=snap(z.len/2,10);z.len-=half;trimCells(o,z);o.zones.splice(bed.zi+1,0,{id:uid(),crop:null,len:half,date:iso(TODAY),cells:{}});bed.zi++;bed.cell=null;save();renderBed();return toast('Zone coupée en deux',true)}
+    bed.cell=null}
+  if(a==='delzone'){o.zones.splice(bed.zi,1);bed.zi=Math.max(0,bed.zi-1);bed.cell=null;save();renderBed();return toast('Zone supprimée',true)}
+  if(a==='fillzone')fillZone(o,z,z.date||iso(TODAY));
+  if(a==='clearzone'){z.cells={};bed.cell=null;save();renderBed();return toast('Zone vidée',true)}
+  if(a==='plantcell')z.cells[bed.cell]=z.date||iso(TODAY);
+  if(a==='plantrow'){const g=zoneGrid(o,z),r=bed.cell.split('-')[0];for(let c=0;c<g.cols;c++)if(!z.cells[r+'-'+c])z.cells[r+'-'+c]=z.date||iso(TODAY)}
+  if(a==='unplant')delete z.cells[bed.cell];
+  if(a==='grow'){recordGrown(o,$('#h-c').value,+$('#h-y').value)}
+  if(a==='ungrow'){o.grown=o.grown.filter(x=>!(x.y===+b.dataset.y&&x.crop===b.dataset.crop))}
+  if(a==='jdel'){o.journal=o.journal.filter(x=>x.id!==b.dataset.id);save();renderBed();return toast('Entrée supprimée',true)}
+  if(a==='jadd'){const k=bed.jk,en={id:uid(),k,d:$('#j-date').value||iso(TODAY),t:$('#j-text').value.trim()};
+    if(k==='recolte'){en.crop=$('#j-crop').value;en.kg=parseFloat(String($('#j-kg').value).replace(',','.'))||0;if(!en.kg)return toast('Indique le poids récolté')}
+    if(isProdJ(k)){const pr=(S.stock||[]).find(q=>q.id===$('#j-pid').value);if(!pr)return toast('Choisis un produit en stock');
+      const q=parseFloat(String($('#j-qty').value).replace(',','.'))||0,st=stockOf(pr);if(q<=0)return toast('Indique la quantité utilisée');
+      if(q>st+1e-9)return toast(`Stock insuffisant : il reste ${fq(st,pr.unit)}`);
+      Object.assign(en,{pid:pr.id,prod:pr.name+(pr.variety?' « '+pr.variety+' »':''),qty:q,unit:pr.unit});if(k==='semis'&&pr.crop)en.crop=pr.crop;if(k==='traitement')en.dar=Math.max(0,+$('#j-dar').value||0)}
+    if(bed.photo)en.ph=bed.photo;bed.photo=null;
+    o.journal=o.journal||[];o.journal.push(en);save();renderBed();return toast(JT[k]+' ajouté'+(k==='recolte'||k==='note'?'e':'')+' au journal'+(en.pid?` · reste ${fq(stockOf(S.stock.find(q=>q.id===en.pid)),en.unit)}`:''),true)}
+  save();renderBed();
+});
+function setCrop(o,z,c){const n=Object.keys(z.cells).length;if(c&&c!==z.crop&&(!z.date||parse(z.date)<TODAY))z.date=iso(TODAY);z.crop=c||null;z.cells={};bed.cell=null;if(c)recordGrown(o,c,yearOf(z));save();renderBed();if(n)toast(`${n} case${n>1?'s':''} effacée${n>1?'s':''}`,true)}
+bedEl.addEventListener('change',async e=>{if(!bed)return;const o=obj(bed.id),z=o.zones[bed.zi],t=e.target;
+  if(t.id==='z-crop')return setCrop(o,z,t.value);
+  if(t.id==='j-pid'){bed.pid=t.value;const note=$('#j-text').value,dt=$('#j-date').value;renderBed();$('#j-text').value=note;$('#j-date').value=dt;return}
+  if(t.id==='d-photo'){const f=t.files[0];if(!f)return;const D=bed.diag||(bed.diag={});try{D.blob=await photoBlob(f);D.url=URL.createObjectURL(D.blob);D.file=f;D.res=null;D.err=null;renderBed()}catch(_){toast("La photo n'a pas pu être lue")}return}
+  if(t.id==='d-crop'){bed.diag.crop=t.value;return}
+  if(t.id==='d-desc'){bed.diag.desc=t.value;renderBed();return}
+  if(t.id==='j-date'&&bed.jk==='maladie'){bed.diag.date=t.value;return}
+  if(t.id==='j-photo'){const f=t.files[0];if(!f)return;try{bed.photo=await processPhoto(f);renderBed()}catch(_){toast("La photo n'a pas pu être lue")}return}
+  if(['h-y','h-c','j-date','j-kg','j-crop','j-dar','j-qty','j-text'].includes(t.id))return;
+  if(t.id==='z-len'){const L=Math.max(o.w,o.h),oth=o.zones.reduce((s,q)=>s+(q===z?0:q.len),0);z.len=clamp(snap(+t.value||20,5),20,L-oth);trimCells(o,z)}
+  if(t.id==='z-date'&&t.value){z.date=t.value;if(z.crop)recordGrown(o,z.crop,yearOf(z))}
+  if(t.id==='c-date'&&t.value&&bed.cell)z.cells[bed.cell]=t.value;
+  save();renderBed();
+});
+/* ================= Que planter ici ? ================= */
+function whatPlant(o,zi,date){const z=o.zones[zi],D=parse(date),m=D.getMonth()+1,mN=m%12+1,Y=D.getFullYear(),inS=!!serreOf(o);
+  const others=[...new Set([...o.zones.filter((q,i)=>i!==zi&&q.crop).map(q=>q.crop),...neighbors(o).flatMap(n=>n.zones.filter(q=>q.crop).map(q=>q.crop))])];
+  const out=[];
+  PLANTS.forEach(p=>{if(p.id===z.crop)return;const now=p.m.includes(m),next=p.m.includes(mN);if(!now&&!next)return;
+    let sow=now?D:new Date(Y+(mN<m?1:0),mN-1,1,12);
+    if(FROST_SENSITIVE.has(p.id)&&!inS){const safe=new Date(sow.getFullYear(),4,15,12);if(sow<safe)sow=safe}
+    const hv=addD(iso(sow),p.j);
+    if(FROST_SENSITIVE.has(p.id)&&!inS&&hv>new Date(sow.getFullYear(),9,15,12))return;
+    let score=0;const rs=[];
+    const sc=sunCheck(o,zi,p.id,iso(sow));if(sc){if(sc.lvl==='ok'){score+=2;rs.push(['ok','☀ '+num(sc.h)+' h'])}else if(sc.lvl==='juste')rs.push(['warn','soleil juste']);else{score-=4;rs.push(['bad','trop d\'ombre'])}}
+    const ri=rotIssue(o,p.id,Y);if(ri){score-=4;rs.push(['bad','rotation : '+P[ri.crop].n.toLowerCase()+' en '+ri.y])}
+    const gd=others.filter(c=>compat(c,p.id)>0),bd=others.filter(c=>compat(c,p.id)<0);
+    if(gd.length){score+=Math.min(2,gd.length);rs.push(['ok','ami de '+gd.map(c=>P[c].n.toLowerCase()).join(', ')])}
+    if(bd.length){score-=4;rs.push(['bad','gêné par '+bd.map(c=>P[c].n.toLowerCase()).join(', ')])}
+    if((S.stock||[]).some(q=>q.cat==='graine'&&q.crop===p.id&&stockOf(q)>0&&!expired(q))){score+=1;rs.push(['ok','graines en stock'])}
+    if(nurseryReady().some(n=>n.crop===p.id)){score+=2;rs.push(['ok','plants prêts à repiquer'])}
+    if(!now)rs.push(['warn','à partir de '+MONTHS[mN-1]]);
+    out.push({p,score,rs,hv,sow:iso(sow)})});
+  const clean=out.filter(x=>!x.rs.some(r=>r[0]==='bad'));return(clean.length?clean:out.filter(x=>x.score>-3)).sort((a,b)=>b.score-a.score||a.hv-b.hv).slice(0,6)}
+function suggestHTML(o,zi,date,act){const L=whatPlant(o,zi,date);
+  if(!L.length)return`<p class="note">Rien de vraiment adapté à semer ici vers le ${fdate(parse(date))}. Un engrais vert ou un paillage protégera le sol en attendant.</p>`;
+  return`<div class="sugg">${L.map(x=>`<div class="sg"><i style="background:${x.p.c}"></i><div style="min-width:0"><b>${x.p.n}</b> <span class="note">· récolte vers le ${fdate(x.hv)}</span><div class="rs">${x.rs.map(r=>`<span class="${r[0]}">${esc(r[1])}</span>`).join('')}</div></div><button class="btn small ${act==='setcrop'?'primary':''}" data-act="${act}" data-crop="${x.p.id}" data-date="${x.sow}">${act==='setcrop'?'Planter':'Prévoir'}</button></div>`).join('')}</div>`}
+/* ================= Planning de l'année ================= */
+function zoneEnd(z){let end=null;if(z.crop&&P[z.crop])end=addD(z.date||iso(TODAY),P[z.crop].j);(z.next||[]).forEach(n=>{const e=addD(n.date,P[n.crop].j);if(!end||e>end)end=e});return end}
+function timelineHTML(o){const y0=new Date(YEAR,0,1,12),span=365,pc=d=>clamp(days(y0,d)/span*100,0,100);
+  const bar=(crop,from,cls)=>{const p=P[crop];const a=parse(from),b=addD(from,p.j),l=pc(a),r=pc(b);if(r<=0||l>=100)return'';return`<span class="b ${cls}" style="left:${l}%;width:${Math.max(r-l,2)}%;background:${p.c};border-color:${p.c}" title="${p.n}">${p.n}</span>`};
+  let h=`<div class="tl"><div class="tlhead"><span></span><div class="mths">${MSHORT.map(m=>`<span>${m}</span>`).join('')}</div></div>`;
+  o.zones.forEach((z,i)=>{
+    h+=`<div class="tlrow"><span class="zl">Zone ${i+1}<br><span class="note" style="font-weight:400">${z.crop?P[z.crop].n:'libre'}</span></span><div class="track">${z.crop?bar(z.crop,z.date||iso(TODAY),''):''}${(z.next||[]).map(n=>bar(n.crop,n.date,'pl')).join('')}<span class="now" style="left:${pc(TODAY)}%"></span></div>
+    <div class="nexts">${z.crop?`<div class="plrow cur"><i style="background:${P[z.crop].c}"></i><span><b>${P[z.crop].n}</b> <span class="note">· en place, récolte ${fdate(addD(z.date||iso(TODAY),P[z.crop].j))}</span></span><span></span><button class="btn small" data-act="endcrop" data-zi="${i}">Libérer</button></div>`:''}
+    ${(z.next||[]).map(n=>`<div class="plrow"><i style="background:${P[n.crop].c}"></i><span><b>${P[n.crop].n}</b> <span class="note">· prévue le ${fdate(parse(n.date))}</span></span><button class="btn small" data-act="startnext" data-zi="${i}" data-id="${n.id}">Lancer</button><button class="btn small danger" data-act="delnext" data-zi="${i}" data-id="${n.id}">Retirer</button></div>`).join('')}
+    <button class="btn small" data-act="planfor" data-zi="${i}" style="justify-self:start">${bed.plan===i?'Fermer les suggestions':'+ Prévoir la suite'}</button></div></div>`;
+    if(bed.plan===i){const e=zoneEnd(z),d=e&&e>TODAY?e:TODAY;h+=`<div style="grid-column:1/-1"><p class="note">Suggestions à partir du ${fdate(d)}${z.crop?`, après ${P[z.crop].n.toLowerCase()}`:''} :</p>${suggestHTML(o,i,iso(d),'plannext')}</div>`}});
+  return h+`</div><p class="note">Barres pleines : en place. Pointillés : prévu. Le trait jaune marque aujourd'hui. « Libérer » vide la zone après la récolte (l'historique de rotation est conservé).</p>`}
+/* ================= Maladie : diagnostic par photo ================= */
+let SAMPLE=null,SAMPLE_IMG=false;
+function diagHTML(o){const D=bed.diag||(bed.diag={});const zc=[...new Set(o.zones.filter(z=>z.crop).map(z=>z.crop))];if(!D.crop)D.crop=zc[0]||'';
+  let h=`<div class="grid2"><label class="field"><span class="lbl">Date</span><input id="j-date" type="date" value="${D.date||iso(TODAY)}"></label>
+  <label class="field"><span class="lbl">Culture touchée</span><select id="d-crop">${(zc.length?zc:PLANTS.map(q=>q.id)).map(c=>`<option value="${c}" ${c===D.crop?'selected':''}>${P[c].n}</option>`).join('')}<option value="" ${!D.crop?'selected':''}>Autre / inconnue</option></select></label>
+  <label class="field span2"><span class="lbl">Ce que tu vois (facultatif)</span><textarea id="d-desc" placeholder="ex. taches brunes sur les feuilles du bas, duvet blanc dessous">${esc(D.desc||'')}</textarea></label></div>
+  <div class="photoprev">${D.url?`<img src="${D.url}" alt="Photo des symptômes"><button class="btn small" data-act="d-photo-x">Changer la photo</button>`:`<label class="btn small" for="d-photo">Photo des symptômes</label>`}<input id="d-photo" type="file" accept="image/jpeg,image/png,image/webp" hidden></div>`;
+  if(!SAMPLE||!SAMPLE_IMG)h+=`<p class="note">L'analyse par Claude n'est pas disponible ici (autorisation refusée, ou app ouverte hors de Claude : l'analyse y arrivera avec une clé API). Tu peux quand même noter les symptômes.</p>`;
+  else h+=`<button class="btn primary" data-act="d-run" ${(!D.blob&&!(D.desc||'').trim())||D.loading?'disabled':''}>${D.loading?'<span class="spin"></span> Analyse en cours…':D.res?'Relancer l\'analyse':'Analyser la photo'}</button>`;
+  if(D.err)h+=`<div class="alert"><span>${esc(D.err)}</span></div>`;
+  if(D.res){const r=D.res,st=(r.en_stock||[]).map(x=>({...x,p:(S.stock||[]).find(q=>q.id===x.id)})).filter(x=>x.p);
+    h+=`<div class="diag"><div class="row between" style="align-items:flex-start"><div style="min-width:0"><span class="lbl">Diagnostic probable</span><h4>${esc(r.diagnostic||'Indéterminé')}</h4></div><span class="conf ${esc(r.confiance)}">confiance ${esc(r.confiance||'?')}</span></div>
+    ${r.signes?`<p class="note" style="color:var(--ink)">${esc(r.signes)}</p>`:''}
+    ${(r.autres_causes||[]).length?`<div><span class="lbl">Autres possibilités</span><ul>${r.autres_causes.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}
+    ${r.urgence?`<div class="kv"><span class="k">Urgence</span><b>${esc(r.urgence)}</b></div>`:''}
+    ${(r.gestes||[]).length?`<div><span class="lbl">À faire tout de suite</span><ul>${r.gestes.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}
+    <div><span class="lbl">Dans ton stock</span>${st.length?st.map(x=>`<div class="opt" style="margin-top:6px"><div class="row between"><b>${esc(x.p.name)}</b><span class="mono note">reste ${fq(stockOf(x.p),x.p.unit)}</span></div><span>${esc(x.dose||'')}</span>${x.pourquoi?`<span class="note">${esc(x.pourquoi)}</span>`:''}<span class="note">≈ ${num(+x.quantite||0,2)} ${x.p.unit} pour cette planche${x.dar_jours!=null?` · DAR ${x.dar_jours} j`:''}</span><button class="btn small primary" data-act="d-apply" data-id="${x.p.id}" data-q="${+x.quantite||''}" data-dar="${x.dar_jours??''}" style="justify-self:start">Noter ce traitement</button></div>`).join(''):`<p class="note">Rien d'adapté dans ton stock.</p>`}</div>
+    ${(r.a_acheter||[]).length?`<div><span class="lbl">À acheter</span>${r.a_acheter.map((x,i)=>`<div class="opt" style="margin-top:6px"><b>${esc(x.produit)}</b>${x.pourquoi?`<span class="note">${esc(x.pourquoi)}</span>`:''}<button class="btn small" data-act="d-buy" data-i="${i}" style="justify-self:start">Ajouter à la liste d'achat</button></div>`).join('')}</div>`:''}
+    ${r.attention?`<div class="alert amber"><span>${esc(r.attention)}</span></div>`:''}
+    <p class="note">Diagnostic indicatif fait par Claude à partir d'une photo. Vérifie toujours la dose et l'usage autorisé sur l'étiquette du produit (phytoweb.be).</p></div>`}
+  h+=`<button class="btn ${D.res?'primary':''}" data-act="d-save" ${!D.blob&&!(D.desc||'').trim()?'disabled':''}>Enregistrer au journal</button>`;
+  return h}
+async function photoBlob(file,max=1024){const url=URL.createObjectURL(file);const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url});
+  const k=Math.min(1,max/Math.max(img.width,img.height)),cv=document.createElement('canvas');cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);URL.revokeObjectURL(url);
+  return new Promise(r=>cv.toBlob(r,'image/jpeg',.85))}
+async function runDiag(o){const D=bed.diag;if(!SAMPLE)return;D.loading=true;D.err=null;renderBed();
+  const z=o.zones.find(q=>q.crop===D.crop),area=z?zoneArea(o,z):o.zones.reduce((s,q)=>s+zoneArea(o,q),0);
+  const stock=(S.stock||[]).map(p=>({id:p.id,nom:p.name,type:p.cat,unite:p.unit,stock:+stockOf(p).toFixed(2),dar_par_defaut:p.dar??null}));
+  const prompt=`Tu conseilles un jardinier amateur pour un potager familial en Belgique (Hesbaye, Wallonie), le ${fdate(parse(D.date||iso(TODAY)))}.
+La photo jointe montre des symptômes sur : ${D.crop?P[D.crop].n:'une plante non précisée'}${serreOf(o)?', cultivée sous serre non chauffée':', cultivée en plein air'}.
+Surface concernée : environ ${num(area,1)} m².
+Description du jardinier : "${(D.desc||'').trim()||'aucune'}".
+Produits disponibles dans son stock (n'utilise QUE ces identifiants dans en_stock) :
+${JSON.stringify(stock)}
+
+Réponds UNIQUEMENT avec un objet JSON de cette forme :
+{"diagnostic":"nom de la maladie, du ravageur ou du trouble le plus probable","confiance":"faible|moyenne|élevée","signes":"ce qui sur la photo appuie ce diagnostic, une ou deux phrases","autres_causes":["autres explications possibles"],"urgence":"faible|moyenne|forte","gestes":["mesures culturales immédiates"],"en_stock":[{"id":"identifiant du stock","dose":"dose et mode d'application, en une phrase","quantite":0,"dar_jours":0,"pourquoi":"pourquoi ce produit convient"}],"a_acheter":[{"produit":"type de produit ou substance, sans marque","type":"traitement|amendement","pourquoi":"pourquoi"}],"attention":"précaution importante ou vide"}
+
+Règles :
+- Si la photo ne permet pas de conclure, dis-le avec une confiance "faible" et liste les causes possibles (maladie, ravageur, carence, stress hydrique, brûlure...).
+- en_stock : uniquement les produits du stock réellement adaptés à ce problème ET à cette culture. Ne propose jamais un produit inadapté parce qu'il est disponible. "quantite" = quantité de produit (dans son unité) à prélever du stock pour traiter la surface indiquée. "dar_jours" = délai avant récolte habituel pour ce produit sur cette culture.
+- a_acheter : seulement si rien d'adapté n'est en stock ou si un complément est utile ; privilégie les solutions autorisées en agriculture biologique pour les particuliers en Belgique.
+- Les doses doivent être prudentes et cohérentes avec un usage amateur ; rappelle dans "attention" de vérifier l'étiquette si un produit phytosanitaire est concerné.
+- Tout le texte en français.`;
+  try{const r=await SAMPLE.json(prompt,{images:[D.blob].filter(Boolean)});if(!r||typeof r!=='object')throw{code:'invalid_json'};D.res=r}
+  catch(e){const c=e&&e.code;D.err={not_granted:"Analyse refusée : autorise l'accès à Claude pour cette page puis réessaie.",rate_limited:'Trop de demandes pour le moment, réessaie dans quelques minutes.',image_rejected:'Cette photo n\'a pas été acceptée. Essaie une photo JPEG ou PNG.',images_unavailable:"L'envoi de photos n'est pas disponible dans cette vue.",refused:"Claude n'a pas pu analyser cette photo.",invalid_json:"La réponse n'a pas pu être lue. Relance l'analyse."}[c]||"L'analyse n'a pas abouti. Relance-la dans un instant."}
+  D.loading=false;if(bed&&bed.diag===D)renderBed()}
+async function processPhoto(file){
+  const url=URL.createObjectURL(file);const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url});
+  const max=ASSETS?1200:320,k=Math.min(1,max/Math.max(img.width,img.height)),cv=document.createElement('canvas');cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);
+  cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);URL.revokeObjectURL(url);
+  if(ASSETS){const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',.8));try{const r=await ASSETS.upload(blob);return{a:r.id}}catch(_){}}
+  return{u:cv.toDataURL('image/jpeg',.6)};
+}
+
+/* ================= Inventaire de l'abri ================= */
+let inv=null;
+function openInv(tab=null){inv={sel:null,add:false,tab};$('#invView').hidden=false;renderInv();$('#invView').scrollTop=0}
+function closeInv(){inv=null;$('#invView').hidden=true}
+function renderInv(){if(!inv)return;if(!inv.tab)return renderInvHome();if(inv.tab==='semis')return renderNursery();if(inv.tab==='stock')inv.tab='produits';renderStockTab(inv.tab==='graines')}
+function renderStockTab(seedsTab){const st=(S.stock||[]).filter(p=>seedsTab?p.cat==='graine':p.cat!=='graine'),lows=st.filter(isLow);
+  const row=p=>{const q=stockOf(p),lo=isLow(p),open=inv.sel===p.id,tot=Math.max(q,(p.moves||[]).filter(m=>m.q>0).reduce((s,m)=>s+m.q,0),0.0001);
+    let h=`<div class="prod"><button class="top" data-iv="sel" data-id="${p.id}"><span><b>${seedLabel(p)}</b>${lo==='out'?'<span class="low out">épuisé</span>':lo==='low'?'<span class="low">stock bas</span>':''}${expired(p)?'<span class="low out">périmées</span>':''}<span class="note" style="display:block">${p.cat==='graine'?`${P[p.crop]?P[p.crop].n:'Graines'}${p.variety?' · '+esc(p.variety):''}${p.exp?' · à semer avant fin '+p.exp:''}`:p.cat==='traitement'?`DAR par défaut ${p.dar||0} j`:'Amendement'}${p.min!=null?` · alerte sous ${num(p.min,2)} ${p.unit}`:''}</span></span><span class="q">${num(Math.max(0,q),2)} <small>${p.unit}</small></span></button>
+    <div class="bar"><span style="width:${clamp(q/tot*100,0,100)}%;${lo?'background:var(--sun)':''}"></span></div>`;
+    if(open){const mv=[...(p.moves||[]).map(m=>({d:m.d,v:+m.q,t:m.k==='achat'?'Ajout au stock':'Correction'})),...prodUses(p).map(u=>({d:u.e.d,v:-u.e.qty,t:u.lab||('Utilisé · '+fullName(u.o))}))].sort((a,b)=>b.d.localeCompare(a.d));
+      h+=`<div class="grid2"><label class="field"><span class="lbl">Ajouter (${p.unit})</span><input id="iv-add" type="number" min="0" step="0.1"></label><label class="field"><span class="lbl">Stock réel (${p.unit})</span><input id="iv-real" type="number" min="0" step="0.1" placeholder="${num(Math.max(0,q),2)}"></label>
+      <button class="btn small primary" data-iv="addq" data-id="${p.id}">Ajouter au stock</button><button class="btn small" data-iv="fix" data-id="${p.id}">Corriger le stock</button></div>
+      ${p.cat==='traitement'?`<label class="field" style="max-width:220px"><span class="lbl">Délai avant récolte par défaut (j)</span><input id="iv-dar" data-id="${p.id}" type="number" min="0" step="1" value="${p.dar||0}"></label>`:''}
+      <label class="field" style="max-width:220px"><span class="lbl">Alerte stock bas sous (${p.unit})</span><input id="iv-min" data-id="${p.id}" type="number" min="0" step="0.1" value="${p.min??''}"></label>
+      <div><span class="lbl">Mouvements</span>${mv.length?mv.map(m=>`<div class="mv"><span class="d">${fdate(parse(m.d))}</span><span>${esc(m.t)}</span><span class="v ${m.v<0?'down':'up'}">${m.v>0?'+':'−'}${num(Math.abs(m.v),2)} ${p.unit}</span></div>`).join(''):'<p class="note">Aucun mouvement.</p>'}</div>
+      <button class="btn small danger" data-iv="del" data-id="${p.id}" style="justify-self:start">Supprimer le produit</button>`}
+    return h+`</div>`};
+  const group=c=>{const ps=st.filter(p=>p.cat===c);return`<div class="stack"><div class="section-t"><span class="lbl">${CAT[c]}</span><span class="mono note">${ps.length}</span></div>${ps.length?`<div class="hvlist">${ps.map(row).join('')}</div>`:'<p class="note">Aucun produit.</p>'}</div>`};
+  const form=!inv.add?'':seedsTab?`<div class="panel"><h3>Nouveau sachet de graines</h3><div class="grid2">
+    <input id="np-cat" type="hidden" value="graine">
+    <label class="field"><span class="lbl">Culture</span><select id="np-crop">${PLANTS.map(q=>`<option value="${q.id}">${q.n}</option>`).join('')}</select></label>
+    <label class="field"><span class="lbl">Variété</span><input id="np-var" placeholder="ex. Cœur de bœuf"></label>
+    <label class="field"><span class="lbl">Quantité</span><input id="np-q" type="number" min="0" step="1"></label>
+    <label class="field"><span class="lbl">Unité</span><select id="np-unit"><option>graines</option><option>g</option><option>sachet</option></select></label>
+    <label class="field"><span class="lbl">À semer avant (année)</span><input id="np-exp" type="number" min="2000" max="2100" step="1" placeholder="${YEAR+2}"></label>
+    <label class="field"><span class="lbl">Alerte sous</span><input id="np-min" type="number" min="0" step="1" placeholder="facultatif"></label></div>
+    <div class="row"><button class="btn primary" data-iv="create">Ajouter les graines</button><button class="btn" data-iv="cancel">Annuler</button></div></div>`
+  :`<div class="panel"><h3>Nouveau produit</h3><div class="grid2"><label class="field span2"><span class="lbl">Nom</span><input id="np-name" placeholder="ex. Fumier de cheval"></label>
+    <label class="field"><span class="lbl">Type</span><select id="np-cat"><option value="amendement" selected>Amendement</option><option value="traitement">Traitement</option></select></label>
+    <label class="field"><span class="lbl">Unité</span><select id="np-unit"><option>kg</option><option>L</option></select></label>
+    <label class="field"><span class="lbl">Quantité en stock</span><input id="np-q" type="number" min="0" step="0.1"></label>
+    <label class="field"><span class="lbl">Alerte sous</span><input id="np-min" type="number" min="0" step="0.1" placeholder="facultatif"></label>
+    <label class="field span2"><span class="lbl">Délai avant récolte (traitements, en jours)</span><input id="np-dar" type="number" min="0" step="1" placeholder="voir l'étiquette"></label></div>
+    <div class="row"><button class="btn primary" data-iv="create">Ajouter le produit</button><button class="btn" data-iv="cancel">Annuler</button></div></div>`;
+  $('#invView').innerHTML=`<div class="bedhead"><button class="iconbtn" data-iv="home" aria-label="Retour"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><div style="min-width:0;flex:1"><div class="brand" style="font-size:17px">${seedsTab?'Graines':'Produits'}</div><div class="mono note">${st.length} ${seedsTab?'sachet':'produit'}${st.length>1?'s':''}${lows.length?' · '+lows.length+' à racheter':''}</div></div>${inv.add?'':`<button class="btn small primary" data-iv="new">+ ${seedsTab?'Graines':'Produit'}</button>`}</div>
+  <div class="bedbody">${lows.length?`<div class="alert amber"><span>À racheter : ${lows.map(p=>`<b>${esc(p.name)}</b> (${fq(stockOf(p),p.unit)})`).join(', ')}.</span></div>`:''}${form}${seedsTab?group('graine'):group('amendement')+group('traitement')}
+  <p class="note">${seedsTab?'Les graines se déduisent toutes seules quand tu notes un semis dans le journal d\'une planche ou un semis en godets. Les graines périmées ne sont plus proposées.':'Le stock baisse tout seul quand tu notes un amendement ou un traitement dans le journal d\'une planche.'} Supprimer l'entrée du journal remet la quantité en stock.</p></div>`;
+}
+const TRANSPLANT={laitue_h:35,tomate:50,poivron:60,aubergine:60,courgette:25,concombre:25,potiron:25,mais:21,chou:35,poireau:70,celeri:60,laitue:30,basilic:40,oignon:50,fenouil:30,blette:30,persil:40,fraise:60,betterave:30,epinard:30,mache:30,feve:25,pois:21,haricot:18};
+const readyOf=n=>addD(n.d,TRANSPLANT[n.crop]||30);
+const nurseryActive=()=>(S.nursery||[]).filter(n=>n.st==='cours');
+const nurseryReady=()=>nurseryActive().filter(n=>readyOf(n)<=TODAY);
+function renderInvHome(){const act=nurseryActive(),rd=nurseryReady(),st=S.stock||[];
+  const sc=(l,w)=>{const lo=l.filter(isLow).length;return`${l.length} ${w}${l.length>1?'s':''}${lo?` · <b style="display:inline;font-size:inherit;color:var(--sun)">${lo} à racheter</b>`:''}`};
+  $('#invView').innerHTML=`<div class="bedhead"><button class="iconbtn" data-iv="back" aria-label="Retour"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><div style="min-width:0;flex:1"><div class="brand" style="font-size:17px">Abri à outils</div><div class="note">Semis, graines et produits</div></div></div>
+  <div class="bedbody"><div class="abhome">
+    <button class="abcard" data-iv="tab" data-t="semis"><svg viewBox="0 0 24 24"><path d="M6 20h12l-1.5-7h-9z"/><path d="M12 13V8"/><path d="M12 9c0-3 2-5 5-5 0 3-2 5-5 5zM12 10c0-2.5-1.7-4-4-4 0 2.3 1.7 4 4 4z"/></svg><span><b>Semis</b><span class="note">${act.length} en cours${rd.length?` · <b style="display:inline;font-size:inherit;color:var(--ok)">${rd.length} à repiquer</b>`:''}</span></span><span class="chev">›</span></button>
+    <button class="abcard" data-iv="tab" data-t="graines"><svg viewBox="0 0 24 24"><path d="M6 3h12v18H6z"/><path d="M6 8h12"/><ellipse cx="10" cy="13" rx="1.4" ry="2"/><ellipse cx="14" cy="16" rx="1.4" ry="2"/></svg><span><b>Graines</b><span class="note">${sc(st.filter(p=>p.cat==='graine'),'sachet')}</span></span><span class="chev">›</span></button>
+    <button class="abcard" data-iv="tab" data-t="produits"><svg viewBox="0 0 24 24"><path d="M4 8l8-4 8 4v10l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v10"/></svg><span><b>Produits</b><span class="note">${sc(st.filter(p=>p.cat!=='graine'),'produit')}</span></span><span class="chev">›</span></button>
+  </div></div>`}
+function renderNursery(){const all=S.nursery||[],act=nurseryActive().sort((a,b)=>readyOf(a)-readyOf(b)),rd=act.filter(n=>readyOf(n)<=TODAY),wait=act.filter(n=>readyOf(n)>TODAY),done=all.filter(n=>n.st!=='cours').slice(-5).reverse();
+  const ns=inv.ns||(inv.ns={crop:'laitue',n:12,qty:'',d:iso(TODAY),pid:''});
+  const seeds=(S.stock||[]).filter(q=>q.cat==='graine'&&q.crop===ns.crop&&stockOf(q)>0&&!expired(q));
+  const item=n=>{const p=P[n.crop],r=readyOf(n),left=days(TODAY,r),tot=TRANSPLANT[n.crop]||30,prog=clamp(days(parse(n.d),TODAY)/tot,0,1),open=inv.sel===n.id;
+    let h=`<div class="prod"><button class="top" data-iv="nsel" data-id="${n.id}"><span><b>${p?p.n:n.crop}</b> <span class="note">· ${n.n} godet${n.n>1?'s':''}</span><span class="note" style="display:block">Semé le ${fdate(parse(n.d))} · repiquage ${left<=0?'possible':'vers le '+fdate(r)}</span></span><span class="${left<=0?'due ready':'due'}">${left<=0?'prêt':'dans '+left+' j'}</span></button><div class="bar"><span style="width:${prog*100}%"></span></div>`;
+    if(open&&n.st==='cours'){const targets=plantables();const tg=inv.tgt||(inv.tgt={o:(targets.find(o=>o.zones.some(z=>!z.crop))||targets[0]||{}).id,zi:0});const to=obj(tg.o);
+      h+=`<div class="grid2"><label class="field"><span class="lbl">Planche</span><select id="ns-o">${targets.map(o=>`<option value="${o.id}" ${o.id===tg.o?'selected':''}>${esc(fullName(o))}</option>`).join('')}</select></label>
+      <label class="field"><span class="lbl">Zone</span><select id="ns-z">${to?to.zones.map((z,i)=>`<option value="${i}" ${i===tg.zi?'selected':''}>Zone ${i+1} · ${z.crop?P[z.crop].n:'libre'}</option>`).join(''):''}</select></label></div>
+      ${to&&to.zones[tg.zi]&&to.zones[tg.zi].crop&&to.zones[tg.zi].crop!==n.crop?`<p class="note" style="color:var(--danger)">Cette zone contient déjà ${P[to.zones[tg.zi].crop].n.toLowerCase()} : elle sera remplacée.</p>`:''}
+      <div class="row"><button class="btn small primary" data-iv="trans" data-id="${n.id}">Repiquer ici</button><button class="btn small" data-iv="lost" data-id="${n.id}">Semis perdu</button><button class="btn small danger" data-iv="ndel" data-id="${n.id}">Supprimer</button></div>`}
+    return h+`</div>`};
+  const form=inv.add?`<div class="panel"><h3>Nouveau semis en godets</h3><div class="grid2">
+    <label class="field"><span class="lbl">Culture</span><select id="ns-crop">${PLANTS.map(q=>`<option value="${q.id}" ${q.id===ns.crop?'selected':''}>${q.n}</option>`).join('')}</select></label>
+    <label class="field"><span class="lbl">Date</span><input id="ns-d" type="date" value="${ns.d}"></label>
+    <label class="field span2"><span class="lbl">Graines du stock</span><select id="ns-pid"><option value="">Sans graines du stock</option>${seeds.map(q=>`<option value="${q.id}" ${q.id===ns.pid?'selected':''}>${seedLabel(q)} · ${fq(stockOf(q),q.unit)}</option>`).join('')}</select></label>
+    <label class="field"><span class="lbl">Godets</span><input id="ns-n" type="number" min="1" step="1" value="${ns.n}"></label>
+    <label class="field"><span class="lbl">Graines utilisées</span><input id="ns-q" type="number" min="0" step="1" value="${ns.qty}" placeholder="${seeds.length?'quantité':'—'}" ${seeds.length?'':'disabled'}></label></div>
+    <p class="note">${P[ns.crop].n} : repiquage environ ${TRANSPLANT[ns.crop]||30} jours après le semis.${seeds.length?'':' Aucune graine de cette culture en stock.'}</p>
+    <div class="row"><button class="btn primary" data-iv="ncreate">Ajouter le semis</button><button class="btn" data-iv="cancel">Annuler</button></div></div>`:'';
+  const sec=(t,l)=>l.length?`<div class="stack"><div class="section-t"><span class="lbl">${t}</span><span class="mono note">${l.length}</span></div><div class="hvlist">${l.map(item).join('')}</div></div>`:'';
+  $('#invView').innerHTML=`<div class="bedhead"><button class="iconbtn" data-iv="home" aria-label="Retour"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><div style="min-width:0;flex:1"><div class="brand" style="font-size:17px">Semis</div><div class="mono note">${act.length} en cours${rd.length?' · '+rd.length+' à repiquer':''}</div></div>${inv.add?'':'<button class="btn small primary" data-iv="new">+ Semis</button>'}</div>
+  <div class="bedbody">${form}${sec('À repiquer',rd)}${sec('En cours',wait)}${!act.length&&!inv.add?'<p class="note">Aucun semis en cours. Ajoute tes semis en godets pour suivre la date de repiquage.</p>':''}
+  ${done.length?`<div class="stack"><span class="lbl">Derniers terminés</span><div class="jlist">${done.map(n=>`<div class="jent"><span class="d">${fdate(parse(n.td||n.d))}</span><div>${P[n.crop]?P[n.crop].n:''} · ${n.n} godets <span class="note">· ${n.st==='perdu'?'perdu':'repiqué'+(obj(n.to)?' sur '+esc(fullName(obj(n.to))):'')}</span></div><button class="del" data-iv="ndel" data-id="${n.id}" aria-label="Supprimer">×</button></div>`).join('')}</div></div>`:''}</div>`}
+$('#invView').addEventListener('click',e=>{const b=e.target.closest('[data-iv]');if(!b)return;const a=b.dataset.iv,p=(S.stock||[]).find(q=>q.id===b.dataset.id);
+  if(a==='back'){closeInv();if(bed)renderBed();else refresh();return}
+  if(a==='home'){inv.tab=null;inv.add=false;inv.sel=null;renderInv();return}
+  if(a==='tab'){inv.tab=b.dataset.t;inv.add=false;inv.sel=null;renderInv();$('#invView').scrollTop=0;return}
+  if(a==='nsel'){inv.sel=inv.sel===b.dataset.id?null:b.dataset.id;inv.tgt=null;renderInv();return}
+  if(a==='ncreate'){const ns=inv.ns,pr=(S.stock||[]).find(q=>q.id===ns.pid),q=parseFloat(ns.qty)||0;
+    if(pr&&q>stockOf(pr)+1e-9)return toast(`Stock insuffisant : il reste ${fq(stockOf(pr),pr.unit)}`);
+    S.nursery=S.nursery||[];S.nursery.push({id:uid(),crop:ns.crop,pid:pr?pr.id:null,qty:pr?q:0,n:Math.max(1,parseInt(ns.n)||1),d:ns.d||iso(TODAY),st:'cours'});inv.add=false;inv.ns=null;save();renderInv();return toast('Semis ajouté'+(pr&&q?` · reste ${fq(stockOf(pr),pr.unit)}`:''),true)}
+  if(a==='trans'||a==='lost'||a==='ndel'){const n=(S.nursery||[]).find(x=>x.id===b.dataset.id);if(!n)return;
+    if(a==='ndel'){S.nursery=S.nursery.filter(x=>x!==n);inv.sel=null;save();renderInv();return toast('Semis supprimé',true)}
+    if(a==='lost'){n.st='perdu';n.td=iso(TODAY);inv.sel=null;save();renderInv();return toast('Semis marqué comme perdu',true)}
+    const o=obj(inv.tgt&&inv.tgt.o),z=o&&o.zones[inv.tgt.zi];if(!z)return toast('Choisis une planche et une zone');
+    if(z.crop!==n.crop){z.crop=n.crop;z.cells={}}z.date=iso(TODAY);recordGrown(o,n.crop,YEAR);
+    const g=zoneGrid(o,z);let left=Math.ceil(n.n/g.per);for(let r=0;r<g.rows&&left>0;r++)for(let c=0;c<g.cols&&left>0;c++){const k=r+'-'+c;if(!z.cells[k]){z.cells[k]=z.date;left--}}
+    o.journal=o.journal||[];o.journal.push({id:uid(),k:'note',d:iso(TODAY),t:`Repiquage de ${n.n} plants de ${P[n.crop].n.toLowerCase()} (semés le ${fdate(parse(n.d))})`});
+    n.st='repique';n.td=iso(TODAY);n.to=o.id;inv.sel=null;save();renderInv();return toast(`${P[n.crop].n} repiquée sur ${fullName(o)}`,true)}
+  if(a==='new'){inv.add=true;inv.sel=null;renderInv();return}
+  if(a==='cancel'){inv.add=false;renderInv();return}
+  if(a==='sel'){inv.sel=inv.sel===p.id?null:p.id;renderInv();return}
+  if(a==='create'){const name=$('#np-name')?$('#np-name').value.trim():(P[$('#np-crop').value]||{}).n;if(!name)return toast('Donne un nom au produit');
+    const q=parseFloat($('#np-q').value)||0,mn=parseFloat($('#np-min').value),dar=$('#np-dar')?parseInt($('#np-dar').value):NaN;
+    const np={id:uid(),name,cat:$('#np-cat').value,unit:$('#np-unit').value,min:isNaN(mn)?null:mn,moves:q>0?[{d:iso(TODAY),q,k:'achat'}]:[]};
+    if(np.cat==='graine'){np.crop=$('#np-crop').value||null;np.variety=$('#np-var').value.trim()||null;const ex=parseInt($('#np-exp').value);np.exp=isNaN(ex)?null:ex;if(!['g','graines','sachet'].includes(np.unit))np.unit='graines'}if(np.cat==='traitement')np.dar=isNaN(dar)?0:dar;
+    S.stock=S.stock||[];S.stock.push(np);inv.add=false;inv.sel=np.id;save();renderInv();return toast(`${name} ajouté à l'inventaire`,true)}
+  if(!p)return;
+  if(a==='addq'){const q=parseFloat($('#iv-add').value)||0;if(q<=0)return toast('Indique la quantité à ajouter');p.moves.push({d:iso(TODAY),q,k:'achat'});save();renderInv();return toast(`+${fq(q,p.unit)} · ${p.name}`,true)}
+  if(a==='fix'){const r=parseFloat($('#iv-real').value);if(isNaN(r)||r<0)return toast('Indique la quantité réellement en stock');const dq=r-stockOf(p);if(Math.abs(dq)<1e-9)return toast('Le stock est déjà juste');p.moves.push({d:iso(TODAY),q:dq,k:'correction'});save();renderInv();return toast(`Stock corrigé : ${fq(r,p.unit)}`,true)}
+  if(a==='del'){if(!b.classList.contains('armed')){b.classList.add('armed');b.textContent='Confirmer la suppression';return}S.stock=S.stock.filter(q=>q!==p);inv.sel=null;save();renderInv();return toast(`${p.name} retiré de l'inventaire`,true)}
+});
+$('#invView').addEventListener('change',e=>{const t=e.target;
+  if(inv&&inv.ns&&t.id&&t.id.startsWith('ns-')&&t.id!=='ns-o'&&t.id!=='ns-z'){const k={'ns-crop':'crop','ns-d':'d','ns-pid':'pid','ns-n':'n','ns-q':'qty'}[t.id];inv.ns[k]=t.value;if(k==='crop'){inv.ns.pid='';inv.ns.qty=''}if(k==='crop'||k==='pid')renderInv();return}
+  if(t.id==='ns-o'){inv.tgt={o:t.value,zi:0};renderInv();return}
+  if(t.id==='ns-z'){inv.tgt.zi=+t.value;renderInv();return}
+  const p=(S.stock||[]).find(q=>q.id===t.dataset.id);if(!p)return;
+  if(t.id==='iv-dar'){p.dar=Math.max(0,parseInt(t.value)||0);save();renderInv()}
+  if(t.id==='iv-min'){const v=parseFloat(t.value);p.min=isNaN(v)?null:v;save();renderInv()}});
+
+/* ================= Récoltes ================= */
+function plantings(){const out=[];plantables().forEach(o=>{const bu=blockUntil(o);o.zones.forEach((z,zi)=>{const p=P[z.crop];if(!p)return;const g=zoneGrid(o,z),by={};
+  for(const k in z.cells)(by[z.cells[k]]=by[z.cells[k]]||[]).push(k);
+  for(const d in by){const hv=addD(d,p.j);out.push({o,z,zi,p,d,n:by[d].length*g.per,hv,bu,left:days(TODAY,hv),prog:clamp(days(parse(d),TODAY)/p.j,0,1)})}})});
+  return out.sort((a,b)=>a.hv-b.hv)}
+function hvRow(x){const due=x.bu&&x.left<=0?`<span class="due blocked">bloquée<br>→ ${fdate(x.bu)}</span>`:`<span class="due ${x.left<=0?'ready':''}">${x.left<=0?(x.left<-14?'prête depuis<br>'+(-x.left)+' j':'prête'):'dans<br>'+x.left+' j'}</span>`;
+  return`<button class="hv" data-open="${x.o.id}" data-zi="${x.zi}"><span class="dot" style="background:${x.p.c}"></span><span style="min-width:0"><span class="t">${x.p.n}</span> <span class="s">· ${esc(fullName(x.o))} · ≈ ${x.n} plant${x.n>1?'s':''}</span>
+  <span class="s" style="display:block">Semé le ${fdate(parse(x.d))} → récolte ${fdate(x.hv)}${x.bu?' · traitement en cours':''}</span><span class="bar"><span style="width:${Math.round(x.prog*100)}%"></span></span></span>${due}</button>`}
+let hvYear=YEAR;
+function allHarvests(){const out=[];plantables().forEach(o=>(o.journal||[]).forEach(e=>{if(e.k==='recolte'&&e.kg>0)out.push({o,crop:e.crop,kg:+e.kg,y:parse(e.d).getFullYear()})}));return out}
+function renderHarvest(){
+  const all=plantings(),ready=all.filter(x=>x.left<=0),soon=all.filter(x=>x.left>0),mo=TODAY.getMonth()+1;
+  const H=allHarvests(),yrs=[...new Set([YEAR,...H.map(h=>h.y)])].sort((a,b)=>b-a);
+  const cur=H.filter(h=>h.y===hvYear),tot=cur.reduce((s,h)=>s+h.kg,0);
+  const byCrop={},byBed={};cur.forEach(h=>{byCrop[h.crop]=(byCrop[h.crop]||0)+h.kg;byBed[fullName(h.o)]=(byBed[fullName(h.o)]||0)+h.kg});
+  const cs=Object.entries(byCrop).sort((a,b)=>b[1]-a[1]),bs=Object.entries(byBed).sort((a,b)=>b[1]-a[1]),mx=cs.length?cs[0][1]:1,mb=bs.length?bs[0][1]:1;
+  const cmpY=yrs.slice(0,3).sort((a,b)=>a-b),cmpCrops=[...new Set(H.filter(h=>cmpY.includes(h.y)).map(h=>h.crop))];
+  const cell=(c,y)=>H.filter(h=>h.crop===c&&h.y===y).reduce((s,h)=>s+h.kg,0);
+  const sow=PLANTS.filter(p=>p.m.includes(mo));
+  $('#v-harvest').innerHTML=`<div class="page">
+   <h2>Récoltes</h2>
+   <div class="stack"><div class="section-t"><span class="lbl">Prêt à récolter</span><span class="mono note">${ready.length}</span></div>
+   ${ready.length?`<div class="hvlist">${ready.map(hvRow).join('')}</div><p class="note">Une fois récolté, note le poids dans le journal de la planche puis retire les cases pour libérer la place.</p>`:`<p class="note">Rien n'est encore à maturité.</p>`}</div>
+   <div class="stack"><div class="section-t"><span class="lbl">À venir</span><span class="mono note">${soon.length}</span></div>
+   ${soon.length?`<div class="hvlist">${soon.map(hvRow).join('')}</div>`:`<p class="note">Aucune récolte en attente. Plante une case dans une planche pour voir apparaître sa date ici.</p>`}</div>
+   <div class="stack"><span class="lbl">À semer ou planter en ${MONTHS[mo-1]}</span><div class="chips">${sow.map(p=>chip(p.id)).join('')||'<span class="note">Rien de prévu ce mois-ci.</span>'}</div></div>
+   <div class="stack"><div class="section-t"><h2>Carnet de récolte</h2></div>
+     <div class="seg">${yrs.map(y=>`<button data-hy="${y}" aria-pressed="${y===hvYear}">${y}</button>`).join('')}</div>
+     <div class="stats"><div class="stat"><span class="lbl">Total ${hvYear}</span><span class="v">${num(tot)} <small>kg</small></span></div><div class="stat"><span class="lbl">Cultures récoltées</span><span class="v">${cs.length}</span></div><div class="stat"><span class="lbl">Pesées</span><span class="v">${cur.length}</span></div></div>
+     ${cs.length?`<div><span class="lbl">Par culture</span><div class="hbars" style="margin-top:8px">${cs.map(([c,kg])=>`<div class="hbar"><span>${P[c]?P[c].n:c}</span><span class="track"><span style="width:${kg/mx*100}%;background:${P[c]?P[c].c:'var(--accent)'}"></span></span><span class="val">${num(kg)} kg</span></div>`).join('')}</div></div>
+     <div><span class="lbl">Par planche</span><div class="hbars" style="margin-top:8px">${bs.map(([b,kg])=>`<div class="hbar"><span>${esc(b)}</span><span class="track"><span style="width:${kg/mb*100}%;background:var(--accent)"></span></span><span class="val">${num(kg)} kg</span></div>`).join('')}</div></div>`:`<p class="note">Aucune pesée en ${hvYear}. Ajoute une récolte depuis le journal d'une planche.</p>`}
+     ${cmpCrops.length&&cmpY.length>1?`<div><span class="lbl">Comparaison des saisons (kg)</span><div class="tblwrap" style="margin-top:8px"><table class="cmp"><thead><tr><th>Culture</th>${cmpY.map(y=>`<th>${y}</th>`).join('')}</tr></thead><tbody>${cmpCrops.map(c=>`<tr><td>${P[c]?P[c].n:c}</td>${cmpY.map((y,i)=>{const v=cell(c,y),pv=i?cell(c,cmpY[i-1]):0;return`<td class="${i&&v&&pv?(v>pv?'up':v<pv?'down':''):''}">${v?num(v):'—'}</td>`}).join('')}</tr>`).join('')}</tbody></table></div></div>`:''}
+   </div>
+   <p class="note">Dans l'app native, chaque date de récolte deviendra une notification sur le téléphone.</p>
+  </div>`;
+}
+$('#v-harvest').addEventListener('click',e=>{const y=e.target.closest('[data-hy]');if(y){hvYear=+y.dataset.hy;return renderHarvest()}const b=e.target.closest('[data-open]');if(b)openBed(b.dataset.open,+b.dataset.zi)});
+
+/* ================= Eau & gel ================= */
+function frostPeriod(d){const m=d.getMonth()+1,dd=d.getDate();
+  if(m>=11||m<=3)return{lvl:2,txt:'Gel probable la nuit'};
+  if(m===10)return{lvl:1,txt:'Premières gelées possibles (souvent mi-octobre en Hesbaye)'};
+  if(m===4||(m===5&&dd<=15))return{lvl:1,txt:'Gelées tardives possibles jusqu\'aux Saints de glace (11–13 mai)'};
+  return{lvl:0,txt:'Pas de gel attendu à cette période'}}
+function cultivated(){let a=0;const per=[];plantables().forEach(o=>{let ao=0;o.zones.forEach(z=>{if(z.crop&&Object.keys(z.cells).length)ao+=zoneArea(o,z)});if(ao){a+=ao;per.push({o,a:ao})}});return{a,per}}
+function renderWeather(){
+  const fp=frostPeriod(TODAY),mo=TODAY.getMonth();
+  const sens=[];plantables().forEach(o=>o.zones.forEach(z=>{if(z.crop&&FROST_SENSITIVE.has(z.crop)&&Object.keys(z.cells).length)sens.push({o,z})}));
+  const fr=S.frost&&S.frost.d===iso(TODAY)?S.frost.t:'';
+  const danger=fr!==''&&+fr<=2;
+  let frost=`<div class="alert ${danger?'':'frost'}"><span><b>${fp.txt}.</b> ${sens.length?`${sens.length} culture${sens.length>1?'s':''} sensible${sens.length>1?'s':''} en place.`:'Aucune culture sensible en place.'}</span>
+    ${danger&&sens.length?`<span>Minimum prévu ${num(fr)} °C : couvre ou rentre ${sens.map(s=>`<b>${P[s.z.crop].n.toLowerCase()}</b> (${esc(fullName(s.o))}${serreOf(s.o)?', serre non chauffée':''})`).join(', ')} ce soir. Un voile d'hivernage P30 gagne environ 2 à 4 °C.</span>`:''}
+    ${fr!==''&&!danger?`<span>Minimum prévu ${num(fr)} °C : pas de protection nécessaire cette nuit.</span>`:''}</div>
+    ${sens.length?`<div class="chips">${sens.map(s=>`<span class="chip"><i style="background:${P[s.z.crop].c}"></i>${P[s.z.crop].n} · ${esc(fullName(s.o))}</span>`).join('')}</div>`:''}
+    <label class="field" style="max-width:260px"><span class="lbl">Minimum prévu cette nuit (°C)</span><input id="w-tmin" type="number" step="0.5" value="${fr}" placeholder="selon ta météo"></label>`;
+  const tc=tankCap();if(tc){S.water.cap=tc.cap;if(S.water.level>tc.cap)S.water.level=tc.cap}
+  const w=S.water,cu=cultivated(),eff=.85;
+  const collect=RAIN.map(mm=>w.roof*mm*eff),need=NEED.map(n=>cu.a*n*30/7);
+  const wkC=collect[mo]/30*7,wkN=cu.a*NEED[mo],bal=wkC-wkN;
+  const auto=bal<0?Math.floor(w.level/(-bal/7)):null;
+  /* graphique : 12 mois, deux séries */
+  const max=Math.max(...collect,...need,1),nice=Math.ceil(max/500)*500||500,Wc=360,Hc=180,pl=40,pb=20,bw=(Wc-pl)/12;
+  let ch=`<svg class="chart" viewBox="0 0 ${Wc} ${Hc+pb}" role="img" aria-label="Pluie récupérée et besoin d'arrosage par mois">`;
+  for(let i=0;i<=4;i++){const v=nice*i/4,y=Hc-v/nice*(Hc-10);ch+=`<line class="gl" x1="${pl}" x2="${Wc}" y1="${y}" y2="${y}"/><text class="ax" x="${pl-6}" y="${y+3}" text-anchor="end">${v>=1000?num(v/1000)+' k':Math.round(v)}</text>`}
+  collect.forEach((c,i)=>{const x=pl+i*bw,h1=c/nice*(Hc-10),h2=need[i]/nice*(Hc-10);
+    ch+=`<rect class="b1" x="${x+bw*.12}" y="${Hc-h1}" width="${bw*.36}" height="${h1}" rx="1.5"/><rect class="b2" x="${x+bw*.52}" y="${Hc-h2}" width="${bw*.36}" height="${h2}" rx="1.5"/><text class="ax" x="${x+bw/2}" y="${Hc+14}" text-anchor="middle" ${i===mo?'style="font-weight:600;fill:var(--ink)"':''}>${MSHORT[i]}</text>`});
+  ch+=`</svg>`;
+  
+  $('#v-weather').innerHTML=`<div class="page">
+   <h2>Gel</h2>${frost}
+   <p class="note">Les seuils viennent du calendrier climatique de la Hesbaye. L'alerte automatique sur les prévisions arrivera avec l'app native ou une station météo reliée.</p>
+   <h2>Pluie</h2>
+   <div class="row"><button class="btn primary" data-wact="rain">Il a plu aujourd'hui</button><label class="field" style="width:120px"><span class="lbl">Quantité (mm)</span><input id="r-mm" type="number" min="0" step="0.5" placeholder="facultatif"></label></div>
+   ${(S.rain||[]).length?`<div class="jlist">${S.rain.slice(0,6).map(r=>`<div class="jent"><span class="d">${fdate(parse(r.d))}</span><div>${r.mm!=null?`<span class="mono">${num(r.mm)} mm</span>`:'Pluie'}${r.mm!=null&&r.mm<RAIN_MIN?' <span class="note">· trop faible pour compter comme arrosage</span>':''}</div><button class="del" data-wact="rdel" data-id="${r.id}" aria-label="Supprimer">×</button></div>`).join('')}</div>`:'<p class="note">Aucune pluie notée.</p>'}
+   <p class="note">Une pluie de ${RAIN_MIN} mm ou plus, ou sans quantité, compte comme un arrosage pour les planches en plein air. La page ne peut pas lire la météo elle-même : la station météo ou l'app native le feront automatiquement.</p>
+   <h2>Eau</h2>
+   <div class="grid3"><label class="field"><span class="lbl">Toit raccordé (m²)</span><input id="w-roof" type="number" min="0" step="1" value="${w.roof}"></label>
+   ${tc?`<div class="field"><span class="lbl">Capacité (L)</span><span class="mono" style="padding-top:9px">${num(tc.cap,0)} L</span><span class="note">calculée sur ${tc.n} cuve${tc.n>1?'s':''} du plan</span></div>`:`<label class="field"><span class="lbl">Capacité cuve (L)</span><input id="w-cap" type="number" min="0" step="100" value="${w.cap}"></label>`}
+   <label class="field"><span class="lbl">Niveau actuel (L)</span><input id="w-level" type="number" min="0" max="${w.cap}" step="50" value="${w.level}"></label></div>
+   <div class="stats"><div class="stat"><span class="lbl">Surface cultivée</span><span class="v">${num(cu.a)} <small>m²</small></span></div>
+   <div class="stat"><span class="lbl">Récupéré / sem. (${MONTHS[mo]})</span><span class="v">${num(wkC,0)} <small>L</small></span></div>
+   <div class="stat"><span class="lbl">Besoin / sem.</span><span class="v">${num(wkN,0)} <small>L</small></span></div>
+   <div class="stat"><span class="lbl">Autonomie cuve</span><span class="v">${auto==null?'∞':auto} <small>${auto==null?'':'jours'}</small></span></div></div>
+   <p class="note">${auto==null?'La pluie récupérée couvre le besoin estimé ce mois-ci.':`Au rythme moyen de ${MONTHS[mo]}, la cuve se vide en ${auto} jours sans pluie supplémentaire.`} Niveau : ${Math.round(w.level/Math.max(1,w.cap)*100)} % de ${num(w.cap,0)} L.</p>
+   <div><div class="section-t"><span class="lbl">Litres par mois</span><span class="legend"><span><i style="background:var(--water)"></i>Pluie récupérée</span><span><i style="background:var(--sun)"></i>Besoin d'arrosage</span></span></div>${ch}</div>
+   ${cu.per.length?`<div class="stack"><span class="lbl">Arrosage indicatif cette semaine</span><div class="hvlist">${cu.per.map(x=>{const lw=lastWater(x.o),th=thirsty(x.o);return`<button class="hv" data-open="${x.o.id}" data-zi="0"><span class="dot" style="background:var(--water)"></span><span><span class="t">${esc(fullName(x.o))}</span> <span class="s">· ${num(x.a)} m² cultivés</span><span class="s" style="display:block${th?';color:var(--water);font-weight:700':''}">${waterText(lw)}${th?' · à arroser':''}</span></span><span class="due">${num(x.a*NEED[mo],0)} L</span></button>`}).join('')}</div></div>`:''}
+   <p class="note">Pluie : moyennes mensuelles régionales, rendement de toiture 85 %. Besoin : 0 à 20 L/m² par semaine selon le mois. Les capteurs d'humidité et la station météo remplaceront ces moyennes par tes mesures.</p>
+  </div>`;
+}
+$('#v-weather').addEventListener('change',e=>{const t=e.target,v=parseFloat(t.value);
+  if(t.id==='w-tmin'){S.frost=t.value===''?null:{t:v,d:iso(TODAY)};save();renderWeather()}
+  if(['w-roof','w-cap','w-level'].includes(t.id)&&!isNaN(v)){S.water[t.id.slice(2)]=Math.max(0,v);if(S.water.level>S.water.cap)S.water.level=S.water.cap;save();renderWeather()}});
+$('#v-weather').addEventListener('click',e=>{const wa=e.target.closest('[data-wact]');
+  if(wa&&wa.dataset.wact==='rain'){const v=parseFloat(String($('#r-mm').value).replace(',','.'));addRain(isNaN(v)?null:v);save();renderWeather();return toast('Pluie notée',true)}
+  if(wa&&wa.dataset.wact==='rdel'){S.rain=S.rain.filter(r=>r.id!==wa.dataset.id);save();renderWeather();return toast('Pluie supprimée',true)}
+  const b=e.target.closest('[data-open]');if(b)openBed(b.dataset.open,0)});
+
+/* ================= Ravageurs et maladies de saison ================= */
+const PESTS=[
+ {n:'Doryphore',c:['pdt','aubergine','tomate'],m:[5,6,7,8],t:'Inspecte le revers des feuilles, écrase les pontes orange et ramasse les adultes.'},
+ {n:'Mildiou',c:['tomate','pdt'],m:[6,7,8,9],t:'Évite de mouiller le feuillage, aère, retire les feuilles tachées dès les premiers signes.'},
+ {n:'Piéride du chou',c:['chou'],m:[5,6,7,8,9],t:'Un filet anti-insectes empêche la ponte ; retire les chenilles à la main.'},
+ {n:'Altise',c:['radis','chou'],m:[4,5,6],t:'Garde le sol frais par des arrosages légers, un voile protège les jeunes plants.'},
+ {n:'Mouche de la carotte',c:['carotte','persil','celeri'],m:[5,6,8,9],t:'Voile anti-insectes, et évite d\'éclaircir par temps calme.'},
+ {n:'Teigne du poireau',c:['poireau','oignon','ail'],m:[4,5,8,9,10],t:'Voile anti-insectes en période de vol, coupe les feuilles atteintes.'},
+ {n:'Mouche de l\'oignon',c:['oignon','poireau'],m:[5,6],t:'Voile, et associe avec les carottes.'},
+ {n:'Puceron noir',c:['feve','haricot'],m:[4,5,6],t:'Pince la tête des fèves dès l\'apparition des colonies ; savon noir si besoin.'},
+ {n:'Limaces',c:['laitue','laitue_h','chou','courgette','fraise','mache','epinard','haricot'],m:[3,4,5,6,9,10],t:'Ronde le soir après la pluie, pièges à bière, paillage sec autour des plants.'},
+ {n:'Oïdium',c:['courgette','concombre','potiron','pois'],m:[7,8,9],t:'Arrose au pied, retire les feuilles blanches ; le soufre agit en préventif.'},
+ {n:'Botrytis',c:['fraise','laitue','laitue_h','tomate'],m:[5,6,9,10],t:'Aère, retire les parties pourries, évite les arrosages tardifs.'}];
+function pestsNow(){const mo=TODAY.getMonth()+1,inPlace=[];plantables().forEach(o=>o.zones.forEach(z=>{if(z.crop&&Object.keys(z.cells).length)inPlace.push({o,crop:z.crop})}));
+  return PESTS.filter(p=>p.m.includes(mo)).map(p=>({...p,where:inPlace.filter(x=>p.c.includes(x.crop))})).filter(p=>p.where.length)}
+const MABR=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+const mRange=ms=>{const a=Math.min(...ms),b=Math.max(...ms);return MABR[a-1]+(a!==b?'–'+MABR[b-1]:'')};
+
+/* ================= Aujourd'hui ================= */
+function renderToday(){
+  const mo=TODAY.getMonth()+1,pl=plantings(),fp=frostPeriod(TODAY);
+  const fr=S.frost&&S.frost.d===iso(TODAY)?+S.frost.t:null;
+  const pests=pestsNow(),nr=nurseryReady(),act=nurseryActive(),lows=(S.stock||[]).filter(isLow);
+  const hasSeeds=id=>(S.stock||[]).some(q=>q.cat==='graine'&&q.crop===id&&stockOf(q)>0&&!expired(q));
+  const row=(color,main,sub,right,attrs)=>`<button class="trow" ${attrs}><i style="background:${color}"></i><span><b>${main}</b>${sub?` <span class="note">· ${sub}</span>`:''}</span>${right}</button>`;
+  /* une section par lieu : plein air, chaque serre */
+  const locs=[{key:'out',t:'Planches en plein air',ico:'<path d="M4 20h16M6 20V10M18 20V10M3 10l9-6 9 6"/>',f:o=>!serreOf(o)}];
+  S.objs.filter(o=>o.type==='serre').forEach(se=>locs.push({key:se.id,t:se.name,ico:'<path d="M3 20V11a9 9 0 0 1 18 0v9z"/><path d="M12 2v18M3 14h18"/>',f:o=>serreOf(o)===se,serre:true}));
+  let nAct=0;
+  const secs=locs.map(L=>{const pls=plantables().filter(L.f),mine=pl.filter(x=>pls.includes(x.o));
+    const ready=mine.filter(x=>x.left<=0&&!x.bu),blocked=mine.filter(x=>x.left<=0&&x.bu),th=pls.filter(o=>thirsty(o));
+    const sens=[];pls.forEach(o=>o.zones.forEach(z=>{if(z.crop&&FROST_SENSITIVE.has(z.crop)&&Object.keys(z.cells).length)sens.push({o,z})}));
+    const pe=pests.map(p=>({...p,where:p.where.filter(w=>pls.includes(w.o))})).filter(p=>p.where.length);
+    const free=[];pls.forEach(o=>o.zones.forEach((z,i)=>{if(!z.crop)free.push({o,i,z})}));
+    const c=[];
+    if(fp.lvl>0&&sens.length){const danger=fr!=null&&fr<=2;c.push(`<div class="tcard ${L.serre?'':'frost'}"><h3>Gel${fr!=null?` · ${num(fr)} °C prévus`:''}</h3><span>${L.serre?'Serre non chauffée : protège d\'un voile si une nuit sous −2 °C est annoncée. Cultures sensibles :':danger?'Couvre ou rentre ce soir :':fp.txt+'. Cultures sensibles :'} ${sens.map(x=>`<b>${P[x.z.crop].n.toLowerCase()}</b> (${esc(x.o.name)})`).join(', ')}.</span>${fr==null&&!L.serre?'<button class="btn small" data-tgo="weather" style="justify-self:start">Indiquer le minimum prévu</button>':''}</div>`);nAct++}
+    if(ready.length){c.push(`<div class="tcard"><h3>À récolter <span class="n">${ready.length}</span></h3>${ready.map(x=>row(x.p.c,x.p.n,esc(x.o.name),`<span class="due ready">${x.left<-14?'depuis '+(-x.left)+' j':'prêt'}</span>`,`data-open="${x.o.id}" data-zi="${x.zi}"`)).join('')}</div>`);nAct+=ready.length}
+    if(blocked.length)c.push(`<div class="tcard"><h3>Récolte à attendre</h3>${blocked.map(x=>row(x.p.c,x.p.n,esc(x.o.name)+' · délai après traitement',`<span class="due blocked">${fdate(x.bu)}</span>`,`data-open="${x.o.id}" data-zi="${x.zi}"`)).join('')}</div>`);
+    if(th.length){c.push(`<div class="tcard urgent"><h3>À arroser <span class="n">${th.length}</span></h3>${th.map(o=>`<div class="trow"><i style="background:var(--water)"></i><span><b>${esc(o.name)}</b><span class="note" style="display:block">${waterText(lastWater(o))}</span></span><button class="btn small" data-tw="${o.id}">Arrosé</button></div>`).join('')}${L.serre?'':'<button class="btn small" data-train="1" style="justify-self:start">Il a plu aujourd\'hui</button>'}</div>`);nAct+=th.length}
+    if(pe.length)c.push(`<div class="tcard"><h3>À surveiller</h3>${pe.map(p=>`<div class="pest"><span><b>${p.n}</b> <span class="note">· ${[...new Set(p.where.map(w=>P[w.crop].n.toLowerCase()+' ('+w.o.name+')'))].map(esc).join(', ')}</span></span><span class="note" style="color:var(--ink)">${esc(p.t)}</span></div>`).join('')}</div>`);
+    if(free.length)c.push(`<div class="tcard"><h3>Place libre <span class="n">${free.length}</span></h3>${free.map(f=>row('var(--soil)',esc(f.o.name),'zone '+(f.i+1)+', '+m2(f.z.len)+' m','<span class="note">Que planter ? ›</span>',`data-open="${f.o.id}" data-zi="${f.i}"`)).join('')}</div>`);
+    return{L,c}}).filter(x=>x.c.length);
+  /* semis à l'abri */
+  const semis=[];
+  if(nr.length){semis.push(`<div class="tcard"><h3>À repiquer <span class="n">${nr.length}</span></h3>${nr.map(n=>row(P[n.crop].c,P[n.crop].n,n.n+' godets semés le '+fdate(parse(n.d)),'<span class="due ready">prêt</span>','data-tinv="semis"')).join('')}</div>`);nAct+=nr.length}
+  const soon=act.filter(n=>readyOf(n)>TODAY).sort((a,b)=>readyOf(a)-readyOf(b));
+  if(soon.length)semis.push(`<div class="tcard"><h3>En cours</h3>${soon.map(n=>row(P[n.crop].c,P[n.crop].n,n.n+' godets','<span class="due">'+fdate(readyOf(n))+'</span>','data-tinv="semis"')).join('')}</div>`);
+  const sg=PLANTS.filter(p=>(p.sg||[]).includes(mo));
+  if(sg.length)semis.push(`<div class="tcard"><h3>À semer en godets ce mois-ci</h3><div class="chips">${sg.map(p=>`<span class="chip"><i style="background:${p.c}"></i>${p.n}${hasSeeds(p.id)?' <span class="mono note">· graines ✓</span>':''}</span>`).join('')}</div></div>`);
+  /* stock et saison */
+  const gen=[];
+  if(lows.length)gen.push(`<div class="tcard"><h3>À racheter <span class="n">${lows.length}</span></h3><div class="chips">${lows.map(p=>`<span class="chip">${seedLabel(p)} · ${fq(stockOf(p),p.unit)}</span>`).join('')}</div><div class="row">${lows.some(p=>p.cat==='graine')?'<button class="btn small" data-tinv="graines">Graines</button>':''}${lows.some(p=>p.cat!=='graine')?'<button class="btn small" data-tinv="produits">Produits</button>':''}</div></div>`);
+  const sow=PLANTS.filter(p=>p.m.includes(mo));
+  gen.push(`<div class="tcard"><h3>À semer ou planter en place ce mois-ci</h3><div class="chips">${sow.map(p=>`<span class="chip"><i style="background:${p.c}"></i>${p.n}${hasSeeds(p.id)?' <span class="mono note">· graines ✓</span>':''}</span>`).join('')||'<span class="note">Rien ce mois-ci.</span>'}</div><button class="btn small" data-tgo="crops" style="justify-self:start">Voir les cultures</button></div>`);
+  const sec=(t,ico,cards,n,id)=>`<section class="tsec" id="ts-${id}"><div class="tsec-h"><svg viewBox="0 0 24 24">${ico}</svg><h2>${esc(t)}</h2>${n?`<span class="n">${n}</span>`:''}</div>${cards.join('')}</section>`;
+  const count=c=>c.length;
+  $('#v-today').innerHTML=`<div class="page"><div><h2>Aujourd'hui</h2><span class="note">${TODAY.toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'})} · ${nAct?nAct+' chose'+(nAct>1?'s':'')+' à faire':'rien d\'urgent'}</span></div>
+  <div class="bednav">${secs.map(x=>`<button data-tj="${x.L.key}">${esc(x.L.t)}</button>`).join('')}${semis.length?'<button data-tj="semis">Semis</button>':''}<button data-tj="gen">Stock et saison</button></div>
+  ${secs.map(x=>sec(x.L.t,x.L.ico,x.c,0,x.L.key)).join('')}
+  ${semis.length?sec('Semis à l\'abri','<path d="M6 20h12l-1.5-7h-9z"/><path d="M12 13V8"/><path d="M12 9c0-3 2-5 5-5 0 3-2 5-5 5z"/>',semis,0,'semis'):''}
+  ${sec('Stock et saison','<path d="M4 8l8-4 8 4v10l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v10"/>',gen,0,'gen')}
+  ${!secs.length?'<p class="note">Rien à faire sur les planches ni dans la serre.</p>':''}</div>`}
+$('#v-today').addEventListener('click',e=>{const tj=e.target.closest('[data-tj]');if(tj){const el=document.getElementById('ts-'+tj.dataset.tj);if(el)el.scrollIntoView({block:'start',behavior:'smooth'});return}const t=e.target.closest('[data-tw],[data-train],[data-tinv],[data-tgo],[data-open]');if(!t)return;
+  if(t.dataset.tw){const o=obj(t.dataset.tw);o.journal=o.journal||[];o.journal.push({id:uid(),k:'arrosage',d:iso(TODAY),t:''});save();renderToday();return toast('Arrosage noté',true)}
+  if(t.dataset.train){addRain(null);save();renderToday();return toast('Pluie notée',true)}
+  if(t.dataset.tinv)return openInv(t.dataset.tinv);
+  if(t.dataset.tgo)return setTab(t.dataset.tgo);
+  if(t.dataset.open){openBed(t.dataset.open,+t.dataset.zi||0)}});
+
+/* ================= Cultures ================= */
+let cq='';
+const inSeason=(p,d)=>{const m=(d||TODAY).getMonth()+1,n=m%12+1;return p.m.includes(m)||p.m.includes(n)};
+const seasonTxt=p=>{const ms=[...p.m].sort((a,b)=>a-b);return ms.map(x=>MABR[x-1]).join(', ')};
+const hasSeedsFor=id=>(S.stock||[]).some(q=>q.cat==='graine'&&q.crop===id&&stockOf(q)>0&&!expired(q));
+function cropGroups(){const mo=TODAY.getMonth()+1,act=nurseryActive();
+  const G=[{k:1,t:'À planter maintenant : tes plants sont prêts',d:'Plants en godets prêts à repiquer.',l:[]},
+    {k:2,t:'À semer ou planter maintenant : graines ou plants en cours',d:'Semis direct ou plantation ce mois-ci.',l:[]},
+    {k:3,t:'À semer en godets maintenant : tu as les graines',d:'À démarrer à l\'abri.',l:[]},
+    {k:4,t:'À semer en place maintenant : graines à acheter',d:'C\'est la saison, mais rien en stock.',l:[]},
+    {k:5,t:'À semer en godets maintenant : graines à acheter',d:'C\'est la saison, mais rien en stock.',l:[]},
+    {k:6,t:'Hors saison',d:'Triées par prochain mois de semis.',l:[]}];
+  PLANTS.forEach(p=>{const now=p.m.includes(mo),sgNow=(p.sg||[]).includes(mo),seeds=hasSeedsFor(p.id),pl=act.filter(n=>n.crop===p.id);
+    const ready=pl.some(n=>readyOf(n)<=TODAY);const k=now&&ready?1:now&&seeds?2:now&&pl.length?2:sgNow&&seeds?3:now?4:sgNow?5:6;G[k-1].l.push({p,seeds,pl,now,sgNow})});
+  const nextM=p=>{const ms=[...p.m,...(p.sg||[])];let best=13;ms.forEach(x=>{const d=(x-mo+12)%12;if(d>0&&d<best)best=d});return best};
+  G[5].l.sort((a,b)=>nextM(a.p)-nextM(b.p));
+  G.forEach(g=>{if(g.k<6)g.l.sort((a,b)=>a.p.n.localeCompare(b.p.n,'fr'))});
+  return G}
+function renderCrops(){
+  const mo=TODAY.getMonth()+1,q=cq.toLowerCase().trim();
+  const v=$('#v-crops'),had=document.activeElement&&document.activeElement.id==='cq';
+  const card=x=>{const p=x.p,g=PLANTS.filter(q=>compat(p.id,q.id)>0),b=PLANTS.filter(q=>compat(p.id,q.id)<0),ps=PESTS.filter(y=>y.c.includes(p.id));
+    const rd=x.pl.filter(n=>readyOf(n)<=TODAY);
+    const st=[x.pl.length?`<span class="ok">${x.pl.reduce((s,n)=>s+n.n,0)} plants en godets${rd.length?' · prêts':' · prêts le '+fdate(readyOf(x.pl[0]))}</span>`:'',x.seeds?'<span class="ok">graines en stock</span>':'',x.now?'<span class="warn">en place ce mois-ci</span>':'',x.sgNow?'<span class="warn">en godets ce mois-ci</span>':''].filter(Boolean).join('');
+    const acts=x.pl.length?`<button class="btn small primary" data-cact="semis">Voir les semis</button>`:'';
+    const acts2=(x.sgNow&&x.seeds&&!x.pl.length)?`<button class="btn small primary" data-cact="sow" data-crop="${p.id}">Semer en godets</button>`:'';
+    const acts3=(!x.seeds&&!x.pl.length&&(x.now||x.sgNow))?`<button class="btn small" data-cact="buy" data-crop="${p.id}">Ajouter aux graines à acheter</button>`:'';
+    return`<div class="crop">
+   <div class="row between"><div class="row"><i style="background:${p.c};width:14px;height:14px;border-radius:50%;display:inline-block"></i><h3>${p.n}</h3><span class="note">${p.f}</span></div><span class="mono note">≈ ${p.j} j${FROST_SENSITIVE.has(p.id)?' · gélive':''}</span></div>
+   ${st?`<div class="rs">${st}</div>`:''}
+   <div class="mono note">Rangs ${p.rang} cm · plants ${p.pl} cm · ☀ ${SUN_NEED[p.id]} h+ (${sunLabel(SUN_NEED[p.id])})</div>
+   <div class="stack" style="gap:6px">${(p.sg||[]).length?`<div class="row" style="flex-wrap:nowrap"><span class="mlbl">Semis en godets</span><div class="months" style="flex:1">${MSHORT.map((l,i)=>`<span class="${p.sg.includes(i+1)?'on':''} ${i+1===mo?'now':''}" title="${MONTHS[i]}">${l}</span>`).join('')}</div></div>`:''}
+   <div class="row" style="flex-wrap:nowrap"><span class="mlbl">Plantation / semis direct</span><div class="months" style="flex:1">${MSHORT.map((l,i)=>`<span class="${p.m.includes(i+1)?'on':''} ${i+1===mo?'now':''}" title="${MONTHS[i]}">${l}</span>`).join('')}</div></div></div>
+   ${acts||acts2||acts3?`<div class="row">${acts}${acts2}${acts3}</div>`:''}
+   ${g.length?`<div><span class="lbl">Bons voisins</span><div class="chips" style="margin-top:4px">${g.map(q=>chip(q.id,'good')).join('')}</div></div>`:''}
+   ${b.length?`<div><span class="lbl">À éviter à côté</span><div class="chips" style="margin-top:4px">${b.map(q=>chip(q.id,'bad')).join('')}</div></div>`:''}
+   ${ps.length?`<div class="note">À surveiller : ${ps.map(y=>`${y.n} (${mRange(y.m)})`).join(', ')}</div>`:''}
+  </div>`};
+  const groups=cropGroups().map(g=>({...g,l:g.l.filter(x=>!q||(x.p.n+' '+x.p.f).toLowerCase().includes(q))})).filter(g=>g.l.length);
+  v.innerHTML=`<div class="page"><h2>Cultures</h2><input id="cq" class="search" placeholder="Chercher une culture ou une famille" value="${esc(cq)}" aria-label="Chercher">
+  ${groups.map(g=>`<div class="stack"><div><div class="section-t"><span class="lbl">${g.k} · ${g.t}</span><span class="mono note">${g.l.length}</span></div><span class="note">${g.d}</span></div>${g.l.map(card).join('')}</div>`).join('')||'<p class="note">Aucune culture ne correspond.</p>'}
+  <p class="note">Classement pour ${MONTHS[mo-1]} (le point jaune sous le calendrier marque le mois en cours, les cases vertes les mois possibles). Cadre vert : bon voisin. Cadre rouge : à éviter. Valeurs indicatives pour un climat belge.</p></div>`;
+  if(had){const i=$('#cq');i.focus();i.setSelectionRange(cq.length,cq.length)}
+}
+$('#v-crops').addEventListener('click',e=>{const b=e.target.closest('[data-cact]');if(!b)return;const a=b.dataset.cact,c=b.dataset.crop;
+  if(a==='semis')return openInv('semis');
+  if(a==='sow'){openInv('semis');inv.add=true;inv.ns={crop:c,n:12,qty:'',d:iso(TODAY),pid:((S.stock||[]).find(q=>q.cat==='graine'&&q.crop===c&&stockOf(q)>0&&!expired(q))||{}).id||''};renderInv();return}
+  if(a==='buy'){S.stock=S.stock||[];if(!S.stock.some(q=>q.cat==='graine'&&q.crop===c&&!expired(q)))S.stock.push({id:uid(),name:P[c].n,crop:c,cat:'graine',unit:'graines',min:0,moves:[]});save();renderCrops();return toast(P[c].n+' : graines ajoutées à la liste d\'achat',true)}});
+$('#v-crops').addEventListener('input',e=>{if(e.target.id==='cq'){cq=e.target.value;renderCrops()}});
+
+/* ================= Démarrage ================= */
+let seenHelp=false;try{seenHelp=!!localStorage.getItem('potager-aide-vue');localStorage.setItem('potager-aide-vue','1')}catch(e){}
+if(!seenHelp)sheetMode='help';
+renderHeader();requestAnimationFrame(()=>{fit();renderSheet();setTab('today')});
+initCaps();
+</script>
+
+<script>
+/* version 9927f3f775 : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
+if('serviceWorker' in navigator&&location.protocol==='https:'){
+  navigator.serviceWorker.register('sw.js').then(r=>r.update()).catch(()=>{});
+  let reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!reloaded){reloaded=true;location.reload()}});
+}
+</script>
+</body>
+</html>
