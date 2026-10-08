@@ -1004,7 +1004,7 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
   if(a==='wu'){sheetMode='wu';renderSheet();return}
   if(a==='wu-test'||a==='wu-save'){const c={id:$('#wu-id').value.trim().toUpperCase(),key:$('#wu-key').value.trim()};if(!c.id||!c.key)return toast('Indique l\'identifiant et la clé');
     b.disabled=true;b.textContent='Connexion…';try{const w=await syncStation(false,c);WU.set(c);sheetMode=null;renderSheet();toast(`Station reliée : ${num(w.now.t,1)} °C, ${num(w.now.rain||0,1)} mm aujourd'hui`);syncStation(false)}catch(err){b.disabled=false;b.textContent='Relier et tester';const el=$('#wu-err');if(el){el.hidden=false;el.textContent=err.message}}return}
-  if(a==='wu-del'){WU.set({});wx=null;sheetMode='menu';renderSheet();return toast('Station déliée de cet appareil')}
+  if(a==='wu-del'){WU.set({off:true});wx=null;sheetMode='menu';renderSheet();return toast('Station déliée de cet appareil')}
   if(a==='theme'){setTheme(b.dataset.k);renderSheet();renderPlan()}
   if(a==='shape-edit')startShapeEdit();
   if(a==='shape-rect'){S.shape=null;save();renderSheet();renderPlan();toast('Terrain redevenu rectangulaire',true)}
@@ -1617,7 +1617,9 @@ $('#v-crops').addEventListener('input',e=>{if(e.target.id==='cq'){cq=e.target.va
 
 /* ================= Station météo (Weather Underground) ================= */
 /* identifiant et clé gardés sur cet appareil uniquement, jamais dans le plan synchronisé */
-const WU={get(){try{return JSON.parse(localStorage.getItem('potager-wu'))||{}}catch(e){return{}}},set(v){try{localStorage.setItem('potager-wu',JSON.stringify(v))}catch(e){}}};
+/* station par défaut (choix de Julien : station publique, clé assumée dans le code) ; un réglage saisi dans l'app la remplace */
+const WU_DEFAULT={id:'IGHEZE29',key:'6fffe640ff8c4e82bfe640ff8cfe8292'};
+const WU={get(){try{const v=JSON.parse(localStorage.getItem('potager-wu'));return v&&v.key?v:(v&&v.off?{}:WU_DEFAULT)}catch(e){return WU_DEFAULT}},set(v){try{localStorage.setItem('potager-wu',JSON.stringify(v))}catch(e){}}};
 let wx=null,wxBusy=false;
 const inClaude=()=>!!window.claude||/claude\.ai|claudeusercontent/.test(location.hostname);
 async function wuFetch(path,c){const u=`https://api.weather.com${path}${path.includes('?')?'&':'?'}apiKey=${encodeURIComponent(c.key)}&format=json&units=m&numericPrecision=decimal`;
@@ -1664,7 +1666,7 @@ if(WU.get().key)setTimeout(()=>syncStation(false),600);
 </script>
 
 <script>
-/* version 7cb336944f : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
+/* version b7ff82adfb : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
 if('serviceWorker' in navigator&&location.protocol==='https:'){
   navigator.serviceWorker.register('sw.js').then(r=>r.update()).catch(()=>{});
   let reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!reloaded){reloaded=true;location.reload()}});
