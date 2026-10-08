@@ -654,7 +654,7 @@ addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()===
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{const t=b.dataset.tab;
   if(t!==tab)return setTab(t);
   if(inv||bed){closeInv();closeBed();refresh();return}
-  if(t==='plan'){sheetMode=null;selId=null;shapeEdit=null;renderSheet();renderShapebar();fit();return}
+  if(t==='plan'){sheetMode=null;selId=null;shapeEdit=null;if(ctx){ctx=null;renderCtxbar();renderSunbar()}renderSheet();renderShapebar();fit();return}
   const v=$('#v-'+t);if(v)v.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})});
 function setTab(t){tab=t;closeBed();closeInv();document.querySelectorAll('.tabs button').forEach(b=>{if(b.dataset.tab===t)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
   ['today','plan','harvest','weather','crops'].forEach(v=>$('#v-'+v).hidden=v!==t);refresh()}
@@ -1685,7 +1685,7 @@ setTimeout(()=>syncStation(false),600);
 </script>
 
 <script>
-/* version fc8d7b84d0 : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
+/* version 9d64bee13c : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
 if('serviceWorker' in navigator&&location.protocol==='https:'){
   navigator.serviceWorker.register('sw.js').then(r=>r.update()).catch(()=>{});
   let reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!reloaded){reloaded=true;location.reload()}});
