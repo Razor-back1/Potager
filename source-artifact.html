@@ -65,6 +65,11 @@ main{position:relative;min-height:0;overflow:hidden}
 .obj.lift{filter:drop-shadow(0 6px 8px rgba(0,0,0,.35))}
 .obj.lift .selbox{stroke-dasharray:none;stroke-width:3}
 .shadepoly{fill:var(--shade);pointer-events:none}
+.rotring{fill:none;stroke:var(--sun);stroke-width:2;stroke-dasharray:5 5;pointer-events:none}
+.rothit{fill:none;stroke:transparent;stroke-width:30px;pointer-events:stroke;cursor:grab}
+.rotline{stroke:var(--sun);stroke-width:1.5;opacity:.6;pointer-events:none}
+.rotknob{fill:var(--sun);stroke:var(--surface);stroke-width:2;cursor:grab}
+.rotknobt{fill:#1d1404;font-family:var(--f-mono);font-weight:600;pointer-events:none}
 .edgehit{stroke:transparent;stroke-width:24px;pointer-events:stroke;cursor:move;fill:none}
 .vtx{fill:var(--surface);stroke:var(--accent);stroke-width:2.5;cursor:move} .vtx.sel{fill:var(--sun);stroke:var(--ink)} .mid{fill:var(--accent);fill-opacity:.55;cursor:copy}
 .edgetxt{fill:var(--accent);font-family:var(--f-mono);font-weight:600;paint-order:stroke;stroke:var(--bg);stroke-width:3px}
@@ -685,6 +690,11 @@ function renderPlan(){
   $('#groundL').innerHTML=`<clipPath id="tclip"><polygon points="${pts}"/></clipPath><g clip-path="url(#tclip)"><rect class="ground" width="${G().w}" height="${G().h}"/><rect width="${G().w}" height="${G().h}" fill="url(#g1)"/><rect width="${G().w}" height="${G().h}" fill="url(#g5)"/></g><polygon class="bound" points="${pts}" vector-effect="non-scaling-stroke"/>${edges}`;
   let ed='';if(shapeEdit){const r=11/view.z;tp.forEach((a,i)=>{const b=tp[(i+1)%tp.length];ed+=`<line class="edgehit" data-edge="${i}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" vector-effect="non-scaling-stroke"/>`});tp.forEach((a,i)=>{const b=tp[(i+1)%tp.length];ed+=`<circle class="mid" data-mid="${i}" cx="${(a.x+b.x)/2}" cy="${(a.y+b.y)/2}" r="${r*.7}"/>`});
     tp.forEach((a,i)=>ed+=`<circle class="vtx${shapeEdit.sel===i?' sel':''}" data-vtx="${i}" cx="${a.x}" cy="${a.y}" r="${r}" vector-effect="non-scaling-stroke"/>`)}
+  /* anneau de rotation autour de l'objet sélectionné (mode édition) */
+  const ro=!shapeEdit&&editMode&&selId&&!lifted?G().objs.find(o=>o.id===selId):null;
+  if(ro&&!TYPES[ro.type].round&&!ro.locked){const cx=ro.x+ro.w/2,cy=ro.y+ro.h/2,Rr=clamp(Math.hypot(ro.w,ro.h)/2+26/view.z,70/view.z,150/view.z),a=ro.rot*Math.PI/180,kx=cx+Rr*Math.sin(a),ky=cy-Rr*Math.cos(a);
+    ed+=`<circle class="rotring" cx="${cx}" cy="${cy}" r="${Rr}" vector-effect="non-scaling-stroke"/><circle class="rothit" data-rot="1" cx="${cx}" cy="${cy}" r="${Rr}" vector-effect="non-scaling-stroke"/>
+    <line class="rotline" x1="${cx}" y1="${cy}" x2="${kx}" y2="${ky}" vector-effect="non-scaling-stroke"/><g data-rot="1" transform="translate(${kx} ${ky})"><circle class="rotknob" r="${14/view.z}" vector-effect="non-scaling-stroke"/><text class="rotknobt" text-anchor="middle" dominant-baseline="central" font-size="${12/view.z}">${ro.rot}°</text></g>`}
   $('#editL').innerHTML=ed;
   const order=['allee','haie','cloture','serre','arbre','abri','compost','cuve','eau','bac','planche','prise'];
   const list=[...G().objs].sort((a,b)=>(a.id===selId)-(b.id===selId)||order.indexOf(a.type)-order.indexOf(b.type));
@@ -717,6 +727,7 @@ function showHint(t){const h=$('#hint');h.textContent=t;h.hidden=false;h.classLi
 svg.addEventListener('pointerdown',e=>{
   svg.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(ptrs.size===2){const[a,b]=[...ptrs.values()];pinch={d0:Math.hypot(a.x-b.x,a.y-b.y),z0:view.z,m:world((a.x+b.x)/2,(a.y+b.y)/2)};clearTimeout(holdT);if(drag&&drag.mode==='move'){drag.o.x=drag.s.x;drag.o.y=drag.s.y}drag=null;lifted=null;guides=null;return}
+  const rh=e.target.closest('[data-rot]');if(rh&&selId&&editMode&&!shapeEdit){const o=obj(selId);drag={mode:'rot',o,s:{rot:o.rot},sx:e.clientX,sy:e.clientY,c:{x:o.x+o.w/2,y:o.y+o.h/2}};return}
   if(shapeEdit){if(!G().shape)G().shape=rectPts();const v=e.target.closest('[data-vtx]'),m=e.target.closest('[data-mid]');
     if(v){shapeEdit.sel=+v.dataset.vtx;drag={mode:'vtx',i:shapeEdit.sel,sx:e.clientX,sy:e.clientY};renderPlan();renderShapebar();return}
     if(m){const i=+m.dataset.mid+1,a=G().shape[i-1],b=G().shape[i%G().shape.length];G().shape.splice(i,0,{x:snap((a.x+b.x)/2,10),y:snap((a.y+b.y)/2,10)});shapeEdit.sel=i;drag={mode:'vtx',i,sx:e.clientX,sy:e.clientY,inserted:true};renderPlan();renderShapebar();return}
@@ -745,6 +756,8 @@ svg.addEventListener('pointermove',e=>{
     const q={x:snap(p.x,10),y:snap(p.y,10)};
     for(const a of[pv,nx]){if(Math.abs(q.x-a.x)<thr)q.x=a.x;if(Math.abs(q.y-a.y)<thr)q.y=a.y}
     sh[drag.i]=q;showHint(`${m2(Math.hypot(q.x-pv.x,q.y-pv.y))} m · ${m2(Math.hypot(q.x-nx.x,q.y-nx.y))} m`)}
+  else if(drag.mode==='rot'){let ang=Math.atan2(p.y-drag.c.y,p.x-drag.c.x)*180/Math.PI+90;ang=(ang%360+360)%360;
+    let r=Math.round(ang/5)*5;for(let k=0;k<=360;k+=45)if(Math.abs(ang-k)<4)r=k;o.rot=r%360;showHint(`Orientation ${o.rot}°`)}
   else if(drag.mode==='edge'){const[a,b]=drag.s,L=Math.hypot(b.x-a.x,b.y-a.y)||1,sg=Math.sign(polyArea(G().shape))||1,nx=(b.y-a.y)/L*sg,ny=-(b.x-a.x)/L*sg;
     const t=snap((p.x-drag.p0.x)*nx+(p.y-drag.p0.y)*ny,10),n=G().shape.length;
     G().shape[drag.i]={x:Math.round(a.x+nx*t),y:Math.round(a.y+ny*t)};G().shape[(drag.i+1)%n]={x:Math.round(b.x+nx*t),y:Math.round(b.y+ny*t)};
@@ -763,6 +776,7 @@ function endPtr(e){ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;clearTimeo
   if(drag&&ptrs.size===0){
     if(drag.mode==='hold'){if(!editMode&&drag.o.type==='abri'){openInv()}else if(!ctx&&drag.o.type==='serre'&&!editMode){enterSerre(drag.o.id)}else{sheetMode='obj';renderSheet();keepAboveSheet(drag.o)}}
     else if(drag.mode==='pan'&&!drag.moved){if(shapeEdit){shapeEdit.sel=null;renderShapebar()}else{selId=null;sheetMode=null;renderSheet()}renderPlan()}
+    else if(drag.mode==='rot'&&drag.moved){save();if(sheetMode)renderSheet()}
     else if((drag.mode==='vtx'&&(drag.moved||drag.inserted))||(drag.mode==='edge'&&drag.moved)){normalizeShape();updateBox();save();renderShapebar()}
     else if(drag.moved&&(drag.mode==='move'||drag.mode==='resize')){fitZones(drag.o);save();if(sheetMode)renderSheet()}
     drag=null;guides=null;$('#hint').hidden=true;lifted=null;renderPlan()}}
@@ -945,7 +959,7 @@ function renderSheet(){
     h+=t.round?`<div class="grid2"><label class="field"><span class="lbl">Diamètre (cm)</span><input id="o-w" type="number" min="10" step="5" value="${Math.round(o.w)}" ${L}></label>`:
       `<div class="grid2"><label class="field"><span class="lbl">Largeur (cm)</span><input id="o-w" type="number" min="10" step="5" value="${Math.round(o.w)}" ${L}></label><label class="field"><span class="lbl">Longueur (cm)</span><input id="o-h" type="number" min="10" step="5" value="${Math.round(o.h)}" ${L}></label>`;
     h+=(o.type!=='planche'&&o.type!=='allee'&&o.type!=='eau'&&o.type!=='prise')?`<label class="field"><span class="lbl">Hauteur (cm)</span><input id="o-ht" type="number" min="0" step="10" value="${Math.round(o.height||0)}"></label></div><p class="note">${o.type==='cuve'?`Contenance ≈ <b class="mono">${num(cuveL(o),0)} L</b>. `:''}La hauteur sert aussi à calculer l'ombre portée.</p>`:`</div>`;
-    if(!t.round&&!o.locked)h+=`<div class="row"><span class="lbl">Rotation</span><span class="mono">${o.rot}°</span><button class="btn small" data-act="rot" data-d="-15">−15°</button><button class="btn small" data-act="rot" data-d="15">+15°</button><button class="btn small" data-act="rot" data-d="90">90°</button><button class="btn small" data-act="rot0">0°</button></div>`;
+    if(!t.round&&!o.locked)h+=`<div class="row"><span class="lbl">Orientation</span><span class="mono">${o.rot}°</span><button class="btn small" data-act="rot" data-d="90">+90°</button><button class="btn small" data-act="rot0">0°</button></div><p class="note">Fais glisser le rond jaune le long du cercle autour de l'objet pour le tourner (crans de 5°, aimanté tous les 45°).</p>`;
     h+=`<div class="row"><button class="btn small" data-act="lock">${o.locked?'Déverrouiller':'Verrouiller'}</button><button class="btn small" data-act="dup">Dupliquer</button>${o.locked?'':'<button class="btn small danger" data-act="del">Supprimer</button>'}</div>`;
     h+=o.locked?`<p class="note">Verrouillé : l'objet ne peut plus être déplacé, redimensionné ni supprimé.</p>`:`<p class="note">Maintiens le doigt sur l'objet pour le soulever, puis glisse-le.</p>`;
     h+=`</div>`;
