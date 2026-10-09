@@ -172,6 +172,9 @@ main{position:relative;min-height:0;overflow:hidden}
 .wxbits{display:flex;flex-wrap:wrap;gap:6px}
 .wxbits span{font-size:12.5px;padding:3px 9px;border-radius:99px;background:var(--glass);font-family:var(--f-mono)}
 .wxbits .wfrost{background:var(--frost);color:#fff;font-weight:600}
+.glist{display:grid;margin-top:6px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.grow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;min-height:46px;background:var(--surface)}
+.grow+.grow{border-top:1px solid var(--line)}.grow.cur{background:var(--surface-2)}
 .rainform{max-width:360px}
 .aucard{display:grid;gap:10px;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--surface);scroll-margin-top:72px}
 .aucard.run{border-color:var(--water);box-shadow:0 0 0 1px var(--water) inset}
@@ -761,10 +764,24 @@ function migrate(s){
 
 /* ================= État, historique, stockage ================= */
 const KEY='atelier-potager-v1',KEYAT='atelier-potager-at';
-let localAt=0;try{localAt=+localStorage.getItem(KEYAT)||0}catch(e){}
-function load(){try{return migrate(JSON.parse(localStorage.getItem(KEY)))}catch(e){return null}}
+/* plusieurs potagers : « main » garde les anciennes clés, les autres ont leur propre clé */
+const GL={get(){try{const v=JSON.parse(localStorage.getItem('atelier-potager-list'));if(v&&Array.isArray(v.list)&&v.list.length)return v}catch(e){}return{cur:'main',list:[{id:'main',name:''}]}},set(v){try{localStorage.setItem('atelier-potager-list',JSON.stringify(v))}catch(e){}}};
+let GID=GL.get().cur;if(!GL.get().list.some(g=>g.id===GID))GID=GL.get().list[0].id;
+const keyOf=id=>id==='main'?KEY:KEY+':'+id,keyAtOf=id=>id==='main'?KEYAT:KEYAT+':'+id;
+let localAt=0;try{localAt=+localStorage.getItem(keyAtOf(GID))||0}catch(e){}
+function load(){try{return migrate(JSON.parse(localStorage.getItem(keyOf(GID))))}catch(e){return null}}
 let past=[],future=[],lastJSON='',lastPush=0;
-function persist(){try{localStorage.setItem(KEY,lastJSON);localStorage.setItem(KEYAT,String(localAt))}catch(e){}}
+function persist(){try{localStorage.setItem(keyOf(GID),lastJSON);localStorage.setItem(keyAtOf(GID),String(localAt))}catch(e){}
+  const g=GL.get(),it=g.list.find(x=>x.id===GID);if(it&&(it.name!==S.name||it.ex!==!!S.example)){it.name=S.name;it.ex=!!S.example;GL.set(g)}}
+function switchGarden(id){if(id===GID)return;persist();GID=id;const g=GL.get();g.cur=id;GL.set(g);
+  try{localAt=+localStorage.getItem(keyAtOf(id))||0}catch(e){localAt=0}S=load()||sample();lastJSON=JSON.stringify(S);past=[];future=[];
+  ctx=null;selId=null;sheetMode=null;editMode=false;shapeEdit=null;closeBed();closeInv();if(typeof closeAuto==='function')closeAuto();persist();
+  if(typeof subscribeDoc==='function')subscribeDoc();fit();renderSheet();renderHeader();refresh();if(typeof updateModeUI==='function')updateModeUI()}
+function addGarden(state,open=true){const id=uid(),g=GL.get();try{localStorage.setItem(keyOf(id),JSON.stringify(state));localStorage.setItem(keyAtOf(id),String(Date.now()))}catch(e){toast('Mémoire de l\'appareil pleine');return null}
+  g.list.push({id,name:state.name,ex:!!state.example});GL.set(g);if(open)switchGarden(id);return id}
+function deleteGarden(id){const g=GL.get();if(g.list.length<2)return;g.list=g.list.filter(x=>x.id!==id);GL.set(g);
+  try{localStorage.removeItem(keyOf(id));localStorage.removeItem(keyAtOf(id))}catch(e){}if(id===GID){GID=null;switchGarden(g.list[0].id)}}
+const emptyGarden=(name='Mon potager')=>({v:8,shape:null,rain:[],stock:[],nursery:[],name,w:1200,h:800,north:0,water:{roof:40,cap:1000,level:500},frost:null,objs:[],example:false});
 function save(coalesce){const j=JSON.stringify(S);if(j!==lastJSON){const now=Date.now();
   if(!(coalesce&&now-lastPush<1500&&past.length)){past.push(lastJSON);if(past.length>80)past.shift()}
   lastPush=coalesce?now:0;future=[];lastJSON=j;localAt=now;persist();schedulePush()}renderHeader()}
@@ -808,8 +825,13 @@ async function initCaps(){
     const[db,user]=await Promise.all([window.claude.use('db'),window.claude.use('user')]);
     if(!db||!user){renderSyncLine();return}
     const id=await user.id();if(!id){renderSyncLine();return}
-    DOC=db.doc('data/users/'+id+'/garden');syncState='wait';renderSyncLine();
-    DOC.onSnapshot(snap=>{
+    DBH={db,id};subscribeDoc();
+  }catch(e){syncState='error';renderSyncLine()}
+}
+let DBH=null,UNSUB=null;
+function subscribeDoc(){if(!DBH)return;try{if(typeof UNSUB==='function')UNSUB()}catch(e){}
+  try{DOC=DBH.db.doc('data/users/'+DBH.id+'/garden'+(GID==='main'?'':'-'+GID));syncState='wait';renderSyncLine();const myG=GID;
+    UNSUB=DOC.onSnapshot(snap=>{if(myG!==GID)return;
       if(!snap.exists){if(!snap.metadata.fromCache)pushRemote();return}
       const d=snap.data()||{};
       if(d.updatedAt>localAt&&d.state){const j=JSON.stringify(d.state);if(j!==lastJSON){past.push(lastJSON);future=[];lastJSON=j;S=migrate(JSON.parse(j));lastJSON=JSON.stringify(S);if(selId&&!obj(selId))selId=null;refresh()}localAt=d.updatedAt;persist()}
@@ -1192,7 +1214,10 @@ function renderSheet(){
     <div class="note"><b>Où les trouver</b> : connecte-toi sur wunderground.com, ouvre le menu de ton profil, puis <b>My Devices</b> pour l'identifiant de la station (il commence par I) et <b>API Keys</b> pour la clé (bouton « Generate » si tu n'en as pas encore). La clé est gratuite pour les stations qui envoient leurs données.</div>
     <p class="note">La clé reste sur cet appareil : elle n'est jamais envoyée ailleurs que chez Weather Underground, ni enregistrée dans le plan.</p></div>`;
   }else if(sheetMode==='menu'){
+    const GLs=GL.get().list;
     h+=`<div class="stack"><div class="row between"><h3>Potager</h3><button class="btn small" data-act="close">Fermer</button></div>
+    <div><span class="lbl">Mes potagers</span><div class="glist">${GLs.map(g=>`<div class="grow${g.id===GID?' cur':''}"><span><b>${esc(g.id===GID?S.name:(g.name||'Potager'))}</b>${(g.id===GID?S.example:g.ex)?' <span class="note">· exemple</span>':''}</span>${g.id===GID?'<span class="note">ouvert</span>':`<button class="btn small" data-act="gopen" data-g="${g.id}">Ouvrir</button>`}</div>`).join('')}</div>
+    <div class="row" style="margin-top:8px"><button class="btn small" data-act="gnew">+ Potager vide</button><button class="btn small" data-act="gnewex">+ Exemple</button>${GLs.length>1?'<button class="btn small danger" data-act="gdel">Supprimer celui-ci</button>':''}</div></div>
     <label class="field"><span class="lbl">Nom</span><input id="g-name" value="${esc(S.name)}"></label>
     ${S.shape?`<div class="row between"><span><span class="lbl">Terrain</span><br><span class="mono">${num(Math.abs(polyArea(S.shape))/1e4)} m² · ${S.shape.length} côtés</span></span><span class="row"><button class="btn small" data-act="shape-rect">Revenir au rectangle</button></span></div>`:
     `<div class="grid2"><label class="field"><span class="lbl">Largeur du terrain (m)</span><input id="g-w" type="number" min="2" step="0.5" value="${S.w/100}"></label>
@@ -1207,7 +1232,8 @@ function renderSheet(){
     <p class="note">0° = le nord est en haut du plan. Tourne jusqu'à ce que l'aiguille rouge pointe vers le vrai nord, en t'aidant de la boussole du téléphone.</p>
     <div class="alert okay"><span id="syncLine">${syncText()}</span></div>
     <div class="row"><button class="btn small" data-act="export">Exporter une sauvegarde</button><button class="btn small" data-act="import">Importer une sauvegarde</button></div>
-    <div class="row"><button class="btn small" data-act="newgarden">Nouveau potager vide</button><button class="btn small" data-act="reload">Recharger l'exemple</button></div></div>`;
+    ${S.example?'<div class="row"><button class="btn small" data-act="reload">Remettre l\'exemple à zéro</button></div>':''}
+    <p class="note">Importer une sauvegarde l'ajoute comme nouveau potager : rien n'est écrasé.</p></div>`;
   }else if(sheetMode==='obj'&&!editMode){
     const o=obj(selId);if(!o){sheetMode=null;return renderSheet()}h+=cultureSheet(o);
   }else if(sheetMode==='obj'){
@@ -1263,15 +1289,18 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
   if(a==='wxplan'){try{localStorage.setItem('potager-wxplan',wxPlanOn()?'off':'on')}catch(e){}renderSheet();renderPlan()}
   if(a==='shape-edit')startShapeEdit();
   if(a==='shape-rect'){S.shape=null;save();renderSheet();renderPlan();toast('Terrain redevenu rectangulaire',true)}
-  if(a==='newgarden'){const gw=$('#g-w'),gh=$('#g-h');S={v:8,shape:null,rain:[],stock:S.stock||[],nursery:S.nursery||[],name:'Mon potager',w:Math.round((gw?+gw.value||12:12)*100),h:Math.round((gh?+gh.value||8:8)*100),north:S.north||0,water:S.water,frost:null,objs:[],example:false};selId=null;sheetMode='add';save();fit();renderSheet();toast('Nouveau potager créé',true)}
-  if(a==='reload'){S=sample();selId=null;sheetMode=null;save();fit();renderSheet();toast('Exemple rechargé',true)}
+  if(a==='reload'){S=sample();selId=null;sheetMode=null;save();fit();renderSheet();toast('Exemple remis à zéro',true)}
+  if(a==='gopen'){switchGarden(b.dataset.g);sheetMode='menu';renderSheet();return toast('Potager ouvert : '+S.name)}
+  if(a==='gnew'){const n=GL.get().list.length+1;addGarden(emptyGarden('Potager '+n));sheetMode='menu';renderSheet();return toast('Nouveau potager créé')}
+  if(a==='gnewex'){addGarden(sample());sheetMode='menu';renderSheet();return toast('Exemple ajouté')}
+  if(a==='gdel'){if(!b.classList.contains('armed')){b.classList.add('armed');b.textContent='Confirmer : supprimer « '+S.name+' »';return}const nm=S.name;deleteGarden(GID);sheetMode='menu';renderSheet();return toast('« '+nm+' » supprimé')}
   if(a==='export'&&!DL){const name=`potager-${iso(TODAY)}.json`,blob=new Blob([lastJSON],{type:'application/json'});
     try{const f=new File([blob],name,{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Sauvegarde du potager'});return toast('Sauvegarde exportée')}}catch(err){if(err&&err.name==='AbortError')return}
     try{const u=URL.createObjectURL(blob),l=document.createElement('a');l.href=u;l.download=name;document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);toast('Sauvegarde exportée')}catch(_){toast("L'export n'a pas abouti")}}
   if(a==='export'&&DL){try{const r=await DL.save({filename:`potager-${iso(TODAY)}.json`,data:new Blob([lastJSON],{type:'application/json'})});if(r)toast('Sauvegarde exportée')}catch(err){if(err&&err.code!=='declined')toast("L'export n'a pas abouti")}}
   if(a==='import')$('#importIn').click();
 });
-$('#importIn').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const s=migrate(JSON.parse(rd.result));if(!s)throw 0;S=s;S.example=false;selId=null;sheetMode=null;save();fit();refresh();toast('Sauvegarde importée',true)}catch(_){toast("Ce fichier n'est pas une sauvegarde du potager")}};rd.readAsText(f);e.target.value=''});
+$('#importIn').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const s=migrate(JSON.parse(rd.result));if(!s)throw 0;s.example=false;if(addGarden(s)){sheetMode=null;renderSheet();toast('Importé comme nouveau potager : '+s.name)}}catch(_){toast("Ce fichier n'est pas une sauvegarde du potager")}};rd.readAsText(f);e.target.value=''});
 sheet.addEventListener('input',e=>{const t=e.target;
   if(t.id==='o-name'){const o=obj(selId);o.name=t.value;save(true);renderPlan()}
   if(t.id==='g-name'){S.name=t.value||'Mon potager';save(true)}
@@ -2344,7 +2373,7 @@ setTimeout(()=>syncStation(false),600);
 
 <script>
 setTimeout(()=>{const s=document.getElementById('splash');if(s){s.classList.add('out');setTimeout(()=>s.remove(),600)}},matchMedia('(display-mode: standalone)').matches||navigator.standalone?650:120);
-/* version 4c8d658c1d : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
+/* version 4364f23987 : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
 if('serviceWorker' in navigator&&location.protocol==='https:'){
   navigator.serviceWorker.register('sw.js').then(r=>r.update()).catch(()=>{});
   let reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!reloaded){reloaded=true;location.reload()}});
