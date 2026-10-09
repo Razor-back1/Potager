@@ -987,7 +987,7 @@ function renderPlan(){
     tp.forEach((a,i)=>ed+=`<circle class="vtx${shapeEdit.sel===i?' sel':''}" data-vtx="${i}" cx="${a.x}" cy="${a.y}" r="${r}" vector-effect="non-scaling-stroke"/>`)}
   /* anneau de rotation autour de l'objet sélectionné (mode édition) */
   const ro=!shapeEdit&&editMode&&selId&&!lifted?G().objs.find(o=>o.id===selId):null;
-  if(ro&&!TYPES[ro.type].round&&!ro.locked){const cx=ro.x+ro.w/2,cy=ro.y+ro.h/2,Rr=clamp(Math.hypot(ro.w,ro.h)/2+26/view.z,70/view.z,150/view.z),a=ro.rot*Math.PI/180,kx=cx+Rr*Math.sin(a),ky=cy-Rr*Math.cos(a);
+  if(ro&&!TYPES[ro.type].round&&!ro.locked){const cx=ro.x+ro.w/2,cy=ro.y+ro.h/2,Rr=Math.min(Math.max(Math.hypot(ro.w,ro.h)/2+40/view.z,70/view.z),Math.min(svg.clientWidth||360,svg.clientHeight||500)*.46/view.z),a=ro.rot*Math.PI/180,kx=cx+Rr*Math.sin(a),ky=cy-Rr*Math.cos(a);
     ed+=`<circle class="rotring" cx="${cx}" cy="${cy}" r="${Rr}" vector-effect="non-scaling-stroke"/><circle class="rothit" data-rot="1" cx="${cx}" cy="${cy}" r="${Rr}" vector-effect="non-scaling-stroke"/>
     <line class="rotline" x1="${cx}" y1="${cy}" x2="${kx}" y2="${ky}" vector-effect="non-scaling-stroke"/><g data-rot="1" transform="translate(${kx} ${ky})"><circle class="rotknob" r="${14/view.z}" vector-effect="non-scaling-stroke"/><text class="rotknobt" text-anchor="middle" dominant-baseline="central" font-size="${12/view.z}">${ro.rot}°</text></g>`}
   $('#editL').innerHTML=ed;
@@ -1025,6 +1025,9 @@ function showHint(t){const h=$('#hint');h.textContent=t;h.hidden=false;h.classLi
 svg.addEventListener('pointerdown',e=>{
   svg.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(ptrs.size===2){const[a,b]=[...ptrs.values()];pinch={d0:Math.hypot(a.x-b.x,a.y-b.y),z0:view.z,m:world((a.x+b.x)/2,(a.y+b.y)/2)};clearTimeout(holdT);if(drag&&drag.mode==='move'){drag.o.x=drag.s.x;drag.o.y=drag.s.y}drag=null;lifted=null;guides=null;return}
+  /* la poignée de taille passe avant l'anneau de rotation quand les deux se chevauchent */
+  if(selId&&editMode&&!shapeEdit){const o=obj(selId);if(o&&!o.locked&&G().objs.includes(o)){const pd=6/view.z,ang=o.rot*Math.PI/180,lx=o.w/2+pd,ly=o.h/2+pd,hx=o.x+o.w/2+lx*Math.cos(ang)-ly*Math.sin(ang),hy=o.y+o.h/2+lx*Math.sin(ang)+ly*Math.cos(ang),pw=world(e.clientX,e.clientY);
+    if(Math.hypot(pw.x-hx,pw.y-hy)*view.z<26){drag={mode:'resize',o,p0:pw,s:{...o},sx:e.clientX,sy:e.clientY};return}}}
   const rh=e.target.closest('[data-rot]');if(rh&&selId&&editMode&&!shapeEdit){const o=obj(selId);drag={mode:'rot',o,s:{rot:o.rot},sx:e.clientX,sy:e.clientY,c:{x:o.x+o.w/2,y:o.y+o.h/2}};return}
   if(shapeEdit){if(!G().shape)G().shape=rectPts();const v=e.target.closest('[data-vtx]'),m=e.target.closest('[data-mid]');
     if(v){shapeEdit.sel=+v.dataset.vtx;drag={mode:'vtx',i:shapeEdit.sel,sx:e.clientX,sy:e.clientY};renderPlan();renderShapebar();return}
@@ -2406,7 +2409,7 @@ setTimeout(()=>syncStation(false),600);
 
 <script>
 setTimeout(()=>{const s=document.getElementById('splash');if(s){s.classList.add('out');setTimeout(()=>s.remove(),600)}},matchMedia('(display-mode: standalone)').matches||navigator.standalone?650:120);
-/* version 88266de125 : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
+/* version 932cc4f69e : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
 if('serviceWorker' in navigator&&location.protocol==='https:'){
   navigator.serviceWorker.register('sw.js').then(r=>r.update()).catch(()=>{});
   let reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!reloaded){reloaded=true;location.reload()}});
