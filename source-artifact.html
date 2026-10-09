@@ -1384,8 +1384,10 @@ function renderSheet(){
   }else if(sheetMode==='friends'){const F=window._friends;
     h+=`<div class="stack"><div class="row between"><h3>Amis</h3><button class="btn small" data-act="relay-back">Retour</button></div>
     <p class="note" style="color:var(--ink)">Chaque ami reçoit un lien. Il l'ouvre sur son téléphone, ajoute l'app à l'écran d'accueil, et tout est relié : ses potagers, sa synchro et ses notifications, séparés des tiens. Il n'a aucun code à gérer.</p>
-    <div class="row" style="flex-wrap:nowrap"><input id="fr-name" placeholder="Prénom de l'ami" style="flex:1;min-width:0" autocomplete="off"><button class="btn primary" data-act="fr-invite">Créer l'invitation</button></div>
-    ${window._newInv?`<div class="alert okay" style="display:grid;gap:8px"><span><b>Invitation pour ${esc(window._newInv.name)}</b> : envoie-lui ce lien (il ne sert qu'à lui).</span><code class="autok">${esc(window._newInv.link)}</code><div class="row"><button class="btn small primary" data-act="fr-share">Envoyer</button><button class="btn small" data-act="fr-copy">Copier le lien</button></div></div>`:''}
+    <input id="fr-name" placeholder="Prénom de l'ami" autocomplete="off" value="${esc(window._frName||'')}">
+    <div><span class="lbl">Son app démarre avec</span><div class="seg" style="margin-top:6px"><button data-act="fr-kind" data-k="potager" aria-pressed="${window._invKind!=='fleurs'}">L'exemple potager</button><button data-act="fr-kind" data-k="fleurs" aria-pressed="${window._invKind==='fleurs'}">L'exemple fleurs</button></div></div>
+    <button class="btn primary" data-act="fr-invite" style="justify-self:start">Créer l'invitation</button>
+    ${window._newInv?`<div class="alert okay" style="display:grid;gap:8px"><span><b>Invitation pour ${esc(window._newInv.name)}</b>${window._newInv.k==='fleurs'?' (jardin de fleurs)':' (potager)'} : envoie-lui ce lien (il ne sert qu'à lui).</span><code class="autok">${esc(window._newInv.link)}</code><div class="row"><button class="btn small primary" data-act="fr-share">Envoyer</button><button class="btn small" data-act="fr-copy">Copier le lien</button></div></div>`:''}
     <span class="lbl">Amis sur ton relais</span>
     ${!F?'<p class="note">Chargement…</p>':F.err?`<p class="note" style="color:var(--danger)">${esc(F.err)}</p>`:F.list.length?`<div class="glist">${F.list.map(u=>`<div class="grow"><span><b>${esc(u.name)}</b><span class="note" style="display:block">${u.last?'vu '+whenTxt(u.last):'pas encore connecté'} · ${u.n} potager${u.n>1?'s':''}</span></span><button class="btn small danger" data-act="fr-rm" data-id="${u.id}" data-n="${esc(u.name)}">Retirer</button></div>`).join('')}</div>`:'<p class="note">Personne pour l\'instant.</p>'}
     <p class="note">Retirer un ami efface ses potagers, ses photos et ses notifications de ton relais. Son lien ne marchera plus.</p></div>`;
@@ -1502,10 +1504,11 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
   if(a==='relay-mode'){window._rhave=b.dataset.m==='have'?true:b.dataset.m==='inv'?'inv':false;renderSheet();return}
   if(a==='inv-paste'){try{$('#inv-code').value=await navigator.clipboard.readText()}catch(x){toast('Colle le code à la main (appui long → Coller)')}return}
   if(a==='inv-use'){const inv=readInvite($('#inv-code').value);if(!inv)return toast('Invitation illisible : colle le lien complet reçu');await applyInvite(inv);renderSheet();return}
-  if(a==='inv-mine'){const c=GDN.get();try{await navigator.clipboard.writeText(APP_URL+'#join='+mkInvite(c.url,c.token,c.name||''));toast('Invitation copiée : ouvre-la sur ton autre appareil')}catch(x){toast('Copie impossible')}return}
-  if(a==='friends'){sheetMode='friends';window._friends=null;window._newInv=null;renderSheet();loadFriends();return}
-  if(a==='fr-invite'){const n=($('#fr-name').value||'').trim();if(!n)return toast('Indique le prénom de ton ami');b.disabled=true;
-    try{const r=await gReq('/admin/invite','POST',{name:n});window._newInv={name:r.name,link:APP_URL+'#join='+mkInvite(GDN.get().url,r.token,r.name)};await loadFriends()}catch(x){toast(x.message)}renderSheet();return}
+  if(a==='inv-mine'){const c=GDN.get();try{await navigator.clipboard.writeText(APP_URL+'#join='+mkInvite(c.url,c.token,c.name||'',FLW()?'fleurs':''));toast('Invitation copiée : ouvre-la sur ton autre appareil')}catch(x){toast('Copie impossible')}return}
+  if(a==='friends'){sheetMode='friends';window._friends=null;window._newInv=null;window._frName='';renderSheet();loadFriends();return}
+  if(a==='fr-kind'){window._frName=($('#fr-name').value||'');window._invKind=b.dataset.k;renderSheet();return}
+  if(a==='fr-invite'){const n=($('#fr-name').value||'').trim();if(!n)return toast('Indique le prénom de ton ami');b.disabled=true;const k=window._invKind==='fleurs'?'fleurs':'potager';
+    try{const r=await gReq('/admin/invite','POST',{name:n});window._newInv={name:r.name,k,link:APP_URL+'#join='+mkInvite(GDN.get().url,r.token,r.name,k)};window._frName='';await loadFriends()}catch(x){toast(x.message)}renderSheet();return}
   if(a==='fr-share'){const I=window._newInv;try{if(navigator.share){await navigator.share({title:'Atelier Potager',text:`${I.name}, voici ton accès à l'app du potager. Ouvre ce lien sur ton téléphone :`,url:I.link});return}}catch(x){return}try{await navigator.clipboard.writeText(I.link);toast('Lien copié')}catch(x){}return}
   if(a==='fr-copy'){try{await navigator.clipboard.writeText(window._newInv.link);toast('Lien copié')}catch(x){toast('Copie impossible')}return}
   if(a==='fr-rm'){if(!b.classList.contains('armed')){b.classList.add('armed');b.textContent='Confirmer';return}try{await gReq('/admin/remove','POST',{id:b.dataset.id});toast(b.dataset.n+' retiré du relais')}catch(x){toast(x.message)}await loadFriends();renderSheet();return}
@@ -2606,10 +2609,14 @@ setTimeout(()=>{try{if(relayOn()&&GDN.get().pushEp)syncPush(GID)}catch(e){}},400
 
 /* ---- amis invités et lieu du potager ---- */
 const APP_URL='https://razor-back1.github.io/Potager/';
-const mkInvite=(u,t,n)=>'POT1.'+b64u(new TextEncoder().encode(JSON.stringify({u,t,n})));
+const mkInvite=(u,t,n,k)=>'POT1.'+b64u(new TextEncoder().encode(JSON.stringify(k?{u,t,n,k}:{u,t,n})));
 function readInvite(code){const m=String(code||'').match(/POT1\.[A-Za-z0-9_-]+/);if(!m)return null;try{const o=JSON.parse(new TextDecoder().decode(unb64u(m[0].slice(5))));return o&&o.u&&o.t?o:null}catch(e){return null}}
 async function applyInvite(inv){GDN.set({url:inv.u,token:inv.t,role:'user',name:inv.n||''});try{localStorage.setItem('potager-noinv','1')}catch(e){}
-  try{await syncPull(true);toast(inv.n?`Bienvenue ${inv.n} : ton app est reliée`:'Invitation acceptée : ton app est reliée')}catch(e){toast(e.message)}renderHeader();refresh()}
+  try{await syncPull(true)}catch(e){toast(e.message)}
+  /* l'app démarre avec l'exemple choisi par celui qui invite */
+  if(inv.k==='fleurs'&&!FLW()){if(S.example&&!localAt){S=sampleFlowers();lastJSON='';save();past=[];future=[]}else addGarden(sampleFlowers())}
+  if(inv.k==='potager'&&FLW())addGarden(sample());
+  toast(inv.n?`Bienvenue ${inv.n} : ton app est reliée`:'Invitation acceptée : ton app est reliée');renderHeader();refresh()}
 async function loadFriends(){try{const r=await gReq('/admin/users');window._friends={list:r.users}}catch(x){window._friends={err:x.message}}if(sheetMode==='friends')renderSheet()}
 function setGeo(g){try{localStorage.setItem('potager-geo',JSON.stringify(g))}catch(e){}window._geoRes=null;wx=null;sheetMode='menu';renderSheet();toast('Lieu enregistré : '+g.name);syncStation(false);syncPushSoon()}
 const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
