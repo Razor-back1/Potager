@@ -614,10 +614,10 @@ const NEED=[0,0,2,5,10,15,20,18,10,4,0,0];
 const LAT=50.55*Math.PI/180;
 
 const TYPES={
- planche:{l:'Planche de culture',w:120,h:500,plant:true,ht:0},
+ planche:{l:'Planche de culture',w:90,h:500,plant:true,ht:0},
  bac:{l:'Bac de culture',w:100,h:200,plant:true,ht:40},
  serre:{l:'Serre',w:300,h:500,ht:250},
- allee:{l:'Allée',w:80,h:500},
+ allee:{l:'Allée',w:70,h:500},
  alleeo:{l:'Allée ronde ou ovale',w:600,h:400},
  cuve:{l:'Cuve de stockage',w:120,h:120,round:true,ht:150},
  eau:{l:"Point d'eau",w:60,h:60,round:true},
@@ -963,7 +963,7 @@ function shapeSVG(o){
         if(i<o.zones.length-1){const[a,b,c,d]=R(off,0,0,W);s+=`<line x1="${a}" y1="${b}" x2="${a+c}" y2="${b+d}" class="s-zone-line" stroke-width="2" ${ns}/>`}});
       return s;}
     case 'serre':return`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" class="s-serre" stroke-width="2" ${ns}/>`;
-    case 'alleeo':{const b=clamp(+o.ring||60,10,Math.min(w,h)/2),rx=w/2,ry=h/2,ix=rx-b,iy=ry-b;
+    case 'alleeo':{const b=clamp(+o.ring||70,10,Math.min(w,h)/2),rx=w/2,ry=h/2,ix=rx-b,iy=ry-b;
       const d=`M${-rx} 0a${rx} ${ry} 0 1 0 ${2*rx} 0a${rx} ${ry} 0 1 0 ${-2*rx} 0z`+(ix>1&&iy>1?`M${-ix} 0a${ix} ${iy} 0 1 1 ${2*ix} 0a${ix} ${iy} 0 1 1 ${-2*ix} 0z`:'');
       return`<path d="${d}" fill-rule="evenodd" class="s-gravel" stroke-width="1" ${ns}/>`}
     case 'allee':return`<rect x="${x}" y="${y}" width="${w}" height="${h}" class="s-gravel" stroke-width="1" ${ns}/>`;
@@ -1229,13 +1229,13 @@ function renderSheet(){
     <div class="grid2"><label class="field"><span class="lbl">Nombre</span><input id="sr-n" type="number" min="1" max="40" value="4"></label>
     <label class="field"><span class="lbl">Orientation</span><select id="sr-o"><option value="v">Planches verticales</option><option value="h">Planches horizontales</option></select></label>
     <label class="field"><span class="lbl">Longueur (cm)</span><input id="sr-l" type="number" min="50" step="10" value="500"></label>
-    <label class="field"><span class="lbl">Largeur (cm)</span><input id="sr-w" type="number" min="30" step="5" value="120"></label>
-    <label class="field"><span class="lbl">Allée entre (cm)</span><input id="sr-g" type="number" min="0" step="5" value="50"></label>
+    <label class="field"><span class="lbl">Largeur (cm)</span><input id="sr-w" type="number" min="30" step="5" value="90"></label>
+    <label class="field"><span class="lbl">Allée entre (cm)</span><input id="sr-g" type="number" min="0" step="5" value="70"></label>
     <label class="field"><span class="lbl">Inclinaison (°)</span><input id="sr-a" type="number" min="-180" max="180" step="5" value="0"></label></div>
     <label class="row" style="gap:8px"><input type="checkbox" id="sr-al" checked> Dessiner les allées entre les planches</label>
     <p class="note">La série forme un bloc : il se déplace et tourne d'un seul tenant. Chaque planche garde son propre menu, avec un bouton pour la détacher du bloc.</p>
     ${G().shape?'<button class="btn small" data-act="series-align" style="justify-self:start">Aligner sur le plus long côté du terrain</button>':''}
-    <p class="note">Repère courant : planche de 75 à 120 cm, allée de 40 à 60 cm pour passer à genoux ou avec une brouette.</p>
+    <p class="note">Par défaut : planche de 90 cm (on atteint le milieu sans marcher dessus) et allée de 70 cm (passage de brouette).</p>
     <button class="btn primary" data-act="series-go">Placer la série</button></div>`;
   }else if(sheetMode==='help'){
     const ic=p=>`<span class="ic"><svg viewBox="0 0 24 24">${p}</svg></span>`;
@@ -1296,7 +1296,7 @@ function renderSheet(){
       `<div class="grid2"><label class="field"><span class="lbl">Largeur (cm)</span><input id="o-w" type="number" min="10" step="5" value="${Math.round(o.w)}" ${L}></label><label class="field"><span class="lbl">Longueur (cm)</span><input id="o-h" type="number" min="10" step="5" value="${Math.round(o.h)}" ${L}></label>`;
     if(o.type!=='citerne')h+=(!['planche','allee','alleeo','eau','prise','etang','ruisseau'].includes(o.type))?`<label class="field"><span class="lbl">Hauteur (cm)</span><input id="o-ht" type="number" min="0" step="10" value="${Math.round(o.height||0)}"></label></div><p class="note">${o.type==='cuve'?`Contenance ≈ <b class="mono">${num(cuveL(o),0)} L</b>. `:''}La hauteur sert aussi à calculer l'ombre portée.</p>`:`</div>`;
     {const ms=grpMembers(o);if(ms){const np=ms.filter(q=>q.type==='planche').length,na=ms.length-np;h+=`<div class="grpinfo"><span><b>Dans un bloc</b> · ${np} planche${np>1?'s':''}${na?` et ${na} allée${na>1?'s':''}`:''}<span class="note" style="display:block">Maintenir pour déplacer tout le bloc, l'anneau le fait tourner d'un coup. La poignée ne change que cet objet.</span></span><div class="row"><button class="btn small" data-act="ungroup">Détacher du bloc</button><button class="btn small" data-act="ungroupall">Dissoudre le bloc</button></div></div>`}}
-    if(o.type==='alleeo')h+=`<div class="grid2"><label class="field"><span class="lbl">Largeur de l'allée (cm)</span><input id="o-ring" type="number" min="10" step="5" value="${Math.round(+o.ring||60)}" ${L}></label><div class="field"><span class="lbl">Forme</span><button class="btn small" data-act="mkcircle" ${L}>Faire un cercle</button></div></div><p class="note">Largeur et longueur = dimensions extérieures. Si l'allée est plus large que la moitié, le rond devient plein (placette).</p>`;
+    if(o.type==='alleeo')h+=`<div class="grid2"><label class="field"><span class="lbl">Largeur de l'allée (cm)</span><input id="o-ring" type="number" min="10" step="5" value="${Math.round(+o.ring||70)}" ${L}></label><div class="field"><span class="lbl">Forme</span><button class="btn small" data-act="mkcircle" ${L}>Faire un cercle</button></div></div><p class="note">Largeur et longueur = dimensions extérieures. Si l'allée est plus large que la moitié, le rond devient plein (placette).</p>`;
     if(o.type==='ruisseau')h+=`<div class="grid2"><label class="field"><span class="lbl">Courbure (cm)</span><input id="o-bend" type="number" step="10" value="${Math.round(o.bend||0)}" ${L}></label><label class="field"><span class="lbl">Méandre (cm)</span><input id="o-wave" type="number" step="10" value="${Math.round(o.wave||0)}" ${L}></label></div><p class="note">Largeur = longueur du cours d'eau, longueur = largeur du lit. Courbure : il bombe d'un côté ; méandre : il ondule en S. L'eau s'écoule dans le sens des tirets ; « Inverser le sens » le retourne.</p><button class="btn small" data-act="flipflow" style="justify-self:start" ${L}>Inverser le sens</button>`;
     if(o.type==='haie')h+=`<label class="field" style="max-width:260px"><span class="lbl">Courbure (cm)</span><input id="o-bend" type="number" step="10" value="${Math.round(o.bend||0)}" ${L}></label><p class="note">0 = haie droite. La valeur est la flèche au milieu de la haie ; négative pour bomber de l'autre côté.</p>`;
     if(!t.round&&!o.locked)h+=`<div class="row"><span class="lbl">Orientation</span><span class="mono">${o.rot}°</span><button class="btn small" data-act="rot" data-d="90">+90°</button><button class="btn small" data-act="rot0">0°</button></div><p class="note">Fais glisser le rond jaune le long du cercle autour de l'objet pour le tourner (crans de 5°, aimanté tous les 45°).</p>`;
@@ -1315,9 +1315,9 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
   if(a==='add'){const t=TYPES[b.dataset.type],r=svg.getBoundingClientRect(),c=world(r.left+r.width/2,r.top+r.height*.3);
     const n={id:uid(),type:b.dataset.type,x:snap(clamp(c.x-t.w/2,0,G().w-t.w)),y:snap(clamp(c.y-t.h/2,0,G().h-t.h)),w:t.w,h:t.h,rot:0,name:t.l,height:t.ht||0,locked:false};
     if(t.plant){n.zones=[{id:uid(),crop:null,len:Math.max(t.w,t.h),date:iso(TODAY),cells:{}}];n.grown=[];n.journal=[]}
-    if(n.type==='citerne')n.vol=5000;if(n.type==='alleeo')n.ring=60;if(n.type==='ruisseau')n.wave=100;
+    if(n.type==='citerne')n.vol=5000;if(n.type==='alleeo')n.ring=70;if(n.type==='ruisseau')n.wave=100;
     G().objs.push(n);selId=n.id;sheetMode='obj';save();renderSheet();renderPlan()}
-  if(a==='series-go'){const n=clamp(+$('#sr-n').value||1,1,40),L=+$('#sr-l').value||500,W=+$('#sr-w').value||120,gap=Math.max(0,+$('#sr-g').value||0),v=$('#sr-o').value==='v';
+  if(a==='series-go'){const n=clamp(+$('#sr-n').value||1,1,40),L=+$('#sr-l').value||500,W=+$('#sr-w').value||90,gap=Math.max(0,+$('#sr-g').value||0),v=$('#sr-o').value==='v';
     /* la série est centrée sur le milieu de l'écran */
     const r=svg.getBoundingClientRect(),c=world(r.left+r.width/2,r.top+r.height*.4),tw=v?n*W+(n-1)*gap:L,th=v?L:n*W+(n-1)*gap;
     const grp=uid(),withA=$('#sr-al').checked&&gap>0,ka=G().objs.filter(o=>o.type==='allee').length;
@@ -2446,7 +2446,7 @@ setTimeout(()=>syncStation(false),600);
 
 <script>
 setTimeout(()=>{const s=document.getElementById('splash');if(s){s.classList.add('out');setTimeout(()=>s.remove(),600)}},matchMedia('(display-mode: standalone)').matches||navigator.standalone?650:120);
-/* version d165226f1f : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
+/* version 4445bcefb9 : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
 if('serviceWorker' in navigator&&location.protocol==='https:'){
   navigator.serviceWorker.register('sw.js').then(r=>r.update()).catch(()=>{});
   let reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!reloaded){reloaded=true;location.reload()}});
