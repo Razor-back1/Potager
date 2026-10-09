@@ -51,6 +51,7 @@ main{position:relative;min-height:0;overflow:hidden}
 .view{position:absolute;inset:0;overflow:auto}
 
 #map{width:100%;height:100%;display:block;touch-action:none;background:var(--bg);user-select:none;-webkit-user-select:none}
+.surround{fill:var(--leaf);fill-opacity:.10;stroke:var(--line);stroke-width:1;stroke-dasharray:6 4}
 .ground{fill:var(--ground)} .bound{fill:none;stroke:var(--accent);stroke-width:1.5}
 .dimtxt{fill:var(--muted);font-family:var(--f-mono)}
 .obj{cursor:grab}
@@ -584,6 +585,7 @@ const TYPES={
  eau:{l:"Point d'eau",w:60,h:60,round:true},
  arbre:{l:'Arbre',w:400,h:400,round:true,ht:600},
  haie:{l:'Haie',w:500,h:60,ht:200},
+ etang:{l:'Étang',w:800,h:400,ht:0},
  cloture:{l:'Clôture',w:500,h:10,ht:150},
  prise:{l:'Prise électrique',w:30,h:30},
  compost:{l:'Composteur',w:120,h:120,ht:100},
@@ -847,11 +849,16 @@ function hull(pts){pts=pts.slice().sort((a,b)=>a.x-b.x||a.y-b.y);const cr=(o,a,b
   for(const p of pts){while(lo.length>=2&&cr(lo[lo.length-2],lo[lo.length-1],p)<=0)lo.pop();lo.push(p)}
   for(const p of pts.reverse()){while(up.length>=2&&cr(up[up.length-2],up[up.length-1],p)<=0)up.pop();up.push(p)}
   return lo.slice(0,-1).concat(up.slice(0,-1))}
-function shadowPoly(o,sp){const h=+o.height||0;if(h<=0)return null;const v=shadowVec(sp,h);if(!v)return null;const b=basePts(o);
-  const k0=o.type==='arbre'?.3:0;return hull([...b.map(p=>({x:p.x+v.x*k0,y:p.y+v.y*k0})),...b.map(p=>({x:p.x+v.x,y:p.y+v.y}))])}
+/* haie courbée : découpée en tronçons pour que l'ombre suive la courbe */
+function baseParts(o){if(!(o.type==='haie'&&o.bend))return[basePts(o)];const N=12,cx=o.x+o.w/2,cy=o.y+o.h/2,a=o.rot*Math.PI/180,c=Math.cos(a),s=Math.sin(a),L=o.w-o.h,t=o.h/2;
+  const pt=u=>{const x=-L/2+u*L,y=-2*o.bend*2*u*(1-u);return{x,y}},W=(x,y)=>({x:cx+x*c-y*s,y:cy+x*s+y*c}),out=[];
+  for(let i=0;i<N;i++){const p=pt(i/N),q=pt((i+1)/N),dx=q.x-p.x,dy=q.y-p.y,l=Math.hypot(dx,dy)||1,nx=-dy/l*t,ny=dx/l*t;out.push([W(p.x+nx,p.y+ny),W(q.x+nx,q.y+ny),W(q.x-nx,q.y-ny),W(p.x-nx,p.y-ny)])}return out}
+function shadowPolys(o,sp){const h=+o.height||0;if(h<=0)return[];const v=shadowVec(sp,h);if(!v)return[];const k0=o.type==='arbre'?.3:0;
+  return baseParts(o).map(b=>hull([...b.map(p=>({x:p.x+v.x*k0,y:p.y+v.y*k0})),...b.map(p=>({x:p.x+v.x,y:p.y+v.y}))]))}
+function shadowPoly(o,sp){return shadowPolys(o,sp)[0]||null}
 function inPoly(pt,poly){let ins=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a.y>pt.y)!==(b.y>pt.y)&&pt.x<(b.x-a.x)*(pt.y-a.y)/(b.y-a.y)+a.x)ins=!ins}return ins}
 function sunHoursAt(c,home,excl,doy){let n=0;const casters=home.objs.filter(q=>q!==excl&&+q.height>0);
-  for(let h=3.25;h<=20.75;h+=.5){const sp=sunPos(doy,h);if(sp.alt<.04)continue;if(!casters.some(q=>{const p=shadowPoly(q,sp);return p&&inPoly(c,p)}))n+=.5}return n}
+  for(let h=3.25;h<=20.75;h+=.5){const sp=sunPos(doy,h);if(sp.alt<.04)continue;if(!casters.some(q=>shadowPolys(q,sp).some(p=>inPoly(c,p))))n+=.5}return n}
 function sunHours(o,doy){return sunHoursAt({x:o.x+o.w/2,y:o.y+o.h/2},homeOf(o),o,doy)}
 /* ---- besoin en soleil des cultures (heures de soleil direct par jour) ---- */
 const SUN_NEED={laitue_h:3,tomate:6,poivron:6,aubergine:6,courgette:6,concombre:6,potiron:6,mais:6,haricot:6,basilic:6,fraise:6,pdt:6,
@@ -909,7 +916,10 @@ function shapeSVG(o){
     case 'cuve':return`<circle r="${w/2}" class="s-water" stroke-width="2" ${ns}/><circle r="${w/2*.6}" fill="none" style="stroke:var(--surface)" stroke-opacity=".5" stroke-width="1" ${ns}/>`;
     case 'eau':return`<circle r="${w/2}" class="s-water-l" stroke-width="2" ${ns}/><circle r="${w/5}" class="s-water"/>`;
     case 'arbre':return`<circle r="${w/2}" class="s-leaf" stroke-width="1.5" stroke-dasharray="4 3" ${ns}/><circle r="${Math.max(8,w*.06)}" class="s-trunk"/>`;
-    case 'haie':return`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${Math.min(w,h)/2}" class="s-leaf-solid" fill-opacity=".8"/>`;
+    case 'haie':if(o.bend)return`<path d="M${x+h/2} 0Q0 ${-2*o.bend} ${-x-h/2} 0" fill="none" style="stroke:var(--leaf-dark)" stroke-opacity=".8" stroke-width="${h}" stroke-linecap="round"/>`;
+      return`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${Math.min(w,h)/2}" class="s-leaf-solid" fill-opacity=".8"/>`;
+    case 'etang':return o.poly&&o.poly.length>2?`<polygon points="${o.poly.map(([u,v])=>(x+u*w).toFixed(1)+','+(y+v*h).toFixed(1)).join(' ')}" class="s-water" fill-opacity=".5" stroke-width="2" stroke-linejoin="round" ${ns}/>`
+      :`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${Math.min(w,h)/2}" class="s-water" fill-opacity=".5" stroke-width="2" ${ns}/>`;
     case 'cloture':{let s=`<rect x="${x}" y="${y}" width="${w}" height="${h}" class="s-fence"/>`;const L=Math.max(w,h),n=Math.floor(L/200);for(let i=0;i<=n;i++){const t=-L/2+i*(L/Math.max(n,1));s+=w>=h?`<rect x="${t-6}" y="${-Math.max(h,12)/2-2}" width="12" height="${Math.max(h,12)+4}" class="s-wood-solid"/>`:`<rect y="${t-6}" x="${-Math.max(w,12)/2-2}" height="12" width="${Math.max(w,12)+4}" class="s-wood-solid"/>`}return s}
     case 'prise':return`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" class="s-plug" stroke-width="1" ${ns}/><circle cx="${-w*.18}" r="${w*.09}" style="fill:var(--ink)"/><circle cx="${w*.18}" r="${w*.09}" style="fill:var(--ink)"/>`;
     case 'compost':return`<rect x="${x}" y="${y}" width="${w}" height="${h}" class="s-wood-solid" stroke-width="1" ${ns}/><path d="M${x} ${y+h/3}H${-x}M${x} ${y+2*h/3}H${-x}" class="s-roof" stroke-width="1" ${ns}/>`;
@@ -921,7 +931,7 @@ function objSVG(o){
   const vert=o.h>o.w*1.4,span=(vert?o.h:o.w)*view.z,thick=Math.min(o.w,o.h)*view.z;
   if(span>o.name.length*6.5&&thick>13&&o.type!=='prise')lab=`<text text-anchor="middle" dominant-baseline="central" font-size="${fs}" transform="${vert?'rotate(-90)':''}">${esc(o.name)}</text>`;
   let badge='';const st=planStatus(o);if(st){const r=10/view.z;badge=`<g class="badge ${st.c}" transform="translate(${o.w/2} ${-o.h/2})"><title>${st.l}</title><circle r="${r}" vector-effect="non-scaling-stroke"/><text text-anchor="middle" dominant-baseline="central" font-size="${(st.c==='blue'?9:11)/view.z}" transform="rotate(${-o.rot})">${st.t}</text></g>`}
-  let selS='';if(sel){const p=6/view.z;selS=`<rect class="selbox${o.locked?' locked':''}" x="${-o.w/2-p}" y="${-o.h/2-p}" width="${o.w+2*p}" height="${o.h+2*p}" vector-effect="non-scaling-stroke"/>`+(o.locked||!editMode?'':`<circle class="handle" data-handle="1" cx="${o.w/2+p}" cy="${o.h/2+p}" r="${11/view.z}" vector-effect="non-scaling-stroke"/>`)}
+  let selS='';if(sel){const p=6/view.z,bd=o.type==='haie'&&o.bend?o.bend:0;selS=`<rect class="selbox${o.locked?' locked':''}" x="${-o.w/2-p}" y="${-o.h/2-p-Math.max(0,bd)}" width="${o.w+2*p}" height="${o.h+2*p+Math.abs(bd)}" vector-effect="non-scaling-stroke"/>`+(o.locked||!editMode?'':`<circle class="handle" data-handle="1" cx="${o.w/2+p}" cy="${o.h/2+p}" r="${11/view.z}" vector-effect="non-scaling-stroke"/>`)}
   return`<g data-id="${o.id}" class="obj${o.id===lifted?' lift':''}" transform="translate(${o.x+o.w/2} ${o.y+o.h/2}) rotate(${o.rot})">${shapeSVG(o)}${lab}${badge}${selS}</g>`;
 }
 function renderPlan(){
@@ -931,7 +941,8 @@ function renderPlan(){
   const tp=terrainPts(),pts=tp.map(q=>q.x+','+q.y).join(' '),sg=Math.sign(polyArea(tp))||1;
   let edges='';tp.forEach((a,i)=>{const b=tp[(i+1)%tp.length],L=Math.hypot(b.x-a.x,b.y-a.y);if(L*view.z<40)return;const nx=(b.y-a.y)/L*sg,ny=-(b.x-a.x)/L*sg,o=14/view.z;
     edges+=`<text class="${shapeEdit?'edgetxt':'dimtxt'}" x="${(a.x+b.x)/2+nx*o}" y="${(a.y+b.y)/2+ny*o}" text-anchor="middle" dominant-baseline="central" font-size="${fs}">${m2(L)} m</text>`});
-  $('#groundL').innerHTML=`<clipPath id="tclip"><polygon points="${pts}"/></clipPath><g clip-path="url(#tclip)"><rect class="ground" width="${G().w}" height="${G().h}"/><rect width="${G().w}" height="${G().h}" fill="url(#g1)"/><rect width="${G().w}" height="${G().h}" fill="url(#g5)"/></g><polygon class="bound" points="${pts}" vector-effect="non-scaling-stroke"/>${edges}`;
+  const sur=!ctx&&S.surround;
+  $('#groundL').innerHTML=`${sur?`<rect class="surround" x="${sur.x}" y="${sur.y}" width="${sur.w}" height="${sur.h}" vector-effect="non-scaling-stroke"/>`:''}<clipPath id="tclip"><polygon points="${pts}"/></clipPath><g clip-path="url(#tclip)"><rect class="ground" width="${G().w}" height="${G().h}"/><rect width="${G().w}" height="${G().h}" fill="url(#g1)"/><rect width="${G().w}" height="${G().h}" fill="url(#g5)"/></g><polygon class="bound" points="${pts}" vector-effect="non-scaling-stroke"/>${edges}`;
   let ed='';if(shapeEdit){const r=11/view.z;tp.forEach((a,i)=>{const b=tp[(i+1)%tp.length];ed+=`<line class="edgehit" data-edge="${i}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" vector-effect="non-scaling-stroke"/>`});tp.forEach((a,i)=>{const b=tp[(i+1)%tp.length];ed+=`<circle class="mid" data-mid="${i}" cx="${(a.x+b.x)/2}" cy="${(a.y+b.y)/2}" r="${r*.7}"/>`});
     tp.forEach((a,i)=>ed+=`<circle class="vtx${shapeEdit.sel===i?' sel':''}" data-vtx="${i}" cx="${a.x}" cy="${a.y}" r="${r}" vector-effect="non-scaling-stroke"/>`)}
   /* anneau de rotation autour de l'objet sélectionné (mode édition) */
@@ -941,12 +952,12 @@ function renderPlan(){
     <line class="rotline" x1="${cx}" y1="${cy}" x2="${kx}" y2="${ky}" vector-effect="non-scaling-stroke"/><g data-rot="1" transform="translate(${kx} ${ky})"><circle class="rotknob" r="${14/view.z}" vector-effect="non-scaling-stroke"/><text class="rotknobt" text-anchor="middle" dominant-baseline="central" font-size="${12/view.z}">${ro.rot}°</text></g>`}
   $('#editL').innerHTML=ed;
   renderWxLayer();
-  const order=['allee','haie','cloture','serre','arbre','abri','compost','cuve','eau','bac','planche','prise'];
+  const order=['etang','allee','haie','cloture','serre','arbre','abri','compost','cuve','eau','bac','planche','prise'];
   const list=[...G().objs].sort((a,b)=>(a.id===selId)-(b.id===selId)||order.indexOf(a.type)-order.indexOf(b.type));
   $('#layer').innerHTML=list.map(objSVG).join('');
   let sh='';const lv=!shade.on&&liveWx()&&!ctx&&wx.cur&&wx.cur.isDay&&['clear','partly'].includes(wxKind(wx.cur.code));
-  if(lv){const sp=sunPos(doyOf(TODAY),solarNow());if(sp.alt>=.04)G().objs.forEach(o=>{const p=shadowPoly(o,sp);if(p)sh+=`<polygon class="shadepoly live" points="${p.map(q=>q.x.toFixed(1)+','+q.y.toFixed(1)).join(' ')}"/>`})}
-  if(shade.on&&!ctx){const sp=sunPos(shade.doy,shade.hour);if(sp.alt>=.04)G().objs.forEach(o=>{const p=shadowPoly(o,sp);if(p)sh+=`<polygon class="shadepoly" points="${p.map(q=>q.x.toFixed(1)+','+q.y.toFixed(1)).join(' ')}"/>`})}
+  if(lv){const sp=sunPos(doyOf(TODAY),solarNow());if(sp.alt>=.04)G().objs.forEach(o=>shadowPolys(o,sp).forEach(p=>{sh+=`<polygon class="shadepoly live" points="${p.map(q=>q.x.toFixed(1)+','+q.y.toFixed(1)).join(' ')}"/>`}))}
+  if(shade.on&&!ctx){const sp=sunPos(shade.doy,shade.hour);if(sp.alt>=.04)G().objs.forEach(o=>shadowPolys(o,sp).forEach(p=>{sh+=`<polygon class="shadepoly" points="${p.map(q=>q.x.toFixed(1)+','+q.y.toFixed(1)).join(' ')}"/>`}))}
   $('#shadeL').innerHTML=sh;
   let ov='';if(guides){guides.forEach(g=>ov+=`<line class="guide" x1="${g[0]}" y1="${g[1]}" x2="${g[2]}" y2="${g[3]}" vector-effect="non-scaling-stroke"/>`)}
   $('#overL').innerHTML=ov;
@@ -1070,7 +1081,8 @@ const ICON={planche:'<rect x="4" y="10" width="38" height="10" rx="2" fill="#8b6
  arbre:'<circle cx="23" cy="15" r="12" fill="#5c9a45" fill-opacity=".4" stroke="#2f5d2b" stroke-dasharray="3 2"/><circle cx="23" cy="15" r="2.5" fill="#a3713f"/>',haie:'<rect x="2" y="10" width="42" height="10" rx="5" fill="#2f5d2b"/>',
  cloture:'<rect x="2" y="14" width="42" height="2.5" fill="#a3713f"/><rect x="5" y="11" width="3" height="9" fill="#a3713f"/><rect x="21.5" y="11" width="3" height="9" fill="#a3713f"/><rect x="38" y="11" width="3" height="9" fill="#a3713f"/>',
  prise:'<rect x="15" y="7" width="16" height="16" rx="3" fill="#d9951c"/><circle cx="20" cy="15" r="1.8"/><circle cx="26" cy="15" r="1.8"/>',compost:'<rect x="12" y="4" width="22" height="22" fill="#a3713f"/><path d="M12 11h22M12 18h22" stroke="#5e4529"/>',
- abri:'<rect x="8" y="4" width="30" height="22" fill="#a3713f"/><path d="M8 4l30 22M38 4L8 26" stroke="#5e4529"/>'};
+ abri:'<rect x="8" y="4" width="30" height="22" fill="#a3713f"/><path d="M8 4l30 22M38 4L8 26" stroke="#5e4529"/>',
+ etang:'<path d="M6 18c0-7 10-12 20-12s16 4 14 10-9 9-19 9S6 24 6 18z" fill="#3a82b5" fill-opacity=".55" stroke="#3a82b5"/>'};
 const alertsHTML=o=>{const cf=conflicts(o),ri=rotIssues(o);let h='';
   if(cf.length)h+=`<div class="alert">${cf.map(c=>`<span><b>${P[c.a].n}</b> et <b>${P[c.b].n}</b> se gênent ${esc(c.where)}.</span>`).join('')}</div>`;
   if(ri.length)h+=`<div class="alert amber">${ri.map(r=>`<span>Rotation : <b>${P[r.crop].n}</b> revient sur des ${P[r.crop].f.toLowerCase()} (${P[r.prev.crop].n.toLowerCase()} en ${r.prev.y}). Attends ${ROT_YEARS+1} ans entre deux cultures de la même famille.</span>`).join('')}</div>`;
@@ -1144,7 +1156,7 @@ function renderSheet(){
   if(sheetMode==='add'){
     h+=`<div class="stack"><div class="row between"><h3>Ajouter au potager</h3><button class="btn small" data-act="close">Fermer</button></div>
     <button class="btn primary" data-act="series">Série de planches avec allées</button>
-    <div class="typegrid">${Object.entries(TYPES).filter(([k])=>!(ctx&&(k==='serre'||k==='arbre'||k==='haie'))).map(([k,t])=>`<button class="typebtn" data-act="add" data-type="${k}"><svg viewBox="0 0 46 30">${ICON[k]}</svg>${t.l}</button>`).join('')}</div>
+    <div class="typegrid">${Object.entries(TYPES).filter(([k])=>!(ctx&&(k==='serre'||k==='arbre'||k==='haie'||k==='etang'))).map(([k,t])=>`<button class="typebtn" data-act="add" data-type="${k}"><svg viewBox="0 0 46 30">${ICON[k]}</svg>${t.l}</button>`).join('')}</div>
     <p class="note">L'objet apparaît au centre de l'écran. Maintiens le doigt dessus pour le soulever et le déplacer. Tire la poignée jaune pour le redimensionner.</p></div>`;
   }else if(sheetMode==='series'){
     h+=`<div class="stack"><div class="row between"><h3>Série de planches</h3><button class="btn small" data-act="add-back">Retour</button></div>
@@ -1212,6 +1224,7 @@ function renderSheet(){
     h+=t.round?`<div class="grid2"><label class="field"><span class="lbl">Diamètre (cm)</span><input id="o-w" type="number" min="10" step="5" value="${Math.round(o.w)}" ${L}></label>`:
       `<div class="grid2"><label class="field"><span class="lbl">Largeur (cm)</span><input id="o-w" type="number" min="10" step="5" value="${Math.round(o.w)}" ${L}></label><label class="field"><span class="lbl">Longueur (cm)</span><input id="o-h" type="number" min="10" step="5" value="${Math.round(o.h)}" ${L}></label>`;
     h+=(o.type!=='planche'&&o.type!=='allee'&&o.type!=='eau'&&o.type!=='prise')?`<label class="field"><span class="lbl">Hauteur (cm)</span><input id="o-ht" type="number" min="0" step="10" value="${Math.round(o.height||0)}"></label></div><p class="note">${o.type==='cuve'?`Contenance ≈ <b class="mono">${num(cuveL(o),0)} L</b>. `:''}La hauteur sert aussi à calculer l'ombre portée.</p>`:`</div>`;
+    if(o.type==='haie')h+=`<label class="field" style="max-width:260px"><span class="lbl">Courbure (cm)</span><input id="o-bend" type="number" step="10" value="${Math.round(o.bend||0)}" ${L}></label><p class="note">0 = haie droite. La valeur est la flèche au milieu de la haie ; négative pour bomber de l'autre côté.</p>`;
     if(!t.round&&!o.locked)h+=`<div class="row"><span class="lbl">Orientation</span><span class="mono">${o.rot}°</span><button class="btn small" data-act="rot" data-d="90">+90°</button><button class="btn small" data-act="rot0">0°</button></div><p class="note">Fais glisser le rond jaune le long du cercle autour de l'objet pour le tourner (crans de 5°, aimanté tous les 45°).</p>`;
     h+=`<div class="row"><button class="btn small" data-act="lock">${o.locked?'Déverrouiller':'Verrouiller'}</button><button class="btn small" data-act="dup">Dupliquer</button>${o.locked?'':'<button class="btn small danger" data-act="del">Supprimer</button>'}</div>`;
     h+=o.locked?`<p class="note">Verrouillé : l'objet ne peut plus être déplacé, redimensionné ni supprimé.</p>`:`<p class="note">Maintiens le doigt sur l'objet pour le soulever, puis glisse-le.</p>`;
@@ -1277,6 +1290,7 @@ sheet.addEventListener('input',e=>{const t=e.target;
 sheet.addEventListener('change',e=>{const t=e.target,o=obj(selId),v=parseFloat(t.value);
   if(o&&(t.id==='o-w'||t.id==='o-h')&&!isNaN(v)){const f=t.id[2],cx=o.x+o.w/2,cy=o.y+o.h/2;o[f]=Math.max(10,v);if(TYPES[o.type].round)o.w=o.h=o[f];o.x=cx-o.w/2;o.y=cy-o.h/2;fitZones(o);save();renderPlan();renderSheet()}
   if(o&&t.id==='o-ht'&&!isNaN(v)){o.height=Math.max(0,v);save();renderPlan();renderSheet()}
+  if(o&&t.id==='o-bend'&&!isNaN(v)){o.bend=clamp(v,-o.w,o.w);save();renderPlan();renderSheet()}
   if(t.id==='g-w'||t.id==='g-h'){S[t.id[2]]=Math.max(200,Math.round(v*100));save();renderPlan()}
   if(t.id==='g-north')renderSheet();
 });
