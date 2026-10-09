@@ -10,7 +10,7 @@
 // À régler dans Cloudflare (Worker > Settings) :
 //   Variables and Secrets : APP_TOKEN (obligatoire), GARDENA_KEY et GARDENA_SECRET (seulement pour l'arrosage), type « Secret »
 //   Bindings              : KV namespace, nom de variable POTAGER
-//   Triggers > Cron       : */30 * * * *
+//   Triggers > Cron       : */30 * * * *  (notifications et arrosage automatique)
 //
 // Limite GARDENA : environ 3 000 requêtes par mois. Le relais met l'état en cache
 // (10 min) et ne lit GARDENA en automatique que pendant tes créneaux d'arrosage.
@@ -158,12 +158,105 @@ async function runAuto(env) {
     const sensor = z.sensor && s.sensors.find(x => x.id === z.sensor);
     const d = autoDecide(z, { soil: sensor ? sensor.soil : null, lastRun: lastRun(id), busy, tankEst, tankMin: cfg.tankMin }, now, fc);
     if (d.go) {
-      try { await water(env, id, (z.min || 15) * 60, 'auto', d.why); busy = true }
+      try { await water(env, id, (z.min || 15) * 60, 'auto', d.why); busy = true; const vn = (s.valves.find(v => v.id === id) || {}).name || 'Vanne'; await pushAll(env, 'gardena', { title: 'Arrosage automatique', body: `${vn} : ${z.min || 15} min. ${d.why}`, tag: 'gardena', url: './' }) }
       catch (e) { await addLog(env, { type: 'error', valve: id, msg: e.message }) }
     } else if (d.skip && !log.some(e => e.type === 'skip' && e.valve === id && localDay(e.at) === today)) {
-      await addLog(env, { type: 'skip', valve: id, why: d.why });
+      await addLog(env, { type: 'skip', valve: id, why: d.why }); const vn = (s.valves.find(v => v.id === id) || {}).name || 'Vanne'; await pushAll(env, 'gardena', { title: 'Arrosage sauté', body: `${vn} : ${d.why}`, tag: 'gardena', url: './' });
     }
   }
+}
+
+
+/* ---------- notifications (Web Push, chiffrement aes128gcm + VAPID) ---------- */
+const b64u = b => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64u = s => { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), c => c.charCodeAt(0)) };
+const cat = (...a) => { const n = a.reduce((x, y) => x + y.length, 0), o = new Uint8Array(n); let i = 0; for (const x of a) { o.set(x, i); i += x.length } return o };
+const utf8 = s => new TextEncoder().encode(s);
+async function hkdf(salt, ikm, info, len) { const k = await crypto.subtle.importKey('raw', ikm, 'HKDF', false, ['deriveBits']); return new Uint8Array(await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt, info }, k, len * 8)) }
+async function vapid(env) {
+  let v = await env.POTAGER.get('vapid', { type: 'json' });
+  if (!v) {
+    const kp = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+    v = { jwk: await crypto.subtle.exportKey('jwk', kp.privateKey), pub: b64u(await crypto.subtle.exportKey('raw', kp.publicKey)) };
+    await env.POTAGER.put('vapid', JSON.stringify(v));
+  }
+  return v;
+}
+async function vapidAuth(env, endpoint) {
+  const v = await vapid(env), aud = new URL(endpoint).origin;
+  const h = b64u(utf8(JSON.stringify({ typ: 'JWT', alg: 'ES256' }))), c = b64u(utf8(JSON.stringify({ aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: 'https://razor-back1.github.io/Potager/' })));
+  const key = await crypto.subtle.importKey('jwk', v.jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, utf8(h + '.' + c));
+  return `vapid t=${h}.${c}.${b64u(sig)}, k=${v.pub}`;
+}
+async function encrypt(sub, text) {
+  const ua = unb64u(sub.keys.p256dh), auth = unb64u(sub.keys.auth);
+  const kp = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+  const as = new Uint8Array(await crypto.subtle.exportKey('raw', kp.publicKey));
+  const uaKey = await crypto.subtle.importKey('raw', ua, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+  const ecdh = new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: uaKey }, kp.privateKey, 256));
+  const ikm = await hkdf(auth, ecdh, cat(utf8('WebPush: info\0'), ua, as), 32);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const cek = await hkdf(salt, ikm, utf8('Content-Encoding: aes128gcm\0'), 16), nonce = await hkdf(salt, ikm, utf8('Content-Encoding: nonce\0'), 12);
+  const k = await crypto.subtle.importKey('raw', cek, 'AES-GCM', false, ['encrypt']);
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, k, cat(utf8(text), new Uint8Array([2]))));
+  return cat(salt, new Uint8Array([0, 0, 16, 0]), new Uint8Array([65]), as, ct);
+}
+const getSubs = async env => (await env.POTAGER.get('subs', { type: 'json' })) || [];
+async function sendPush(env, sub, msg) {
+  try {
+    const r = await fetch(sub.endpoint, { method: 'POST', headers: { Authorization: await vapidAuth(env, sub.endpoint), 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream', TTL: '43200', Urgency: 'normal' }, body: await encrypt(sub, JSON.stringify(msg)) });
+    if (r.status === 404 || r.status === 410) { const l = (await getSubs(env)).filter(x => x.endpoint !== sub.endpoint); await env.POTAGER.put('subs', JSON.stringify(l)); return 'gone' }
+    return r.ok ? 'ok' : 'http ' + r.status;
+  } catch (e) { return 'err ' + e.message }
+}
+async function pushAll(env, pref, msg) { const out = []; for (const s of await getSubs(env)) if (!s.prefs || s.prefs[pref] !== false) out.push(await sendPush(env, s, msg)); return out }
+const PNAMES = { harvest: 'récoltes', nursery: 'semis', plan: 'plantations', dar: 'traitements' };
+const thirstLim = m => m >= 5 && m <= 9 ? 4 : (m === 4 || m === 10) ? 7 : null;
+const dayDiff = (a, b) => Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 864e5);
+async function meteo(geo) {
+  try {
+    const g = geo || { lat: 50.586, lon: 4.877 };
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${g.lat}&longitude=${g.lon}&hourly=temperature_2m&daily=precipitation_sum&past_days=10&forecast_days=2&timezone=Europe%2FBrussels`);
+    const j = await r.json(), today = localDay(), t0 = today + 'T18:00', tm = new Date(Date.parse(today + 'T12:00:00Z') + 864e5).toISOString().slice(0, 10) + 'T09:00';
+    let night = null; (j.hourly.time || []).forEach((t, i) => { if (t >= t0 && t <= tm) { const v = j.hourly.temperature_2m[i]; if (v != null && (night == null || v < night)) night = v } });
+    const wet = (j.daily.time || []).filter((d, i) => d <= today && (j.daily.precipitation_sum[i] || 0) >= 5);
+    return { night, lastRain: wet.length ? wet[wet.length - 1] : null };
+  } catch (e) { return { night: null, lastRain: null } }
+}
+async function runNotify(env, force) {
+  const subs = await getSubs(env); if (!subs.length) return;
+  const h = localHour(), today = localDay(), sent = (await env.POTAGER.get('nsent', { type: 'json' })) || { digest: {}, frost: {}, ev: {} };
+  const gardens = (await gList(env)).filter(g => !g.del && !g.ex);
+  const plans = []; for (const g of gardens) { const p = await env.POTAGER.get('plan:' + g.id, { type: 'json' }); if (p) plans.push({ g, p }) }
+  if (!plans.length) return;
+  const cfg = await getCfg(env), m = await meteo(cfg.geo), month = +today.slice(5, 7), lim = thirstLim(month), multi = plans.length > 1;
+  let changed = false;
+  for (const s of subs) {
+    const pr = s.prefs || {}, hour = +pr.hour || 8, sid = s.endpoint.slice(-24);
+    /* résumé du matin */
+    if ((force || h === hour) && sent.digest[sid] !== today) {
+      const lines = [];
+      for (const { g, p } of plans) {
+        const pre = multi ? g.name + ' : ' : '';
+        if (pr.water !== false && lim) {
+          const th = (p.water || []).filter(w => { let last = w.last; if (!w.serre && m.lastRain && (!last || m.lastRain > last)) last = m.lastRain; return !last || dayDiff(last, today) >= lim }).map(w => w.name);
+          if (th.length) lines.push(pre + (pre ? 'à arroser ' : 'À arroser ') + th.slice(0, 4).join(', ') + (th.length > 4 ? ' +' + (th.length - 4) : ''));
+        }
+        const due = (p.ev || []).filter(e => e.d <= today && pr[e.k] !== false && !sent.ev[g.id + e.id]);
+        due.slice(0, 5).forEach(e => { lines.push(pre + e.txt); sent.ev[g.id + e.id] = today });
+      }
+      sent.digest[sid] = today; changed = true;
+      if (lines.length) await sendPush(env, s, { title: 'Potager · aujourd\'hui', body: lines.slice(0, 6).join('\n'), tag: 'digest', url: './' });
+    }
+    /* alerte gel en fin de journée */
+    if (pr.frost !== false && (force || h === 18) && sent.frost[sid] !== today && m.night != null) {
+      const crops = []; for (const { g, p } of plans) (p.frost || []).forEach(f => { if (m.night <= (f.serre ? -2 : 2)) crops.push(f.crop + ' (' + f.name + ')') });
+      sent.frost[sid] = today; changed = true;
+      if (crops.length) await sendPush(env, s, { title: `Gel prévu cette nuit : ${String(Math.round(m.night * 10) / 10).replace('.', ',')} °C`, body: 'Couvre ou rentre : ' + [...new Set(crops)].slice(0, 6).join(', '), tag: 'frost', url: './' });
+    }
+  }
+  if (changed) { for (const k in sent.ev) if (dayDiff(sent.ev[k], today) > 60) delete sent.ev[k]; await env.POTAGER.put('nsent', JSON.stringify(sent)) }
 }
 
 /* ---------- synchronisation des potagers ---------- */
@@ -186,18 +279,30 @@ export default {
         case '/garden': {
           const id = gid(url); if (!id) return J({ error: 'Identifiant manquant.' }, 400);
           if (req.method === 'GET') { const g = await env.POTAGER.get('garden:' + id, { type: 'json' }); return g ? J(g) : J({ error: 'Potager inconnu.' }, 404) }
-          if (req.method === 'DELETE') { await env.POTAGER.delete('garden:' + id); await gSetList(env, l => [...l.filter(x => x.id !== id), { id, del: true, at: Date.now() }]); return J({ ok: true }) }
+          if (req.method === 'DELETE') { await env.POTAGER.delete('garden:' + id); await env.POTAGER.delete('plan:' + id); await gSetList(env, l => [...l.filter(x => x.id !== id), { id, del: true, at: Date.now() }]); return J({ ok: true }) }
           if (req.method === 'PUT') {
             if (!body || !body.state || !body.at) return J({ error: 'Potager vide.' }, 400);
-            const raw = JSON.stringify(body); if (raw.length > 24e6) return J({ error: 'Potager trop lourd (photos) pour la synchronisation.' }, 413);
+            const raw = JSON.stringify(body.state); if (raw.length > 24e6) return J({ error: 'Potager trop lourd (photos) pour la synchronisation.' }, 413);
             const cur = (await gList(env)).find(x => x.id === id);
             if (cur && !cur.del && cur.at > body.at) return J({ error: 'Version plus récente sur un autre appareil.', at: cur.at }, 409);
-            await env.POTAGER.put('garden:' + id, raw);
+            if (body.plan) await env.POTAGER.put('plan:' + id, JSON.stringify(body.plan));
+            const raw2 = JSON.stringify({ state: body.state, at: body.at }); await env.POTAGER.put('garden:' + id, raw2);
             await gSetList(env, l => [...l.filter(x => x.id !== id), { id, name: String(body.state.name || 'Potager').slice(0, 80), at: body.at, ex: !!body.state.example, size: raw.length }]);
             return J({ ok: true, at: body.at });
           }
           return J({ error: 'Méthode non prise en charge.' }, 405);
         }
+        case '/push/key': return J({ key: (await vapid(env)).pub });
+        case '/push/subscribe': {
+          if (!body.sub || !body.sub.endpoint || !body.sub.keys) return J({ error: 'Abonnement invalide.' }, 400);
+          const l = (await getSubs(env)).filter(x => x.endpoint !== body.sub.endpoint);
+          l.push({ endpoint: body.sub.endpoint, keys: body.sub.keys, prefs: body.prefs || {}, name: String(body.name || 'Appareil').slice(0, 40), at: Date.now() });
+          await env.POTAGER.put('subs', JSON.stringify(l)); return J({ ok: true, n: l.length });
+        }
+        case '/push/prefs': { const l = await getSubs(env), x = l.find(y => y.endpoint === body.endpoint); if (!x) return J({ error: 'Appareil non abonné.' }, 404); x.prefs = body.prefs || {}; await env.POTAGER.put('subs', JSON.stringify(l)); return J({ ok: true }) }
+        case '/push/unsubscribe': { const l = (await getSubs(env)).filter(x => x.endpoint !== body.endpoint); await env.POTAGER.put('subs', JSON.stringify(l)); return J({ ok: true }) }
+        case '/push/test': { const x = (await getSubs(env)).find(y => y.endpoint === body.endpoint); if (!x) return J({ error: 'Appareil non abonné.' }, 404); const r = await sendPush(env, x, { title: 'Atelier Potager', body: 'Les notifications fonctionnent sur cet appareil.', tag: 'test', url: './' }); return r === 'ok' ? J({ ok: true }) : J({ error: 'Envoi refusé (' + r + ').' }, 502) }
+        case '/push/digest': { if (url.searchParams.get('reset')) await env.POTAGER.delete('nsent'); await runNotify(env, true); return J({ ok: true }) }
         case '/status':
           if (!env.GARDENA_KEY || !env.GARDENA_SECRET) return J({ error: 'GARDENA n\'est pas encore configuré sur le relais (secrets GARDENA_KEY et GARDENA_SECRET).', nogardena: true }, 400); return J(await out(url.searchParams.get('fresh') ? 120000 : 600000));
         case '/water': await water(env, body.id, +body.seconds || 600, 'manuel', ''); return J(await out(600000));
@@ -210,5 +315,5 @@ export default {
       }
     } catch (e) { return J({ error: e.message }, 502) }
   },
-  async scheduled(ev, env, ctx) { ctx.waitUntil(runAuto(env).catch(e => addLog(env, { type: 'error', msg: e.message }))) }
+  async scheduled(ev, env, ctx) { ctx.waitUntil(Promise.all([runNotify(env).catch(() => { }), (env.GARDENA_KEY ? runAuto(env) : Promise.resolve()).catch(e => addLog(env, { type: 'error', msg: e.message }))])) }
 };

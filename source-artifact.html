@@ -148,6 +148,7 @@ main{position:relative;min-height:0;overflow:hidden}
 .wxbits span{font-size:12.5px;padding:3px 9px;border-radius:99px;background:var(--glass);font-family:var(--f-mono)}
 .wxbits .wfrost{background:var(--frost);color:#fff;font-weight:600}
 .glist{display:grid;margin-top:6px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.nlist{display:grid;border:1px solid var(--line);border-radius:12px;overflow:hidden}.nrow{padding:10px 12px;background:var(--surface);gap:12px;flex-wrap:nowrap;align-items:center}.nrow>span{min-width:0}.nrow+.nrow{border-top:1px solid var(--line)}.nrow input{width:22px;height:22px;flex:none}
 .grpinfo{display:grid;gap:8px;padding:10px 12px;border:1px dashed var(--sun);border-radius:12px}
 .grow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;min-height:46px;background:var(--surface)}
 .grow+.grow{border-top:1px solid var(--line)}.grow.cur{background:var(--surface-2)}
@@ -1250,6 +1251,15 @@ function renderSheet(){
     <label class="field"><span class="lbl">Code d'accès (APP_TOKEN)</span><input id="rl-tok" value="${esc(window._rhave&&!c.token?'':tok)}" placeholder="le code du relais" autocomplete="off" spellcheck="false"></label>
     <p class="alert" id="rl-err" hidden></p>
     <button class="btn primary" data-act="relay-link">Relier et synchroniser</button>`}</div>`;
+  }else if(sheetMode==='notif'){const ps=pushState(),pr=pushPrefs();
+    const tg=(k,l,d)=>`<label class="row between nrow"><span><b>${l}</b><span class="note" style="display:block">${d}</span></span><input type="checkbox" data-np="${k}" ${pr[k]!==false?'checked':''}></label>`;
+    h+=`<div class="stack"><div class="row between"><h3>Notifications</h3><button class="btn small" data-act="relay-back">Retour</button></div>
+    ${ps.why?`<div class="alert"><span>${ps.why}</span></div>`:''}
+    ${ps.on?`<div class="alert okay"><span>Activées sur cet appareil.</span></div>`:ps.can?`<p class="note" style="color:var(--ink)">Ton relais t'envoie un résumé le matin et une alerte gel le soir, même app fermée. Chaque appareil s'active séparément (iPhone, iPad).</p><button class="btn primary" data-act="np-on">Activer sur cet appareil</button>`:''}
+    <div class="nlist">${tg('water','Arrosage','planches sans eau depuis plusieurs jours (pluie comprise)')}${tg('harvest','Récoltes','quand une culture arrive à maturité')}${tg('nursery','Semis','quand des semis sont prêts à repiquer')}${tg('plan','Plantations prévues','le jour prévu dans le planning des planches')}${tg('dar','Traitements','fin du délai avant récolte')}${tg('frost','Gel','alerte vers 18 h si la nuit descend sous 2 °C (−2 °C sous serre)')}${tg('gardena','GARDENA','arrosage automatique lancé ou sauté')}</div>
+    <label class="field" style="max-width:220px"><span class="lbl">Résumé du matin à</span><select data-np="hour">${[6,7,8,9,10,12,18].map(x=>`<option value="${x}" ${+(pr.hour||8)===x?'selected':''}>${x} h</option>`).join('')}</select></label>
+    ${ps.on?`<div class="row"><button class="btn small" data-act="np-test">Envoyer un test</button><button class="btn small" data-act="np-now">Résumé maintenant</button><button class="btn small danger" data-act="np-off">Désactiver ici</button></div>`:''}
+    <p class="note">Le relais vérifie toutes les 30 minutes : il faut le déclencheur Cron <code>*/30 * * * *</code> dans ton Worker (Settings → Trigger events). Les notifications portent sur tes potagers synchronisés, pas sur l'exemple.</p></div>`;
   }else if(sheetMode==='menu'){
     const GLs=GL.get().list;
     h+=`<div class="stack"><div class="row between"><h3>Potager</h3><button class="btn small" data-act="close">Fermer</button></div>
@@ -1263,6 +1273,7 @@ function renderSheet(){
     <div><span class="lbl">Apparence</span><div class="seg" style="margin-top:6px">${[['auto','Automatique'],['light','Clair'],['dark','Sombre']].map(([k,l])=>`<button data-act="theme" data-k="${k}" aria-pressed="${themePref()===k}">${l}</button>`).join('')}</div>
     <div class="row between" style="margin-top:8px"><span class="note" style="color:var(--ink)">Météo vivante sur le plan<br><span class="note">pluie, givre, nuit et ombres à l'heure réelle, coupée en mode édition</span></span><button class="btn small ${wxPlanOn()?'on':''}" data-act="wxplan">${wxPlanOn()?'Activée':'Désactivée'}</button></div></div>
     <div class="row between"><span><span class="lbl">Synchronisation</span><br><span class="note">${relayOn()?'Relais relié : iPhone, iPad… à jour':'Ce potager reste sur cet appareil'}</span></span><button class="btn small" data-act="relay">${relayOn()?'Gérer':'Relier'}</button></div>
+    ${relayOn()?`<div class="row between"><span><span class="lbl">Notifications</span><br><span class="note">${pushState().txt}</span></span><button class="btn small" data-act="notif">${pushState().on?'Régler':'Activer'}</button></div>`:''}
     <div class="row between"><span><span class="lbl">Arrosage automatique</span><br><span class="note">${GDN.get().demo?'Démo':gLinked()?'GARDENA relié':'GARDENA smart system'}</span></span><button class="btn small" data-act="openauto">${gLinked()?'Ouvrir':'Relier'}</button></div>
     <div class="row"><button class="btn" data-act="help">Comment ça marche</button><button class="btn" data-act="openinv">Inventaire</button></div>
     ${ctx?'':`<button class="btn" data-act="shape-edit">${S.shape?'Modifier la forme du terrain':'Dessiner une forme libre'}</button>`}
@@ -1336,6 +1347,11 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
   if(a==='mkcircle'&&o){const d=Math.round((o.w+o.h)/2),cx=o.x+o.w/2,cy=o.y+o.h/2;o.w=o.h=d;o.x=cx-d/2;o.y=cy-d/2;save();renderPlan();renderSheet();return toast('Allée circulaire de '+m2(d)+' m',true)}
   if(a==='flipflow'&&o){o.rot=(o.rot+180)%360;o.bend=-(+o.bend||0);o.wave=+o.wave||0;save();renderPlan();renderSheet();return toast('Sens du courant inversé',true)}
   if(a==='relay'){sheetMode='relay';renderSheet();return}
+  if(a==='notif'){sheetMode='notif';renderSheet();return}
+  if(a==='np-on'){b.disabled=true;b.textContent='Activation…';try{await pushOn();toast('Notifications activées')}catch(x){toast(x.message)}renderSheet();return}
+  if(a==='np-off'){try{await pushOff();toast('Notifications désactivées sur cet appareil')}catch(x){toast(x.message)}renderSheet();return}
+  if(a==='np-test'){try{await gReq('/push/test','POST',{endpoint:GDN.get().pushEp});toast('Test envoyé')}catch(x){toast(x.message)}return}
+  if(a==='np-now'){try{await syncPush(GID);await gReq('/push/digest?reset=1','POST',{});toast('Résumé envoyé (s\'il y a quelque chose à dire)')}catch(x){toast(x.message)}return}
   if(a==='relay-back'){sheetMode='menu';renderSheet();return}
   if(a==='relay-mode'){window._rhave=b.dataset.m==='have';renderSheet();return}
   if(a==='relay-copytok'){try{await navigator.clipboard.writeText(($('#rl-tok')&&$('#rl-tok').value.trim())||GDN.get().token||'');toast('Code copié')}catch(err){toast('Copie impossible : sélectionne le code à la main')}return}
@@ -1376,6 +1392,7 @@ sheet.addEventListener('input',e=>{const t=e.target;
   if(t.id==='g-name'){S.name=t.value||'Mon potager';save(true)}
   if(t.id==='g-north'){S.north=+t.value;save(true);t.previousElementSibling.querySelector('.mono').textContent=S.north+'°';renderPlan()}});
 sheet.addEventListener('change',e=>{const t=e.target,o=obj(selId),v=parseFloat(t.value);
+  if(t.dataset.np){const p=pushPrefs();p[t.dataset.np]=t.dataset.np==='hour'?+t.value:t.checked;GDN.set({...GDN.get(),pushPrefs:p});if(GDN.get().pushEp)gReq('/push/prefs','POST',{endpoint:GDN.get().pushEp,prefs:p}).catch(x=>toast(x.message));return}
   if(o&&(t.id==='o-w'||t.id==='o-h')&&!isNaN(v)){const f=t.id[2],cx=o.x+o.w/2,cy=o.y+o.h/2;o[f]=Math.max(10,v);if(TYPES[o.type].round)o.w=o.h=o[f];o.x=cx-o.w/2;o.y=cy-o.h/2;fitZones(o);save();renderPlan();renderSheet()}
   if(o&&t.id==='o-ht'&&!isNaN(v)){o.height=Math.max(0,v);save();renderPlan();renderSheet()}
   if(o&&t.id==='o-bend'&&!isNaN(v)){o.bend=clamp(v,-o.w,o.w);save();renderPlan();renderSheet()}
@@ -2333,8 +2350,17 @@ var syncT=null,syncBusy=false,syncErr=null,syncAt=0;
 function syncPushSoon(){try{if(!relayOn())return;clearTimeout(syncT);syncT=setTimeout(()=>syncPush(GID),2500)}catch(e){}}
 const localAtOf=id=>id===GID?localAt:(+localStorage.getItem(keyAtOf(id))||0);
 const stateOf=id=>id===GID?lastJSON:localStorage.getItem(keyOf(id));
+/* ce que le relais doit surveiller pour les notifications (calculé ici, avec toutes les règles de l'app) */
+function notifPlan(){const ev=[],seen=new Set(),add=(k,d,txt)=>{const id=k+':'+d+':'+txt;if(!seen.has(id)){seen.add(id);ev.push({id,k,d,txt})}};
+  plantings().forEach(x=>{if(x.left>-30)add('harvest',iso(x.bu&&x.bu>x.hv?x.bu:x.hv),`${x.p.n} prêt à récolter (${fullName(x.o)})`)});
+  plantables().forEach(o=>{const bu=blockUntil(o);if(bu)add('dar',iso(bu),`Fin du délai après traitement : ${fullName(o)}`);
+    o.zones.forEach(z=>(z.next||[]).forEach(n=>{if(n.date&&P[n.crop])add('plan',n.date,`À planter : ${P[n.crop].n} (${fullName(o)})`)}))});
+  nurseryActive().forEach(n=>{if(P[n.crop])add('nursery',iso(readyOf(n)),`Semis de ${P[n.crop].n.toLowerCase()} prêts à repiquer`)});
+  const water=plantables().filter(isPlanted).map(o=>{const m=(o.journal||[]).filter(x=>x.k==='arrosage').map(x=>x.d).sort().pop()||null,r=serreOf(o)?null:(S.rain||[]).filter(x=>x.mm==null||x.mm>=RAIN_MIN).map(x=>x.d).sort().pop()||null;return{name:fullName(o),serre:!!serreOf(o),last:[m,r].filter(Boolean).sort().pop()||null}});
+  const frost=[];plantables().forEach(o=>o.zones.forEach(z=>{if(z.crop&&FROST_SENSITIVE.has(z.crop)&&Object.keys(z.cells).length)frost.push({crop:P[z.crop].n.toLowerCase(),name:fullName(o),serre:!!serreOf(o)})}));
+  return{ev,water,frost,at:Date.now()}}
 async function syncPush(id){if(!relayOn())return;const at=localAtOf(id),j=stateOf(id);if(!at||!j)return;
-  try{await gReq('/garden?id='+encodeURIComponent(id),'PUT',{state:JSON.parse(j),at});syncErr=null;syncAt=Date.now()}
+  try{let plan=null;if(id===GID){try{plan=notifPlan()}catch(e){}}await gReq('/garden?id='+encodeURIComponent(id),'PUT',{state:JSON.parse(j),at,plan});syncErr=null;syncAt=Date.now()}
   catch(e){if(e.status===409){syncPull()}else syncErr=e.message}renderSyncLine()}
 async function syncPull(manual){if(!relayOn()||syncBusy)return;syncBusy=true;
   try{const r=await gReq('/gardens'),c=GDN.get();if(c.gardena!==!!r.gardena)GDN.set({...c,gardena:!!r.gardena});
@@ -2354,6 +2380,27 @@ async function syncPull(manual){if(!relayOn()||syncBusy)return;syncBusy=true;
     else if(manual)toast('Tout est à jour')}
   catch(e){syncErr=e.status===401?'Code d\'accès refusé par le relais':e.message;if(manual)toast(syncErr)}
   finally{syncBusy=false;renderSyncLine();if(sheetMode==='menu'||sheetMode==='relay')renderSheet()}}
+
+/* ---- notifications (Web Push via le relais) ---- */
+const pushPrefs=()=>({hour:8,...(GDN.get().pushPrefs||{})});
+function pushState(){const sa=matchMedia('(display-mode: standalone)').matches||navigator.standalone,sup='serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window,on=!!GDN.get().pushEp&&sup&&Notification.permission==='granted';
+  if(!relayOn())return{txt:'Relie d\'abord le relais',why:'Les notifications passent par ton relais : relie-le dans Synchronisation.'};
+  if(!sup)return{txt:'Pas disponible ici',why:sa?'Cet appareil ne gère pas les notifications web (iOS 16.4 minimum).':'Sur iPhone et iPad, les notifications ne marchent que dans l\'app ajoutée à l\'écran d\'accueil (Partager → Sur l\'écran d\'accueil), ouverte depuis son icône.'};
+  if(Notification.permission==='denied')return{txt:'Refusées',why:'Les notifications ont été refusées. Réglages iPhone → Notifications → Potager pour les autoriser.'};
+  return on?{on:true,txt:'Activées sur cet appareil'}:{can:true,txt:'Désactivées sur cet appareil'}}
+async function pushOn(){if(Notification.permission!=='granted'){const p=await Notification.requestPermission();if(p!=='granted')throw new Error('Autorisation refusée.')}
+  const k=await gReq('/push/key'),reg=await navigator.serviceWorker.ready,key=unb64u(k.key);
+  let sub=await reg.pushManager.getSubscription();if(sub){const cur=sub.options&&sub.options.applicationServerKey;if(cur&&b64u(cur)!==k.key){await sub.unsubscribe();sub=null}}
+  if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:key});
+  const name=/iPad/.test(navigator.userAgent)||navigator.maxTouchPoints>1&&/Mac/.test(navigator.userAgent)?'iPad':/iPhone/.test(navigator.userAgent)?'iPhone':'Appareil';
+  await gReq('/push/subscribe','POST',{sub:sub.toJSON(),prefs:pushPrefs(),name});GDN.set({...GDN.get(),pushEp:sub.endpoint});syncPush(GID);
+  gReq('/push/test','POST',{endpoint:sub.endpoint}).catch(()=>{})}
+async function pushOff(){const ep=GDN.get().pushEp;try{const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();if(sub)await sub.unsubscribe()}catch(e){}
+  if(ep)await gReq('/push/unsubscribe','POST',{endpoint:ep}).catch(()=>{});const c=GDN.get();delete c.pushEp;GDN.set(c)}
+function unb64u(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';return Uint8Array.from(atob(s),c=>c.charCodeAt(0))}
+function b64u(b){return btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+/* le plan surveillé reste à jour chaque jour, même sans modification */
+setTimeout(()=>{try{if(relayOn()&&GDN.get().pushEp)syncPush(GID)}catch(e){}},4000);
 addEventListener('visibilitychange',()=>{if(!document.hidden)syncPull()});
 setInterval(()=>{if(!document.hidden)syncPull()},60000);
 setTimeout(()=>syncPull(),700);
