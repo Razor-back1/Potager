@@ -1211,7 +1211,9 @@ function renderSheet(){
     <label class="field"><span class="lbl">Orientation</span><select id="sr-o"><option value="v">Planches verticales</option><option value="h">Planches horizontales</option></select></label>
     <label class="field"><span class="lbl">Longueur (cm)</span><input id="sr-l" type="number" min="50" step="10" value="500"></label>
     <label class="field"><span class="lbl">Largeur (cm)</span><input id="sr-w" type="number" min="30" step="5" value="120"></label>
-    <label class="field"><span class="lbl">Allée entre (cm)</span><input id="sr-g" type="number" min="0" step="5" value="50"></label></div>
+    <label class="field"><span class="lbl">Allée entre (cm)</span><input id="sr-g" type="number" min="0" step="5" value="50"></label>
+    <label class="field"><span class="lbl">Inclinaison (°)</span><input id="sr-a" type="number" min="-180" max="180" step="5" value="0"></label></div>
+    ${G().shape?'<button class="btn small" data-act="series-align" style="justify-self:start">Aligner sur le plus long côté du terrain</button>':''}
     <p class="note">Repère courant : planche de 75 à 120 cm, allée de 40 à 60 cm pour passer à genoux ou avec une brouette.</p>
     <button class="btn primary" data-act="series-go">Placer la série</button></div>`;
   }else if(sheetMode==='help'){
@@ -1285,16 +1287,22 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
   if(a==='close'){sheetMode=null;selId=null;renderSheet();renderPlan()}
   if(a==='add-back'){sheetMode='add';renderSheet()}
   if(a==='series'){sheetMode='series';renderSheet()}
+  if(a==='series-align'){const tp=terrainPts();let best=null;tp.forEach((p,i)=>{const q=tp[(i+1)%tp.length],L=Math.hypot(q.x-p.x,q.y-p.y);if(!best||L>best.L)best={L,a:Math.atan2(q.y-p.y,q.x-p.x)*180/Math.PI}});
+    const v=$('#sr-o').value==='v';let d=best.a-(v?90:0);d=((d%180)+180)%180;if(d>90)d-=180;$('#sr-a').value=Math.round(d);return}
   if(a==='add'){const t=TYPES[b.dataset.type],r=svg.getBoundingClientRect(),c=world(r.left+r.width/2,r.top+r.height*.3);
     const n={id:uid(),type:b.dataset.type,x:snap(clamp(c.x-t.w/2,0,G().w-t.w)),y:snap(clamp(c.y-t.h/2,0,G().h-t.h)),w:t.w,h:t.h,rot:0,name:t.l,height:t.ht||0,locked:false};
     if(t.plant){n.zones=[{id:uid(),crop:null,len:Math.max(t.w,t.h),date:iso(TODAY),cells:{}}];n.grown=[];n.journal=[]}
     if(n.type==='citerne')n.vol=5000;if(n.type==='ruisseau')n.wave=100;
     G().objs.push(n);selId=n.id;sheetMode='obj';save();renderSheet();renderPlan()}
-  if(a==='series-go'){const n=clamp(+$('#sr-n').value||1,1,40),L=+$('#sr-l').value||500,W=+$('#sr-w').value||120,G=+$('#sr-g').value||0,v=$('#sr-o').value==='v';
-    const r=svg.getBoundingClientRect(),c=world(r.left+40,r.top+80);const x0=snap(clamp(c.x,0,G().w)),y0=snap(clamp(c.y,0,G().h));
-    const k=G().objs.filter(o=>o.type==='planche').length;
-    for(let i=0;i<n;i++){const w=v?W:L,h=v?L:W;G().objs.push({id:uid(),type:'planche',x:v?x0+i*(W+G):x0,y:v?y0:y0+i*(W+G),w,h,rot:0,name:'Planche '+(k+i+1),height:0,locked:false,grown:[],journal:[],zones:[{id:uid(),crop:null,len:L,date:iso(TODAY),cells:{}}]})}
-    sheetMode=null;save();renderSheet();renderPlan();toast(`${n} planches placées, allées de ${G} cm`,true)}
+  if(a==='series-go'){const n=clamp(+$('#sr-n').value||1,1,40),L=+$('#sr-l').value||500,W=+$('#sr-w').value||120,gap=Math.max(0,+$('#sr-g').value||0),v=$('#sr-o').value==='v';
+    /* la série est centrée sur le milieu de l'écran */
+    const r=svg.getBoundingClientRect(),c=world(r.left+r.width/2,r.top+r.height*.4),tw=v?n*W+(n-1)*gap:L,th=v?L:n*W+(n-1)*gap;
+    const x0=c.x-tw/2,y0=c.y-th/2,k=G().objs.filter(o=>o.type==='planche').length,ids=[],ang=((Math.round(+$('#sr-a').value||0)%360)+360)%360,ar=ang*Math.PI/180;
+    for(let i=0;i<n;i++){const w=v?W:L,h=v?L:W,id=uid();ids.push(id);
+      /* chaque planche tourne autour du centre de la série, pour garder les allées */
+      const px=(v?x0+i*(W+gap):x0)+w/2-c.x,py=(v?y0:y0+i*(W+gap))+h/2-c.y,qx=c.x+px*Math.cos(ar)-py*Math.sin(ar),qy=c.y+px*Math.sin(ar)+py*Math.cos(ar);
+      G().objs.push({id,type:'planche',x:snap(qx-w/2),y:snap(qy-h/2),w,h,rot:ang,name:'Planche '+(k+i+1),height:0,locked:false,grown:[],journal:[],zones:[{id:uid(),crop:null,len:L,date:iso(TODAY),cells:{}}]})}
+    sheetMode=null;save();renderSheet();renderPlan();toast(`${n} planche${n>1?'s':''} placée${n>1?'s':''}, allées de ${gap} cm`,true)}
   if(a==='rot'&&o){o.rot=((o.rot+ +b.dataset.d)%360+360)%360;save();renderSheet();renderPlan()}
   if(a==='rot0'&&o){o.rot=0;save();renderSheet();renderPlan()}
   if(a==='lock'&&o){o.locked=!o.locked;save();renderSheet();renderPlan()}
@@ -2409,7 +2417,7 @@ setTimeout(()=>syncStation(false),600);
 
 <script>
 setTimeout(()=>{const s=document.getElementById('splash');if(s){s.classList.add('out');setTimeout(()=>s.remove(),600)}},matchMedia('(display-mode: standalone)').matches||navigator.standalone?650:120);
-/* version 932cc4f69e : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
+/* version 5f89a6fdf5 : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
 if('serviceWorker' in navigator&&location.protocol==='https:'){
   navigator.serviceWorker.register('sw.js').then(r=>r.update()).catch(()=>{});
   let reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!reloaded){reloaded=true;location.reload()}});
