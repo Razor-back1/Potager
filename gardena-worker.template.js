@@ -1,7 +1,7 @@
-// Atelier Potager — relais Cloudflare : synchronisation des potagers et GARDENA smart system
+// Atelier Potager — relais Cloudflare : potagers synchronisés, amis invités, notifications et GARDENA
 // ------------------------------------------------------------------
 // Ce relais tourne en permanence chez Cloudflare (offre gratuite). Il :
-//   0. synchronise tes potagers entre tes appareils (iPhone, iPad…) ;
+//   0. synchronise les potagers entre appareils, pour toi et les amis que tu invites (base D1) ;
 //   1. garde ta clé GARDENA en secret (elle n'est jamais dans l'app) ;
 //   2. lit l'état des vannes, sondes et prises pour l'app ;
 //   3. ouvre ou ferme une vanne quand l'app le demande (arrosage manuel avec minuteur) ;
@@ -10,6 +10,7 @@
 // À régler dans Cloudflare (Worker > Settings) :
 //   Variables and Secrets : APP_TOKEN (obligatoire), GARDENA_KEY et GARDENA_SECRET (seulement pour l'arrosage), type « Secret »
 //   Bindings              : KV namespace, nom de variable POTAGER
+//                           D1 database, nom de variable DB
 //   Triggers > Cron       : */30 * * * *  (notifications et arrosage automatique)
 //
 // Limite GARDENA : environ 3 000 requêtes par mois. Le relais met l'état en cache
@@ -158,14 +159,56 @@ async function runAuto(env) {
     const sensor = z.sensor && s.sensors.find(x => x.id === z.sensor);
     const d = autoDecide(z, { soil: sensor ? sensor.soil : null, lastRun: lastRun(id), busy, tankEst, tankMin: cfg.tankMin }, now, fc);
     if (d.go) {
-      try { await water(env, id, (z.min || 15) * 60, 'auto', d.why); busy = true; const vn = (s.valves.find(v => v.id === id) || {}).name || 'Vanne'; await pushAll(env, 'gardena', { title: 'Arrosage automatique', body: `${vn} : ${z.min || 15} min. ${d.why}`, tag: 'gardena', url: './' }) }
+      try { await water(env, id, (z.min || 15) * 60, 'auto', d.why); busy = true; const vn = (s.valves.find(v => v.id === id) || {}).name || 'Vanne'; await pushAll(env, 'admin', 'gardena', { title: 'Arrosage automatique', body: `${vn} : ${z.min || 15} min. ${d.why}`, tag: 'gardena', url: './' }) }
       catch (e) { await addLog(env, { type: 'error', valve: id, msg: e.message }) }
     } else if (d.skip && !log.some(e => e.type === 'skip' && e.valve === id && localDay(e.at) === today)) {
-      await addLog(env, { type: 'skip', valve: id, why: d.why }); const vn = (s.valves.find(v => v.id === id) || {}).name || 'Vanne'; await pushAll(env, 'gardena', { title: 'Arrosage sauté', body: `${vn} : ${d.why}`, tag: 'gardena', url: './' });
+      await addLog(env, { type: 'skip', valve: id, why: d.why }); const vn = (s.valves.find(v => v.id === id) || {}).name || 'Vanne'; await pushAll(env, 'admin', 'gardena', { title: 'Arrosage sauté', body: `${vn} : ${d.why}`, tag: 'gardena', url: './' });
     }
   }
 }
 
+
+/* ---------- base D1 : comptes, potagers, photos, notifications ---------- */
+let schemaOk = false;
+async function schema(env) {
+  if (schemaOk) return;
+  await env.DB.batch([
+    env.DB.prepare('CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY, name TEXT, th TEXT UNIQUE, role TEXT, created INTEGER, last INTEGER)'),
+    env.DB.prepare('CREATE TABLE IF NOT EXISTS gardens(uid TEXT, id TEXT, name TEXT, at INTEGER, ex INTEGER DEFAULT 0, del INTEGER DEFAULT 0, size INTEGER, state TEXT, plan TEXT, PRIMARY KEY(uid,id))'),
+    env.DB.prepare('CREATE TABLE IF NOT EXISTS photos(id TEXT PRIMARY KEY, uid TEXT, data TEXT, at INTEGER)'),
+    env.DB.prepare('CREATE TABLE IF NOT EXISTS subs(endpoint TEXT PRIMARY KEY, uid TEXT, keys TEXT, prefs TEXT, name TEXT, at INTEGER)'),
+    env.DB.prepare('CREATE TABLE IF NOT EXISTS meta(uid TEXT, k TEXT, v TEXT, PRIMARY KEY(uid,k))')
+  ]);
+  schemaOk = true;
+}
+const rid = (n = 20) => { const a = crypto.getRandomValues(new Uint8Array(n)); return Array.from(a, b => 'abcdefghjkmnpqrstuvwxyz23456789'[b % 31]).join('') };
+async function sha(s) { return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))), b => b.toString(16).padStart(2, '0')).join('') }
+const metaGet = async (env, uid, k) => { const r = await env.DB.prepare('SELECT v FROM meta WHERE uid=? AND k=?').bind(uid, k).first(); return r ? JSON.parse(r.v) : null };
+const metaSet = (env, uid, k, v) => env.DB.prepare('INSERT INTO meta(uid,k,v) VALUES(?,?,?) ON CONFLICT(uid,k) DO UPDATE SET v=excluded.v').bind(uid, k, JSON.stringify(v)).run();
+async function who(env, req) {
+  const key = req.headers.get('X-Potager-Key') || '';
+  if (!key) return null;
+  if (env.APP_TOKEN && key === env.APP_TOKEN) return { id: 'admin', role: 'admin', name: 'Toi' };
+  const u = await env.DB.prepare('SELECT id,name,role,last FROM users WHERE th=?').bind(await sha(key)).first();
+  if (!u) return null;
+  if (!u.last || Date.now() - u.last > 6 * 3600e3) await env.DB.prepare('UPDATE users SET last=? WHERE id=?').bind(Date.now(), u.id).run();
+  return u;
+}
+/* reprise unique des données de l'ancien relais (stockage KV) */
+async function migrate(env) {
+  if (!env.POTAGER || await metaGet(env, 'admin', 'migrated')) return;
+  const list = (await env.POTAGER.get('gardens', { type: 'json' })) || [];
+  for (const g of list) {
+    if (g.del) continue;
+    const d = await env.POTAGER.get('garden:' + g.id, { type: 'json' }), plan = await env.POTAGER.get('plan:' + g.id);
+    if (!d || !d.state) continue;
+    const st = JSON.stringify(d.state);
+    await env.DB.prepare('INSERT OR IGNORE INTO gardens(uid,id,name,at,ex,del,size,state,plan) VALUES(?,?,?,?,?,0,?,?,?)').bind('admin', g.id, g.name || 'Potager', d.at || g.at || Date.now(), g.ex ? 1 : 0, st.length, st, plan || null).run();
+  }
+  for (const s of (await env.POTAGER.get('subs', { type: 'json' })) || [])
+    await env.DB.prepare('INSERT OR IGNORE INTO subs(endpoint,uid,keys,prefs,name,at) VALUES(?,?,?,?,?,?)').bind(s.endpoint, 'admin', JSON.stringify(s.keys), JSON.stringify(s.prefs || {}), s.name || 'Appareil', s.at || Date.now()).run();
+  await metaSet(env, 'admin', 'migrated', Date.now());
+}
 
 /* ---------- notifications (Web Push, chiffrement aes128gcm + VAPID) ---------- */
 const b64u = b => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -174,11 +217,12 @@ const cat = (...a) => { const n = a.reduce((x, y) => x + y.length, 0), o = new U
 const utf8 = s => new TextEncoder().encode(s);
 async function hkdf(salt, ikm, info, len) { const k = await crypto.subtle.importKey('raw', ikm, 'HKDF', false, ['deriveBits']); return new Uint8Array(await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt, info }, k, len * 8)) }
 async function vapid(env) {
-  let v = await env.POTAGER.get('vapid', { type: 'json' });
+  let v = await metaGet(env, '*', 'vapid');
+  if (!v && env.POTAGER) { v = await env.POTAGER.get('vapid', { type: 'json' }); if (v) await metaSet(env, '*', 'vapid', v) }
   if (!v) {
     const kp = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
     v = { jwk: await crypto.subtle.exportKey('jwk', kp.privateKey), pub: b64u(await crypto.subtle.exportKey('raw', kp.publicKey)) };
-    await env.POTAGER.put('vapid', JSON.stringify(v));
+    await metaSet(env, '*', 'vapid', v);
   }
   return v;
 }
@@ -202,39 +246,38 @@ async function encrypt(sub, text) {
   const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, k, cat(utf8(text), new Uint8Array([2]))));
   return cat(salt, new Uint8Array([0, 0, 16, 0]), new Uint8Array([65]), as, ct);
 }
-const getSubs = async env => (await env.POTAGER.get('subs', { type: 'json' })) || [];
+const subsOf = async (env, uid) => (await env.DB.prepare('SELECT * FROM subs WHERE uid=?').bind(uid).all()).results.map(r => ({ ...r, keys: JSON.parse(r.keys), prefs: JSON.parse(r.prefs || '{}') }));
 async function sendPush(env, sub, msg) {
   try {
     const r = await fetch(sub.endpoint, { method: 'POST', headers: { Authorization: await vapidAuth(env, sub.endpoint), 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream', TTL: '43200', Urgency: 'normal' }, body: await encrypt(sub, JSON.stringify(msg)) });
-    if (r.status === 404 || r.status === 410) { const l = (await getSubs(env)).filter(x => x.endpoint !== sub.endpoint); await env.POTAGER.put('subs', JSON.stringify(l)); return 'gone' }
+    if (r.status === 404 || r.status === 410) { await env.DB.prepare('DELETE FROM subs WHERE endpoint=?').bind(sub.endpoint).run(); return 'gone' }
     return r.ok ? 'ok' : 'http ' + r.status;
   } catch (e) { return 'err ' + e.message }
 }
-async function pushAll(env, pref, msg) { const out = []; for (const s of await getSubs(env)) if (!s.prefs || s.prefs[pref] !== false) out.push(await sendPush(env, s, msg)); return out }
-const PNAMES = { harvest: 'récoltes', nursery: 'semis', plan: 'plantations', dar: 'traitements' };
+async function pushAll(env, uid, pref, msg) { if (!env.DB) return []; const out = []; for (const s of await subsOf(env, uid)) if (s.prefs[pref] !== false) out.push(await sendPush(env, s, msg)); return out }
 const thirstLim = m => m >= 5 && m <= 9 ? 4 : (m === 4 || m === 10) ? 7 : null;
 const dayDiff = (a, b) => Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 864e5);
+const meteoCache = {};
 async function meteo(geo) {
+  const g = geo && geo.lat ? geo : { lat: 50.586, lon: 4.877 }, key = g.lat.toFixed(2) + ',' + g.lon.toFixed(2);
+  if (meteoCache[key] && Date.now() - meteoCache[key].t < 20 * 60e3) return meteoCache[key].v;
   try {
-    const g = geo || { lat: 50.586, lon: 4.877 };
     const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${g.lat}&longitude=${g.lon}&hourly=temperature_2m&daily=precipitation_sum&past_days=10&forecast_days=2&timezone=Europe%2FBrussels`);
     const j = await r.json(), today = localDay(), t0 = today + 'T18:00', tm = new Date(Date.parse(today + 'T12:00:00Z') + 864e5).toISOString().slice(0, 10) + 'T09:00';
     let night = null; (j.hourly.time || []).forEach((t, i) => { if (t >= t0 && t <= tm) { const v = j.hourly.temperature_2m[i]; if (v != null && (night == null || v < night)) night = v } });
     const wet = (j.daily.time || []).filter((d, i) => d <= today && (j.daily.precipitation_sum[i] || 0) >= 5);
-    return { night, lastRain: wet.length ? wet[wet.length - 1] : null };
+    const v = { night, lastRain: wet.length ? wet[wet.length - 1] : null }; meteoCache[key] = { t: Date.now(), v }; return v;
   } catch (e) { return { night: null, lastRain: null } }
 }
-async function runNotify(env, force) {
-  const subs = await getSubs(env); if (!subs.length) return;
-  const h = localHour(), today = localDay(), sent = (await env.POTAGER.get('nsent', { type: 'json' })) || { digest: {}, frost: {}, ev: {} };
-  const gardens = (await gList(env)).filter(g => !g.del && !g.ex);
-  const plans = []; for (const g of gardens) { const p = await env.POTAGER.get('plan:' + g.id, { type: 'json' }); if (p) plans.push({ g, p }) }
-  if (!plans.length) return;
-  const cfg = await getCfg(env), m = await meteo(cfg.geo), month = +today.slice(5, 7), lim = thirstLim(month), multi = plans.length > 1;
+async function notifyUser(env, uid, force) {
+  const subs = await subsOf(env, uid); if (!subs.length) return;
+  const rows = (await env.DB.prepare('SELECT id,name,plan FROM gardens WHERE uid=? AND del=0 AND ex=0 AND plan IS NOT NULL').bind(uid).all()).results;
+  const plans = rows.map(r => ({ g: r, p: JSON.parse(r.plan) })); if (!plans.length) return;
+  const h = localHour(), today = localDay(), sent = (await metaGet(env, uid, 'nsent')) || { digest: {}, frost: {}, ev: {} };
+  const m = await meteo((plans.find(x => x.p.geo) || {}).p?.geo), month = +today.slice(5, 7), lim = thirstLim(month), multi = plans.length > 1;
   let changed = false;
   for (const s of subs) {
     const pr = s.prefs || {}, hour = +pr.hour || 8, sid = s.endpoint.slice(-24);
-    /* résumé du matin */
     if ((force || h === hour) && sent.digest[sid] !== today) {
       const lines = [];
       for (const { g, p } of plans) {
@@ -249,71 +292,107 @@ async function runNotify(env, force) {
       sent.digest[sid] = today; changed = true;
       if (lines.length) await sendPush(env, s, { title: 'Potager · aujourd\'hui', body: lines.slice(0, 6).join('\n'), tag: 'digest', url: './' });
     }
-    /* alerte gel en fin de journée */
     if (pr.frost !== false && (force || h === 18) && sent.frost[sid] !== today && m.night != null) {
-      const crops = []; for (const { g, p } of plans) (p.frost || []).forEach(f => { if (m.night <= (f.serre ? -2 : 2)) crops.push(f.crop + ' (' + f.name + ')') });
+      const crops = []; for (const { p } of plans) (p.frost || []).forEach(f => { if (m.night <= (f.serre ? -2 : 2)) crops.push(f.crop + ' (' + f.name + ')') });
       sent.frost[sid] = today; changed = true;
       if (crops.length) await sendPush(env, s, { title: `Gel prévu cette nuit : ${String(Math.round(m.night * 10) / 10).replace('.', ',')} °C`, body: 'Couvre ou rentre : ' + [...new Set(crops)].slice(0, 6).join(', '), tag: 'frost', url: './' });
     }
   }
-  if (changed) { for (const k in sent.ev) if (dayDiff(sent.ev[k], today) > 60) delete sent.ev[k]; await env.POTAGER.put('nsent', JSON.stringify(sent)) }
+  if (changed) { for (const k in sent.ev) if (dayDiff(sent.ev[k], today) > 60) delete sent.ev[k]; await metaSet(env, uid, 'nsent', sent) }
+}
+async function runNotify(env) {
+  if (!env.DB) return; await schema(env);
+  const h = localHour(); if (h !== 18 && !(h >= 5 && h <= 12)) return;   /* rien à envoyer en dehors de ces heures */
+  for (const r of (await env.DB.prepare('SELECT DISTINCT uid FROM subs').all()).results) { try { await notifyUser(env, r.uid) } catch (e) { } }
 }
 
-/* ---------- synchronisation des potagers ---------- */
-const gList = async env => (await env.POTAGER.get('gardens', { type: 'json' })) || [];
-async function gSetList(env, fn) { const l = await gList(env); const n = fn(l) || l; await env.POTAGER.put('gardens', JSON.stringify(n)); return n }
-const gid = url => (url.searchParams.get('id') || '').replace(/[^\w-]/g, '').slice(0, 40);
-
 /* ---------- requêtes de l'app ---------- */
+const gid = url => (url.searchParams.get('id') || '').replace(/[^\w-]/g, '').slice(0, 40);
+const ADMIN_ONLY = new Set(['/status', '/water', '/stop', '/config', '/run', '/admin/users', '/admin/invite', '/admin/remove']);
 export default {
   async fetch(req, env) {
     if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
     const url = new URL(req.url);
-    if (!env.APP_TOKEN || req.headers.get('X-Potager-Key') !== env.APP_TOKEN) return J({ error: 'Code d\'accès refusé.' }, 401);
-    if (!env.POTAGER) return J({ error: 'Stockage KV « POTAGER » non relié au relais.' }, 500);
+    if (!env.DB) return J({ error: 'Base D1 « DB » non reliée au relais (Settings → Bindings → D1 database, nom DB).' }, 500);
     try {
-      const body = req.method === 'POST' || req.method === 'PUT' ? await req.json().catch(() => ({})) : {};
+      await schema(env);
+      /* photos : lien public mais introuvable sans son identifiant */
+      if (url.pathname.startsWith('/p/')) {
+        const r = await env.DB.prepare('SELECT data FROM photos WHERE id=?').bind(url.pathname.slice(3).replace(/[^\w]/g, '')).first();
+        if (!r) return new Response('Photo introuvable', { status: 404, headers: CORS });
+        const m = /^data:([^;]+);base64,(.*)$/.exec(r.data); if (!m) return new Response('Photo illisible', { status: 500, headers: CORS });
+        return new Response(Uint8Array.from(atob(m[2]), c => c.charCodeAt(0)), { headers: { ...CORS, 'Content-Type': m[1], 'Cache-Control': 'public, max-age=31536000, immutable' } });
+      }
+      const me = await who(env, req);
+      if (!me) return J({ error: 'Code d\'accès refusé.' }, 401);
+      if (ADMIN_ONLY.has(url.pathname) && me.role !== 'admin') return J({ error: 'Réservé au propriétaire du relais.' }, 403);
+      if (me.role === 'admin') await migrate(env);
+      const uid = me.id, body = req.method === 'POST' || req.method === 'PUT' ? await req.json().catch(() => ({})) : {};
       const out = async (maxAge) => ({ state: await state(env, maxAge), log: (await getLog(env)).slice(0, 60), cfgAt: (await getCfg(env)).at || null });
       switch (url.pathname) {
-        case '/gardens': return J({ list: await gList(env), gardena: !!(env.GARDENA_KEY && env.GARDENA_SECRET) });
+        case '/gardens': {
+          const list = (await env.DB.prepare('SELECT id,name,at,ex,del,size FROM gardens WHERE uid=?').bind(uid).all()).results.map(g => ({ ...g, ex: !!g.ex, del: !!g.del }));
+          return J({ list, gardena: me.role === 'admin' && !!(env.GARDENA_KEY && env.GARDENA_SECRET), me: { role: me.role, name: me.name } });
+        }
         case '/garden': {
           const id = gid(url); if (!id) return J({ error: 'Identifiant manquant.' }, 400);
-          if (req.method === 'GET') { const g = await env.POTAGER.get('garden:' + id, { type: 'json' }); return g ? J(g) : J({ error: 'Potager inconnu.' }, 404) }
-          if (req.method === 'DELETE') { await env.POTAGER.delete('garden:' + id); await env.POTAGER.delete('plan:' + id); await gSetList(env, l => [...l.filter(x => x.id !== id), { id, del: true, at: Date.now() }]); return J({ ok: true }) }
+          if (req.method === 'GET') { const g = await env.DB.prepare('SELECT state,at FROM gardens WHERE uid=? AND id=? AND del=0').bind(uid, id).first(); return g ? J({ state: JSON.parse(g.state), at: g.at }) : J({ error: 'Potager inconnu.' }, 404) }
+          if (req.method === 'DELETE') { await env.DB.prepare('UPDATE gardens SET del=1, state=NULL, plan=NULL, at=? WHERE uid=? AND id=?').bind(Date.now(), uid, id).run(); return J({ ok: true }) }
           if (req.method === 'PUT') {
             if (!body || !body.state || !body.at) return J({ error: 'Potager vide.' }, 400);
-            const raw = JSON.stringify(body.state); if (raw.length > 24e6) return J({ error: 'Potager trop lourd (photos) pour la synchronisation.' }, 413);
-            const cur = (await gList(env)).find(x => x.id === id);
+            const st = JSON.stringify(body.state); if (st.length > 1900000) return J({ error: 'Potager trop lourd pour la synchronisation (photos).' }, 413);
+            const cur = await env.DB.prepare('SELECT at,del FROM gardens WHERE uid=? AND id=?').bind(uid, id).first();
             if (cur && !cur.del && cur.at > body.at) return J({ error: 'Version plus récente sur un autre appareil.', at: cur.at }, 409);
-            if (body.plan) await env.POTAGER.put('plan:' + id, JSON.stringify(body.plan));
-            const raw2 = JSON.stringify({ state: body.state, at: body.at }); await env.POTAGER.put('garden:' + id, raw2);
-            await gSetList(env, l => [...l.filter(x => x.id !== id), { id, name: String(body.state.name || 'Potager').slice(0, 80), at: body.at, ex: !!body.state.example, size: raw.length }]);
+            await env.DB.prepare('INSERT INTO gardens(uid,id,name,at,ex,del,size,state,plan) VALUES(?,?,?,?,?,0,?,?,?) ON CONFLICT(uid,id) DO UPDATE SET name=excluded.name, at=excluded.at, ex=excluded.ex, del=0, size=excluded.size, state=excluded.state, plan=COALESCE(excluded.plan, gardens.plan)')
+              .bind(uid, id, String(body.state.name || 'Potager').slice(0, 80), body.at, body.state.example ? 1 : 0, st.length, st, body.plan ? JSON.stringify(body.plan) : null).run();
             return J({ ok: true, at: body.at });
           }
           return J({ error: 'Méthode non prise en charge.' }, 405);
         }
+        case '/photo': {
+          const d = String(body.data || ''); if (!/^data:image\/(jpeg|png|webp);base64,/.test(d)) return J({ error: 'Image invalide.' }, 400);
+          if (d.length > 1800000) return J({ error: 'Photo trop lourde.' }, 413);
+          const id = rid(22); await env.DB.prepare('INSERT INTO photos(id,uid,data,at) VALUES(?,?,?,?)').bind(id, uid, d, Date.now()).run();
+          return J({ id, url: url.origin + '/p/' + id });
+        }
         case '/push/key': return J({ key: (await vapid(env)).pub });
         case '/push/subscribe': {
           if (!body.sub || !body.sub.endpoint || !body.sub.keys) return J({ error: 'Abonnement invalide.' }, 400);
-          const l = (await getSubs(env)).filter(x => x.endpoint !== body.sub.endpoint);
-          l.push({ endpoint: body.sub.endpoint, keys: body.sub.keys, prefs: body.prefs || {}, name: String(body.name || 'Appareil').slice(0, 40), at: Date.now() });
-          await env.POTAGER.put('subs', JSON.stringify(l)); return J({ ok: true, n: l.length });
+          await env.DB.prepare('INSERT INTO subs(endpoint,uid,keys,prefs,name,at) VALUES(?,?,?,?,?,?) ON CONFLICT(endpoint) DO UPDATE SET uid=excluded.uid, keys=excluded.keys, prefs=excluded.prefs, name=excluded.name, at=excluded.at')
+            .bind(body.sub.endpoint, uid, JSON.stringify(body.sub.keys), JSON.stringify(body.prefs || {}), String(body.name || 'Appareil').slice(0, 40), Date.now()).run();
+          return J({ ok: true });
         }
-        case '/push/prefs': { const l = await getSubs(env), x = l.find(y => y.endpoint === body.endpoint); if (!x) return J({ error: 'Appareil non abonné.' }, 404); x.prefs = body.prefs || {}; await env.POTAGER.put('subs', JSON.stringify(l)); return J({ ok: true }) }
-        case '/push/unsubscribe': { const l = (await getSubs(env)).filter(x => x.endpoint !== body.endpoint); await env.POTAGER.put('subs', JSON.stringify(l)); return J({ ok: true }) }
-        case '/push/test': { const x = (await getSubs(env)).find(y => y.endpoint === body.endpoint); if (!x) return J({ error: 'Appareil non abonné.' }, 404); const r = await sendPush(env, x, { title: 'Atelier Potager', body: 'Les notifications fonctionnent sur cet appareil.', tag: 'test', url: './' }); return r === 'ok' ? J({ ok: true }) : J({ error: 'Envoi refusé (' + r + ').' }, 502) }
-        case '/push/digest': { if (url.searchParams.get('reset')) await env.POTAGER.delete('nsent'); await runNotify(env, true); return J({ ok: true }) }
+        case '/push/prefs': { const r = await env.DB.prepare('UPDATE subs SET prefs=? WHERE endpoint=? AND uid=?').bind(JSON.stringify(body.prefs || {}), body.endpoint || '', uid).run(); return r.meta.changes ? J({ ok: true }) : J({ error: 'Appareil non abonné.' }, 404) }
+        case '/push/unsubscribe': await env.DB.prepare('DELETE FROM subs WHERE endpoint=? AND uid=?').bind(body.endpoint || '', uid).run(); return J({ ok: true });
+        case '/push/test': { const x = (await subsOf(env, uid)).find(y => y.endpoint === body.endpoint); if (!x) return J({ error: 'Appareil non abonné.' }, 404); const r = await sendPush(env, x, { title: 'Atelier Potager', body: 'Les notifications fonctionnent sur cet appareil.', tag: 'test', url: './' }); return r === 'ok' ? J({ ok: true }) : J({ error: 'Envoi refusé (' + r + ').' }, 502) }
+        case '/push/digest': { if (url.searchParams.get('reset')) { const n = (await metaGet(env, uid, 'nsent')) || { digest: {}, frost: {}, ev: {} }; n.digest = {}; n.frost = {}; await metaSet(env, uid, 'nsent', n) } await notifyUser(env, uid, true); return J({ ok: true }) }
+        /* gestion des amis (propriétaire seulement) */
+        case '/admin/users': {
+          const us = (await env.DB.prepare('SELECT u.id,u.name,u.created,u.last,(SELECT COUNT(*) FROM gardens g WHERE g.uid=u.id AND g.del=0) AS n FROM users u ORDER BY u.created').all()).results;
+          return J({ users: us });
+        }
+        case '/admin/invite': {
+          const name = String(body.name || 'Ami').trim().slice(0, 40) || 'Ami', token = rid(24), id = 'u' + rid(10);
+          await env.DB.prepare('INSERT INTO users(id,name,th,role,created,last) VALUES(?,?,?,?,?,NULL)').bind(id, name, await sha(token), 'user', Date.now()).run();
+          return J({ id, name, token });
+        }
+        case '/admin/remove': {
+          const id = String(body.id || ''); if (!id || id === 'admin') return J({ error: 'Compte invalide.' }, 400);
+          await env.DB.batch(['users WHERE id', 'gardens WHERE uid', 'photos WHERE uid', 'subs WHERE uid', 'meta WHERE uid'].map(t => env.DB.prepare('DELETE FROM ' + t + '=?').bind(id)));
+          return J({ ok: true });
+        }
         case '/status':
-          if (!env.GARDENA_KEY || !env.GARDENA_SECRET) return J({ error: 'GARDENA n\'est pas encore configuré sur le relais (secrets GARDENA_KEY et GARDENA_SECRET).', nogardena: true }, 400); return J(await out(url.searchParams.get('fresh') ? 120000 : 600000));
+          if (!env.GARDENA_KEY || !env.GARDENA_SECRET) return J({ error: 'GARDENA n\'est pas encore configuré sur le relais (secrets GARDENA_KEY et GARDENA_SECRET).', nogardena: true }, 400);
+          return J(await out(url.searchParams.get('fresh') ? 120000 : 600000));
         case '/water': await water(env, body.id, +body.seconds || 600, 'manuel', ''); return J(await out(600000));
         case '/stop': await stop(env, body.id); return J(await out(600000));
         case '/config':
           if (req.method === 'PUT') { if (JSON.stringify(body).length > 50000) return J({ error: 'Réglages trop volumineux.' }, 400); await env.POTAGER.put('cfg', JSON.stringify({ ...body, at: Date.now() })); return J({ ok: true }) }
           return J(await getCfg(env));
         case '/run': await runAuto(env); return J(await out(600000));
-        default: return J({ ok: true, app: 'Atelier Potager — relais', gardena: !!(env.GARDENA_KEY && env.GARDENA_SECRET) });
+        default: return J({ ok: true, app: 'Atelier Potager — relais', me: { role: me.role, name: me.name } });
       }
     } catch (e) { return J({ error: e.message }, 502) }
   },
-  async scheduled(ev, env, ctx) { ctx.waitUntil(Promise.all([runNotify(env).catch(() => { }), (env.GARDENA_KEY ? runAuto(env) : Promise.resolve()).catch(e => addLog(env, { type: 'error', msg: e.message }))])) }
+  async scheduled(ev, env, ctx) { ctx.waitUntil(Promise.all([runNotify(env).catch(() => { }), (env.GARDENA_KEY && env.POTAGER ? runAuto(env) : Promise.resolve()).catch(e => addLog(env, { type: 'error', msg: e.message }))])) }
 };

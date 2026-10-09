@@ -148,6 +148,10 @@ main{position:relative;min-height:0;overflow:hidden}
 .wxbits span{font-size:12.5px;padding:3px 9px;border-radius:99px;background:var(--glass);font-family:var(--f-mono)}
 .wxbits .wfrost{background:var(--frost);color:#fff;font-weight:600}
 .glist{display:grid;margin-top:6px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.invguide{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.45);display:grid;place-items:end center;padding:16px 16px max(env(safe-area-inset-bottom),16px)}
+.invcard{background:var(--surface);color:var(--ink);border-radius:20px;padding:18px;display:grid;gap:10px;max-width:440px;width:100%}
+.invcard ol{margin:0;padding-left:20px;display:grid;gap:10px}
+.invban{border-color:var(--accent)}
 .nlist{display:grid;border:1px solid var(--line);border-radius:12px;overflow:hidden}.nrow{padding:10px 12px;background:var(--surface);gap:12px;flex-wrap:nowrap;align-items:center}.nrow>span{min-width:0}.nrow+.nrow{border-top:1px solid var(--line)}.nrow input{width:22px;height:22px;flex:none}
 .grpinfo{display:grid;gap:8px;padding:10px 12px;border:1px dashed var(--sun);border-radius:12px}
 .grow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;min-height:46px;background:var(--surface)}
@@ -1236,21 +1240,38 @@ function renderSheet(){
     <p class="note">La clé reste sur cet appareil : elle n'est jamais envoyée ailleurs que chez Weather Underground, ni enregistrée dans le plan.</p></div>`;
   }else if(sheetMode==='relay'){const c=GDN.get(),tok=c.token||(window._rtok||(window._rtok=newToken()));
     h+=`<div class="stack"><div class="row between"><h3>Synchronisation</h3><button class="btn small" data-act="relay-back">Retour</button></div>
-    ${relayOn()?`<div class="alert okay"><span>${esc(syncText())}</span></div><div class="row"><button class="btn small primary" data-act="relay-sync">Synchroniser maintenant</button><button class="btn small danger" data-act="relay-unlink">Délier cet appareil</button></div>
+    ${relayOn()&&c.role==='user'?`<div class="alert okay"><span>${esc(syncText())}</span></div><p class="note" style="color:var(--ink)">Tu utilises l'app sur invitation : tes potagers sont enregistrés en ligne, à toi seul, et se synchronisent entre tes appareils.</p>
+      <div class="row"><button class="btn small primary" data-act="relay-sync">Synchroniser maintenant</button><button class="btn small" data-act="inv-mine">Copier l'invitation pour mon autre appareil</button></div>
+      <button class="btn small danger" data-act="relay-unlink" style="justify-self:start">Délier cet appareil</button>`:
+    relayOn()?`<div class="alert okay"><span>${esc(syncText())}</span></div><div class="row"><button class="btn small primary" data-act="relay-sync">Synchroniser maintenant</button><button class="btn small danger" data-act="relay-unlink">Délier cet appareil</button></div>
       <p class="note"><b>Sur ton autre appareil</b> : Menu → Synchronisation → « J'ai déjà un relais », puis la même adresse et le même code d'accès :</p><div class="row"><code class="autok">${esc(c.url)}</code></div><div class="row"><code class="autok">${esc(c.token)}</code><button class="btn small" data-act="relay-copytok">Copier le code</button></div>`:
     `<p class="note" style="color:var(--ink)">Ton potager est enregistré sur cet appareil uniquement. Un petit relais gratuit chez Cloudflare le garde en ligne : chaque modification part tout de suite, et ton iPhone et ton iPad se mettent à jour à l'ouverture. Le même relais sert ensuite à l'arrosage GARDENA. Compte 10 minutes, plus simple sur un ordinateur.</p>
-    <div class="seg"><button data-act="relay-mode" data-m="new" aria-pressed="${!window._rhave}">Créer mon relais</button><button data-act="relay-mode" data-m="have" aria-pressed="${!!window._rhave}">J'ai déjà un relais</button></div>
-    ${window._rhave?'':`<ol class="austeps">
+    <div class="seg"><button data-act="relay-mode" data-m="inv" aria-pressed="${window._rhave==='inv'}">J'ai une invitation</button><button data-act="relay-mode" data-m="new" aria-pressed="${!window._rhave}">Créer mon relais</button><button data-act="relay-mode" data-m="have" aria-pressed="${window._rhave===true}">J'ai déjà un relais</button></div>
+    ${window._rhave==='inv'?`<label class="field"><span class="lbl">Invitation reçue</span><textarea id="inv-code" placeholder="colle ici le lien ou le code reçu"></textarea></label><div class="row"><button class="btn small" data-act="inv-paste">Coller</button><button class="btn primary" data-act="inv-use">Utiliser l'invitation</button></div>`:window._rhave?'':`<ol class="austeps">
      <li><b>Compte.</b> Crée un compte gratuit sur <a href="https://dash.cloudflare.com" target="_blank" rel="noopener">dash.cloudflare.com</a>.</li>
      <li><b>Relais.</b> Workers &amp; Pages → Create → Worker → Deploy. Puis <b>Edit code</b>, remplace tout par le code du relais et Deploy.<div class="row" style="margin-top:6px"><button class="btn small" data-act="relay-copycode">Copier le code du relais</button><a class="btn small" href="${WORKER_URL}" target="_blank" rel="noopener">Ouvrir le code</a></div></li>
-     <li><b>Stockage.</b> Storage &amp; Databases → KV → Create, nomme-le « potager ». Dans ton Worker : Settings → Bindings → Add → KV namespace, nom de variable <code>POTAGER</code>, choisis « potager ».</li>
+     <li><b>Base de données.</b> Storage &amp; Databases → D1 → Create, nomme-la « potager ». Dans ton Worker : Bindings → Add binding → D1 database, nom de variable <code>DB</code>, choisis « potager ».</li>
      <li><b>Code d'accès.</b> Worker → Settings → Variables and Secrets → Add, type <b>Secret</b>, nom <code>APP_TOKEN</code>, valeur :<div class="row" style="margin-top:6px"><code class="autok">${esc(tok)}</code><button class="btn small" data-act="relay-copytok">Copier</button></div></li>
      <li><b>Ici.</b> Copie l'adresse du Worker (elle finit par <code>workers.dev</code>) et colle-la ci-dessous.</li></ol>
      <p class="note">Les intitulés de Cloudflare peuvent varier un peu. Personne ne peut lire ni modifier ton potager sans ce code d'accès.</p>`}
-    <label class="field"><span class="lbl">Adresse du relais</span><input id="rl-url" value="${esc(c.url||'')}" placeholder="https://potager.xxx.workers.dev" autocomplete="off" spellcheck="false" inputmode="url"></label>
+    ${window._rhave==='inv'?'':`<label class="field"><span class="lbl">Adresse du relais</span><input id="rl-url" value="${esc(c.url||'')}" placeholder="https://potager.xxx.workers.dev" autocomplete="off" spellcheck="false" inputmode="url"></label>
     <label class="field"><span class="lbl">Code d'accès (APP_TOKEN)</span><input id="rl-tok" value="${esc(window._rhave&&!c.token?'':tok)}" placeholder="le code du relais" autocomplete="off" spellcheck="false"></label>
     <p class="alert" id="rl-err" hidden></p>
-    <button class="btn primary" data-act="relay-link">Relier et synchroniser</button>`}</div>`;
+    <button class="btn primary" data-act="relay-link">Relier et synchroniser</button>`}`}</div>`;
+  }else if(sheetMode==='friends'){const F=window._friends;
+    h+=`<div class="stack"><div class="row between"><h3>Amis</h3><button class="btn small" data-act="relay-back">Retour</button></div>
+    <p class="note" style="color:var(--ink)">Chaque ami reçoit un lien. Il l'ouvre sur son téléphone, ajoute l'app à l'écran d'accueil, et tout est relié : ses potagers, sa synchro et ses notifications, séparés des tiens. Il n'a aucun code à gérer.</p>
+    <div class="row" style="flex-wrap:nowrap"><input id="fr-name" placeholder="Prénom de l'ami" style="flex:1;min-width:0" autocomplete="off"><button class="btn primary" data-act="fr-invite">Créer l'invitation</button></div>
+    ${window._newInv?`<div class="alert okay" style="display:grid;gap:8px"><span><b>Invitation pour ${esc(window._newInv.name)}</b> : envoie-lui ce lien (il ne sert qu'à lui).</span><code class="autok">${esc(window._newInv.link)}</code><div class="row"><button class="btn small primary" data-act="fr-share">Envoyer</button><button class="btn small" data-act="fr-copy">Copier le lien</button></div></div>`:''}
+    <span class="lbl">Amis sur ton relais</span>
+    ${!F?'<p class="note">Chargement…</p>':F.err?`<p class="note" style="color:var(--danger)">${esc(F.err)}</p>`:F.list.length?`<div class="glist">${F.list.map(u=>`<div class="grow"><span><b>${esc(u.name)}</b><span class="note" style="display:block">${u.last?'vu '+whenTxt(u.last):'pas encore connecté'} · ${u.n} potager${u.n>1?'s':''}</span></span><button class="btn small danger" data-act="fr-rm" data-id="${u.id}" data-n="${esc(u.name)}">Retirer</button></div>`).join('')}</div>`:'<p class="note">Personne pour l\'instant.</p>'}
+    <p class="note">Retirer un ami efface ses potagers, ses photos et ses notifications de ton relais. Son lien ne marchera plus.</p></div>`;
+  }else if(sheetMode==='geo'){const G0=GEO(),R=window._geoRes;
+    h+=`<div class="stack"><div class="row between"><h3>Lieu du potager</h3><button class="btn small" data-act="relay-back">Retour</button></div>
+    <p class="note" style="color:var(--ink)">Sert à la météo, aux prévisions de gel et de pluie, et aux notifications.${G0?' Actuellement : <b>'+esc(G0.name||'position enregistrée')+'</b>.':''}</p>
+    <button class="btn" data-act="geo-here">Utiliser ma position actuelle</button>
+    <div class="row" style="flex-wrap:nowrap"><input id="geo-q" placeholder="Commune (ex. Éghezée)" style="flex:1;min-width:0" autocomplete="off"><button class="btn primary" data-act="geo-find">Chercher</button></div>
+    ${R?R.length?`<div class="glist">${R.map((g,i)=>`<div class="grow"><span><b>${esc(g.name)}</b><span class="note" style="display:block">${esc([g.admin1,g.country].filter(Boolean).join(', '))}</span></span><button class="btn small" data-act="geo-pick" data-i="${i}">Choisir</button></div>`).join('')}</div>`:'<p class="note">Aucune commune trouvée.</p>':''}</div>`;
   }else if(sheetMode==='notif'){const ps=pushState(),pr=pushPrefs();
     const tg=(k,l,d)=>`<label class="row between nrow"><span><b>${l}</b><span class="note" style="display:block">${d}</span></span><input type="checkbox" data-np="${k}" ${pr[k]!==false?'checked':''}></label>`;
     h+=`<div class="stack"><div class="row between"><h3>Notifications</h3><button class="btn small" data-act="relay-back">Retour</button></div>
@@ -1274,7 +1295,9 @@ function renderSheet(){
     <div class="row between" style="margin-top:8px"><span class="note" style="color:var(--ink)">Météo vivante sur le plan<br><span class="note">pluie, givre, nuit et ombres à l'heure réelle, coupée en mode édition</span></span><button class="btn small ${wxPlanOn()?'on':''}" data-act="wxplan">${wxPlanOn()?'Activée':'Désactivée'}</button></div></div>
     <div class="row between"><span><span class="lbl">Synchronisation</span><br><span class="note">${relayOn()?'Relais relié : iPhone, iPad… à jour':'Ce potager reste sur cet appareil'}</span></span><button class="btn small" data-act="relay">${relayOn()?'Gérer':'Relier'}</button></div>
     ${relayOn()?`<div class="row between"><span><span class="lbl">Notifications</span><br><span class="note">${pushState().txt}</span></span><button class="btn small" data-act="notif">${pushState().on?'Régler':'Activer'}</button></div>`:''}
-    <div class="row between"><span><span class="lbl">Arrosage automatique</span><br><span class="note">${GDN.get().demo?'Démo':gLinked()?'GARDENA relié':'GARDENA smart system'}</span></span><button class="btn small" data-act="openauto">${gLinked()?'Ouvrir':'Relier'}</button></div>
+    ${GDN.get().role==='admin'?`<div class="row between"><span><span class="lbl">Amis</span><br><span class="note">Inviter des amis sur ton relais</span></span><button class="btn small" data-act="friends">Gérer</button></div>`:''}
+    <div class="row between"><span><span class="lbl">Lieu du potager</span><br><span class="note">${GEO()?esc(GEO().name||'Position enregistrée'):'Pas encore indiqué (météo de Bruxelles)'}</span></span><button class="btn small" data-act="geo">${GEO()?'Changer':'Indiquer'}</button></div>
+    ${GDN.get().role==='user'?'':`<div class="row between"><span><span class="lbl">Arrosage automatique</span><br><span class="note">${GDN.get().demo?'Démo':gLinked()?'GARDENA relié':'GARDENA smart system'}</span></span><button class="btn small" data-act="openauto">${gLinked()?'Ouvrir':'Relier'}</button></div>`}
     <div class="row"><button class="btn" data-act="help">Comment ça marche</button><button class="btn" data-act="openinv">Inventaire</button></div>
     ${ctx?'':`<button class="btn" data-act="shape-edit">${S.shape?'Modifier la forme du terrain':'Dessiner une forme libre'}</button>`}
     <label class="field"><span class="lbl">Direction du nord sur le plan : <span class="mono">${S.north}°</span></span><input id="g-north" type="range" min="0" max="355" step="5" value="${S.north}"></label>
@@ -1353,7 +1376,22 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
   if(a==='np-test'){try{await gReq('/push/test','POST',{endpoint:GDN.get().pushEp});toast('Test envoyé')}catch(x){toast(x.message)}return}
   if(a==='np-now'){try{await syncPush(GID);await gReq('/push/digest?reset=1','POST',{});toast('Résumé envoyé (s\'il y a quelque chose à dire)')}catch(x){toast(x.message)}return}
   if(a==='relay-back'){sheetMode='menu';renderSheet();return}
-  if(a==='relay-mode'){window._rhave=b.dataset.m==='have';renderSheet();return}
+  if(a==='relay-mode'){window._rhave=b.dataset.m==='have'?true:b.dataset.m==='inv'?'inv':false;renderSheet();return}
+  if(a==='inv-paste'){try{$('#inv-code').value=await navigator.clipboard.readText()}catch(x){toast('Colle le code à la main (appui long → Coller)')}return}
+  if(a==='inv-use'){const inv=readInvite($('#inv-code').value);if(!inv)return toast('Invitation illisible : colle le lien complet reçu');await applyInvite(inv);renderSheet();return}
+  if(a==='inv-mine'){const c=GDN.get();try{await navigator.clipboard.writeText(APP_URL+'#join='+mkInvite(c.url,c.token,c.name||''));toast('Invitation copiée : ouvre-la sur ton autre appareil')}catch(x){toast('Copie impossible')}return}
+  if(a==='friends'){sheetMode='friends';window._friends=null;window._newInv=null;renderSheet();loadFriends();return}
+  if(a==='fr-invite'){const n=($('#fr-name').value||'').trim();if(!n)return toast('Indique le prénom de ton ami');b.disabled=true;
+    try{const r=await gReq('/admin/invite','POST',{name:n});window._newInv={name:r.name,link:APP_URL+'#join='+mkInvite(GDN.get().url,r.token,r.name)};await loadFriends()}catch(x){toast(x.message)}renderSheet();return}
+  if(a==='fr-share'){const I=window._newInv;try{if(navigator.share){await navigator.share({title:'Atelier Potager',text:`${I.name}, voici ton accès à l'app du potager. Ouvre ce lien sur ton téléphone :`,url:I.link});return}}catch(x){return}try{await navigator.clipboard.writeText(I.link);toast('Lien copié')}catch(x){}return}
+  if(a==='fr-copy'){try{await navigator.clipboard.writeText(window._newInv.link);toast('Lien copié')}catch(x){toast('Copie impossible')}return}
+  if(a==='fr-rm'){if(!b.classList.contains('armed')){b.classList.add('armed');b.textContent='Confirmer';return}try{await gReq('/admin/remove','POST',{id:b.dataset.id});toast(b.dataset.n+' retiré du relais')}catch(x){toast(x.message)}await loadFriends();renderSheet();return}
+  if(a==='geo'){sheetMode='geo';window._geoRes=null;renderSheet();return}
+  if(a==='geo-here'){if(!navigator.geolocation)return toast('Position indisponible sur cet appareil');b.disabled=true;b.textContent='Localisation…';
+    navigator.geolocation.getCurrentPosition(p=>{setGeo({lat:+p.coords.latitude.toFixed(4),lon:+p.coords.longitude.toFixed(4),name:'Ma position'})},()=>{toast('Position refusée');renderSheet()},{timeout:15000});return}
+  if(a==='geo-find'){const q=($('#geo-q').value||'').trim();if(!q)return;b.disabled=true;
+    try{const r=await fetch('https://geocoding-api.open-meteo.com/v1/search?count=6&language=fr&name='+encodeURIComponent(q));const j=await r.json();window._geoRes=(j.results||[]).map(g=>({name:g.name,admin1:g.admin1,country:g.country,lat:g.latitude,lon:g.longitude}))}catch(x){toast('Recherche impossible (connexion ?)')}renderSheet();return}
+  if(a==='geo-pick'){const g=window._geoRes[+b.dataset.i];setGeo({lat:g.lat,lon:g.lon,name:g.name});return}
   if(a==='relay-copytok'){try{await navigator.clipboard.writeText(($('#rl-tok')&&$('#rl-tok').value.trim())||GDN.get().token||'');toast('Code copié')}catch(err){toast('Copie impossible : sélectionne le code à la main')}return}
   if(a==='relay-copycode'){try{const r=await fetch('gardena-worker.js');if(!r.ok)throw 0;await navigator.clipboard.writeText(await r.text());toast('Code du relais copié')}catch(err){window.open(WORKER_URL,'_blank')}return}
   if(a==='relay-unlink'){const c=GDN.get();GDN.set({demo:c.demo});gdst=null;syncErr=null;renderSheet();return toast('Cet appareil n\'est plus synchronisé (ton potager y reste)')}
@@ -1412,7 +1450,7 @@ $('#menuBtn').onclick=()=>{setTab('plan');selId=null;sheetMode='menu';renderShee
 function openBed(id,zi=0,jk='arrosage',toJournal=false){bed={id,zi,cell:null,jk,photo:null};$('#bedView').hidden=false;updateNoteBtn();renderBed();$('#bedView').scrollTop=0;if(toJournal){const j=$('#jpanel');if(j)j.scrollIntoView({block:'start'})}}
 function closeBed(){bed=null;$('#bedView').hidden=true;if(typeof updateNoteBtn==='function')updateNoteBtn()}
 const ROWS='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-const photoSrc=ph=>ph?(ph.a?'/_blob/'+ph.a:ph.u):'';
+const photoSrc=ph=>ph?(ph.r||(ph.a?'/_blob/'+ph.a:ph.u)):'';
 function renderBed(){
   const o=obj(bed.id);if(!o)return closeBed();
   const L=Math.max(o.w,o.h),W=Math.min(o.w,o.h);bed.zi=clamp(bed.zi,0,o.zones.length-1);const z=o.zones[bed.zi],Y=yearOf(z);
@@ -1876,6 +1914,7 @@ $('#v-weather').addEventListener('change',e=>{const t=e.target,v=parseFloat(t.va
 $('#v-weather').addEventListener('click',e=>{const wa=e.target.closest('[data-wact]');
   if(wa&&wa.dataset.wact==='wusync'){syncStation(true);return}
   if(wa&&wa.dataset.wact==='auto'){openAuto();return}
+  if(wa&&wa.dataset.wact==='geo'){setTab('plan');selId=null;sheetMode='geo';renderSheet();return}
   if(wa&&wa.dataset.wact==='wuconf'){setTab('plan');sheetMode='wu';selId=null;renderSheet();return}
   if(wa&&wa.dataset.wact==='rain-open'){rainForm=true;renderWeather();const i=$('#r-mm');if(i)i.focus();return}
   if(wa&&wa.dataset.wact==='rain-cancel'){rainForm=false;renderWeather();return}
@@ -1941,13 +1980,16 @@ function renderToday(){
   const count=c=>c.length;
   $('#v-today').innerHTML=`<div class="ptr" id="ptr"><span class="spin"></span><span id="ptrt">Tire pour actualiser la météo</span></div><div class="page"><div><h2>Aujourd'hui</h2><span class="note">${TODAY.toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'})} · ${nAct?nAct+' chose'+(nAct>1?'s':'')+' à faire':'rien d\'urgent'}</span></div>
   <div class="bednav">${secs.map(x=>`<button data-tj="${x.L.key}">${esc(x.L.t)}</button>`).join('')}${semis.length?'<button data-tj="semis">Semis</button>':''}<button data-tj="gen">Stock et saison</button></div>
+  ${inviteBanner()}
   ${weatherHero()}
   ${autoCard(true)}
   ${secs.map(x=>sec(x.L.t,x.L.ico,x.c,0,x.L.key)).join('')}
   ${semis.length?sec('Semis à l\'abri','<path d="M6 20h12l-1.5-7h-9z"/><path d="M12 13V8"/><path d="M12 9c0-3 2-5 5-5 0 3-2 5-5 5z"/>',semis,0,'semis'):''}
   ${sec('Stock et saison','<path d="M4 8l8-4 8 4v10l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v10"/>',gen,0,'gen')}
   ${!secs.length?'<p class="note">Rien à faire sur les planches ni dans la serre.</p>':''}</div>`}
-$('#v-today').addEventListener('click',e=>{if(swipedAt&&Date.now()-swipedAt<400){e.preventDefault();return}const tj=e.target.closest('[data-tj]');if(tj){const el=document.getElementById('ts-'+tj.dataset.tj);if(el)el.scrollIntoView({block:'start',behavior:'smooth'});return}const t=e.target.closest('[data-tw],[data-train],[data-tinv],[data-tgo],[data-open]');if(!t)return;
+$('#v-today').addEventListener('click',async e=>{if(swipedAt&&Date.now()-swipedAt<400){e.preventDefault();return}
+  const iv=e.target.closest('[data-tinv2]');if(iv){if(iv.dataset.tinv2==='later'){try{localStorage.setItem('potager-noinv','1')}catch(_){}return renderToday()}
+    let txt='';try{txt=await navigator.clipboard.readText()}catch(_){}let inv=readInvite(txt);if(!inv){txt=prompt('Colle ici l\'invitation reçue');inv=readInvite(txt)}if(!inv)return toast('Invitation illisible');return applyInvite(inv)}const tj=e.target.closest('[data-tj]');if(tj){const el=document.getElementById('ts-'+tj.dataset.tj);if(el)el.scrollIntoView({block:'start',behavior:'smooth'});return}const t=e.target.closest('[data-tw],[data-train],[data-tinv],[data-tgo],[data-open]');if(!t)return;
   if(t.dataset.tw){const o=obj(t.dataset.tw);o.journal=o.journal||[];o.journal.push({id:uid(),k:'arrosage',d:iso(TODAY),t:''});save();renderToday();return toast('Arrosage noté',true)}
   if(t.dataset.train){addRain(null);save();renderToday();return toast('Pluie notée',true)}
   if(t.dataset.tinv)return openInv(t.dataset.tinv);
@@ -2008,7 +2050,9 @@ $('#v-crops').addEventListener('input',e=>{if(e.target.id==='cq'){cq=e.target.va
 /* identifiant et clé gardés sur cet appareil uniquement, jamais dans le plan synchronisé */
 /* station par défaut (choix de Julien : station publique, clé assumée dans le code) ; un réglage saisi dans l'app la remplace */
 const WU_DEFAULT={id:'IGHEZE29',key:'6fffe640ff8c4e82bfe640ff8cfe8292'};
-const WU={get(){try{const v=JSON.parse(localStorage.getItem('potager-wu'));return v&&v.key?v:(v&&v.off?{}:WU_DEFAULT)}catch(e){return WU_DEFAULT}},set(v){try{localStorage.setItem('potager-wu',JSON.stringify(v))}catch(e){}}};
+/* ma station par défaut ne s'applique qu'à moi (propriétaire du relais), pas aux amis invités */
+const isOwner=()=>{try{return JSON.parse(localStorage.getItem('potager-gardena')||'{}').role==='admin'}catch(e){return false}};
+const WU={get(){try{const v=JSON.parse(localStorage.getItem('potager-wu'));return v&&v.key?v:(v&&v.off||!isOwner()?{}:WU_DEFAULT)}catch(e){return isOwner()?WU_DEFAULT:{}}},set(v){try{localStorage.setItem('potager-wu',JSON.stringify(v))}catch(e){}}};
 let wx=null,wxBusy=false;
 const inClaude=()=>!!window.claude||/claude\.ai|claudeusercontent/.test(location.hostname);
 async function wuFetch(path,c){const u=`https://api.weather.com${path}${path.includes('?')?'&':'?'}apiKey=${encodeURIComponent(c.key)}&format=json&units=m&numericPrecision=decimal`;
@@ -2018,6 +2062,9 @@ async function wuFetch(path,c){const u=`https://api.weather.com${path}${path.inc
   if(!r.ok)throw new Error('Weather Underground a répondu ' + r.status + '.');return r.json()}
 /* Prévisions publiques Open-Meteo (gratuites, sans clé) : minimum de la nuit et 5 jours */
 const HOME_GEO={lat:50.586,lon:4.877};
+/* lieu du potager : choisi dans le menu, sinon Leuze pour moi, Bruxelles par défaut pour les autres */
+function GEO(){try{const g=JSON.parse(localStorage.getItem('potager-geo'));if(g&&isFinite(g.lat)&&isFinite(g.lon))return g}catch(e){}return isOwner()?{...HOME_GEO,name:'Leuze'}:null}
+const geoOr=()=>GEO()||{lat:50.85,lon:4.35,name:'Bruxelles (par défaut)'};
 async function forecastOM(lat,lon){
   const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
     +`&daily=temperature_2m_min,temperature_2m_max,precipitation_sum,precipitation_probability_max,weather_code,wind_speed_10m_max,wind_gusts_10m_max,et0_fao_evapotranspiration,sunrise,sunset,daylight_duration,sunshine_duration,uv_index_max`
@@ -2041,7 +2088,7 @@ async function forecastOM(lat,lon){
 async function syncStation(manual,cfg){const c=cfg||WU.get();if(wxBusy&&!cfg)return;wxBusy=true;
   try{
     /* 1. la station (mesures et pluie) */
-    let now=null,lat=HOME_GEO.lat,lon=HOME_GEO.lon,stErr=null,days=null;
+    let now=null,lat=geoOr().lat,lon=geoOr().lon,stErr=null,days=null;
     if(c.id&&c.key){try{const sid=encodeURIComponent(c.id.trim());
         const cur=await wuFetch(`/v2/pws/observations/current?stationId=${sid}`,c),ob=cur&&cur.observations&&cur.observations[0];if(!ob)throw new Error('Aucune observation récente pour cette station.');
         const m=ob.metric||{};now={t:m.temp,h:ob.humidity,rain:m.precipTotal,rate:m.precipRate,wind:m.windSpeed,gust:m.windGust,dir:ob.winddir,dew:m.dewpt,p:m.pressure,uv:ob.uv,sol:ob.solarRadiation,feel:m.temp!=null&&m.temp<10?m.windChill:m.heatIndex,time:ob.obsTimeLocal};if(ob.lat)lat=ob.lat;if(ob.lon)lon=ob.lon;
@@ -2124,7 +2171,7 @@ function wxAdvice(){const A=[],cur=wx.cur||{},n=wx.now||{},fc=wx.fc||[],H=wx.hou
   return A}
 const ADV_C={soil:'var(--wood)',dry:'var(--sun)',wet:'var(--water)',ok:'var(--ok)',rain:'var(--water)',wind:'var(--muted)',hot:'var(--danger)',mold:'var(--danger)',treat:'var(--ok)',notreat:'var(--muted)'};
 function weatherPanel(){const hasKey=!!WU.get().key;
-  const head=`<div class="row between"><h2>Météo</h2><button class="btn small" data-wact="wusync">${wxBusy?'…':'Actualiser'}</button></div>`;
+  const head=`<div class="row between"><h2>Météo</h2><button class="btn small" data-wact="wusync">${wxBusy?'…':'Actualiser'}</button></div>${GEO()?'':`<div class="alert amber"><span>Météo de Bruxelles par défaut. <button class="linkbtn" data-wact="geo">Indique le lieu de ton potager</button></span></div>`}`;
   const link=hasKey?'':`<div class="row between" style="gap:8px"><span class="note">Relie ta station Weather Underground pour des mesures sur place et la pluie notée toute seule.</span><button class="btn small" data-wact="wuconf">Relier</button></div>`;
   if(!wx)return head+`<div class="tcard"><span class="note">Lecture de la météo…</span></div>`+link;
   const cur=wx.cur||{},n=wx.now||{},fc=wx.fc||[],f0=fc[0]||{},kind=cur.code!=null?wxKind(cur.code):null,day=cur.isDay!==false;
@@ -2225,7 +2272,7 @@ function gImport(){if(!gdst||gdst.demo||!gdst.log)return;const seen=new Set(S.au
   const nv=[...seen].slice(-300);if(ch||nv.length!==(S.autoSeen||[]).length){S.autoSeen=nv;save(true)}if(ch)pushCfgSoon()}
 function pushCfgSoon(){clearTimeout(cfgT);cfgT=setTimeout(pushCfg,1500)}
 async function pushCfg(){const c=GDN.get();if(c.demo||!gLinked())return;const a=autoCfg();
-  try{await gReq('/config','PUT',{zones:a.zones,pump:a.pump,tankMin:a.tankMin,tank:a.pump.kind!=='none'&&S.water?{level:S.water.level,at:Date.now()}:null,geo:HOME_GEO});if(gdst)gdst.cfgAt=Date.now();renderAutoAll()}
+  try{await gReq('/config','PUT',{zones:a.zones,pump:a.pump,tankMin:a.tankMin,tank:a.pump.kind!=='none'&&S.water?{level:S.water.level,at:Date.now()}:null,geo:geoOr()});if(gdst)gdst.cfgAt=Date.now();renderAutoAll()}
   catch(e){toast('Réglages non envoyés au relais : '+e.message)}}
 async function gWater(id,min){try{if(gDemo())demoWater(id,min);else gdSet(await gReq('/water','POST',{id,seconds:min*60}));toast(`${valveName(id)} : arrosage ${min} min lancé`)}catch(e){toast(e.message)}renderAutoAll()}
 async function gStop(id){try{if(gDemo())demoStop(id);else gdSet(await gReq('/stop','POST',{id}));toast(valveName(id)+' arrêtée')}catch(e){toast(e.message)}renderAutoAll()}
@@ -2252,6 +2299,7 @@ function autoSetupHTML(){const c=GDN.get(),demoBtn=c.demo?'<button class="btn da
   <p class="note" style="color:var(--ink)">Ton relais est en place. Il lui manque ta clé GARDENA, qui ne quittera jamais Cloudflare.</p>
   <ol class="austeps">
    <li><b>Clé GARDENA.</b> Sur <a href="https://developer.husqvarnagroup.cloud" target="_blank" rel="noopener">developer.husqvarnagroup.cloud</a>, connecte-toi avec ton compte GARDENA, crée une application et relie-lui <b>Authentication API</b> et <b>GARDENA smart system API</b>. Garde l'<b>Application key</b> et l'<b>Application secret</b>.</li>
+   <li><b>Stockage GARDENA.</b> Si ce n'est pas déjà fait : Storage &amp; Databases → KV → Create « potager », puis dans ton Worker : Bindings → Add binding → KV namespace, nom de variable <code>POTAGER</code>.</li>
    <li><b>Secrets.</b> Dans ton Worker : Settings → Variables and Secrets, deux entrées de type <b>Secret</b> : <code>GARDENA_KEY</code> (Application key) et <code>GARDENA_SECRET</code> (Application secret).</li>
    <li><b>Automatique.</b> Worker → Settings → Trigger events → Cron : <code>*/30 * * * *</code></li></ol>
   <p class="alert" id="au-err" hidden></p>
@@ -2303,7 +2351,7 @@ function renderAuto(){if(!auto)return;const c=GDN.get(),v=$('#autoView');
   else if(gLinked()&&!gdst)b+=`<p class="note">Lecture des appareils…</p>`;
   v.innerHTML=`<div class="bedhead">${AU_BACK}<div style="min-width:0;flex:1"><div class="brand" style="font-size:17px">Arrosage automatique</div><div class="note">${sub}</div></div>${gLinked()?`<button class="btn small" data-au="sync">${gdBusy?'…':'Actualiser'}</button>`:''}</div><div class="bedbody">${b}</div>`}
 /* petite carte réutilisée dans Eau & météo et Aujourd'hui */
-function autoCard(compact){if(!gLinked())return compact?'':`<button class="tcard aucta" data-wact="auto"><div class="row between"><h3>Relier GARDENA</h3><span class="chev">›</span></div><span class="note">Relie ton GARDENA smart system pour arroser à distance avec minuteur, ou selon tes sondes.</span></button>`;
+function autoCard(compact){if(GDN.get().role==='user')return'';if(!gLinked())return compact?'':`<button class="tcard aucta" data-wact="auto"><div class="row between"><h3>Relier GARDENA</h3><span class="chev">›</span></div><span class="note">Relie ton GARDENA smart system pour arroser à distance avec minuteur, ou selon tes sondes.</span></button>`;
   const vs=gValves(),run=vs.filter(isRun),autos=vs.filter(v=>zc(v.id).mode!=='off');
   if(compact&&!run.length)return'';
   const lines=run.map(v=>`<span class="aurow"><i class="on"></i><b>${esc(v.name)}</b> arrose${v.end?` · reste <b class="mono" data-end="${v.end}">${fmtLeft(v.end-Date.now())}</b>`:''}</span>`);
@@ -2358,12 +2406,14 @@ function notifPlan(){const ev=[],seen=new Set(),add=(k,d,txt)=>{const id=k+':'+d
   nurseryActive().forEach(n=>{if(P[n.crop])add('nursery',iso(readyOf(n)),`Semis de ${P[n.crop].n.toLowerCase()} prêts à repiquer`)});
   const water=plantables().filter(isPlanted).map(o=>{const m=(o.journal||[]).filter(x=>x.k==='arrosage').map(x=>x.d).sort().pop()||null,r=serreOf(o)?null:(S.rain||[]).filter(x=>x.mm==null||x.mm>=RAIN_MIN).map(x=>x.d).sort().pop()||null;return{name:fullName(o),serre:!!serreOf(o),last:[m,r].filter(Boolean).sort().pop()||null}});
   const frost=[];plantables().forEach(o=>o.zones.forEach(z=>{if(z.crop&&FROST_SENSITIVE.has(z.crop)&&Object.keys(z.cells).length)frost.push({crop:P[z.crop].n.toLowerCase(),name:fullName(o),serre:!!serreOf(o)})}));
-  return{ev,water,frost,at:Date.now()}}
-async function syncPush(id){if(!relayOn())return;const at=localAtOf(id),j=stateOf(id);if(!at||!j)return;
+  return{ev,water,frost,geo:geoOr(),at:Date.now()}}
+/* les photos partent à part sur le relais : le potager reste léger */
+async function offloadPhotos(){let n=0;for(const o of allObjs())for(const e of (o.journal||[])){if(e.ph&&e.ph.u&&!e.ph.r){try{const r=await gReq('/photo','POST',{data:e.ph.u});e.ph={r:r.url};n++}catch(x){return n}}}if(n)save(true);return n}
+async function syncPush(id){if(!relayOn())return;if(id===GID&&allObjs().some(o=>(o.journal||[]).some(e=>e.ph&&e.ph.u))){if(await offloadPhotos())return}const at=localAtOf(id),j=stateOf(id);if(!at||!j)return;
   try{let plan=null;if(id===GID){try{plan=notifPlan()}catch(e){}}await gReq('/garden?id='+encodeURIComponent(id),'PUT',{state:JSON.parse(j),at,plan});syncErr=null;syncAt=Date.now()}
   catch(e){if(e.status===409){syncPull()}else syncErr=e.message}renderSyncLine()}
 async function syncPull(manual){if(!relayOn()||syncBusy)return;syncBusy=true;
-  try{const r=await gReq('/gardens'),c=GDN.get();if(c.gardena!==!!r.gardena)GDN.set({...c,gardena:!!r.gardena});
+  try{const r=await gReq('/gardens'),c=GDN.get();if(c.gardena!==!!r.gardena||r.me&&(c.role!==r.me.role||c.name!==r.me.name))GDN.set({...c,gardena:!!r.gardena,...(r.me?{role:r.me.role,name:r.me.name}:{})});
     const reg=GL.get();let regCh=false,curCh=false;
     for(const g of r.list){const loc=reg.list.find(x=>x.id===g.id);
       if(g.del){if(loc&&reg.list.length>1){reg.list=reg.list.filter(x=>x.id!==g.id);regCh=true;try{localStorage.removeItem(keyOf(g.id));localStorage.removeItem(keyAtOf(g.id))}catch(e){}if(g.id===GID)curCh='gone'}continue}
@@ -2401,6 +2451,28 @@ function unb64u(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='
 function b64u(b){return btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
 /* le plan surveillé reste à jour chaque jour, même sans modification */
 setTimeout(()=>{try{if(relayOn()&&GDN.get().pushEp)syncPush(GID)}catch(e){}},4000);
+
+/* ---- amis invités et lieu du potager ---- */
+const APP_URL='https://razor-back1.github.io/Potager/';
+const mkInvite=(u,t,n)=>'POT1.'+b64u(new TextEncoder().encode(JSON.stringify({u,t,n})));
+function readInvite(code){const m=String(code||'').match(/POT1\.[A-Za-z0-9_-]+/);if(!m)return null;try{const o=JSON.parse(new TextDecoder().decode(unb64u(m[0].slice(5))));return o&&o.u&&o.t?o:null}catch(e){return null}}
+async function applyInvite(inv){GDN.set({url:inv.u,token:inv.t,role:'user',name:inv.n||''});try{localStorage.setItem('potager-noinv','1')}catch(e){}
+  try{await syncPull(true);toast(inv.n?`Bienvenue ${inv.n} : ton app est reliée`:'Invitation acceptée : ton app est reliée')}catch(e){toast(e.message)}renderHeader();refresh()}
+async function loadFriends(){try{const r=await gReq('/admin/users');window._friends={list:r.users}}catch(x){window._friends={err:x.message}}if(sheetMode==='friends')renderSheet()}
+function setGeo(g){try{localStorage.setItem('potager-geo',JSON.stringify(g))}catch(e){}window._geoRes=null;wx=null;sheetMode='menu';renderSheet();toast('Lieu enregistré : '+g.name);syncStation(false);syncPushSoon()}
+const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+const isIOS=()=>/iPhone|iPad|iPod/.test(navigator.userAgent)||navigator.maxTouchPoints>1&&/Mac/.test(navigator.userAgent);
+/* lien d'invitation ouvert : on relie tout de suite, et sur iPhone dans Safari on explique comment l'installer */
+setTimeout(()=>{const m=(location.hash||'').match(/join=(POT1\.[\w-]+)/);if(!m)return;const inv=readInvite(m[1]);try{history.replaceState(null,'',location.pathname)}catch(e){}
+  if(!inv)return toast('Invitation illisible');applyInvite(inv);if(isIOS()&&!isStandalone())showInstallGuide(inv,m[1])},300);
+function showInstallGuide(inv,code){const d=document.createElement('div');d.className='invguide';
+  d.innerHTML=`<div class="invcard"><h3>Bienvenue${inv.n?' '+esc(inv.n):''} !</h3><p>Pour avoir l'app sur ton écran d'accueil :</p>
+  <ol><li><button class="btn primary" data-g="copy">Copier mon invitation</button></li><li>Touche <b>Partager</b> en bas de Safari, puis <b>« Sur l'écran d'accueil »</b>.</li><li>Ouvre <b>Potager</b> depuis son icône et touche <b>« Coller l'invitation »</b>.</li></ol>
+  <button class="btn" data-g="close">Continuer ici pour l'instant</button></div>`;
+  d.addEventListener('click',async e=>{const b=e.target.closest('[data-g]');if(!b)return;if(b.dataset.g==='copy'){try{await navigator.clipboard.writeText(APP_URL+'#join='+code);b.textContent='Invitation copiée ✓'}catch(x){toast('Copie impossible')}}else d.remove()});
+  document.body.appendChild(d)}
+function inviteBanner(){if(relayOn()||!isStandalone())return'';try{if(localStorage.getItem('potager-noinv'))return''}catch(e){}
+  return`<div class="tcard invban"><h3>Tu as reçu une invitation ?</h3><span class="note">Colle-la pour retrouver tes potagers en ligne, ta synchro et tes notifications.</span><div class="row"><button class="btn small primary" data-tinv2="paste">Coller l'invitation</button><button class="btn small" data-tinv2="later">Non merci</button></div></div>`}
 addEventListener('visibilitychange',()=>{if(!document.hidden)syncPull()});
 setInterval(()=>{if(!document.hidden)syncPull()},60000);
 setTimeout(()=>syncPull(),700);
@@ -2409,7 +2481,7 @@ setTimeout(()=>syncPull(),700);
 /* ================= Météo vivante sur le plan (jamais en mode édition) ================= */
 const wxPlanOn=()=>{try{return localStorage.getItem('potager-wxplan')!=='off'}catch(e){return true}};
 const liveWx=()=>wxPlanOn()&&!editMode&&!shapeEdit&&tab==='plan'&&!!wx;
-function solarNow(){const d=new Date();return d.getHours()+d.getMinutes()/60+d.getTimezoneOffset()/60+HOME_GEO.lon/15}
+function solarNow(){const d=new Date();return d.getHours()+d.getMinutes()/60+d.getTimezoneOffset()/60+geoOr().lon/15}
 let wxLayerKey='';
 function renderWxLayer(){const el=$('#wxlayer');if(!el)return;
   if(!liveWx()||!wx.cur){el.hidden=true;wxLayerKey='';return}
