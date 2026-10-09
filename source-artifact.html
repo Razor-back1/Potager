@@ -1578,12 +1578,21 @@ function renderSheet(){
     <button class="btn" data-act="geo-here">Utiliser ma position actuelle</button>
     <div class="row" style="flex-wrap:nowrap"><input id="geo-q" placeholder="Commune (ex. Éghezée)" style="flex:1;min-width:0" autocomplete="off"><button class="btn primary" data-act="geo-find">Chercher</button></div>
     ${R?R.length?`<div class="glist">${R.map((g,i)=>`<div class="grow"><span><b>${esc(g.name)}</b><span class="note" style="display:block">${esc([g.admin1,g.country].filter(Boolean).join(', '))}</span></span><button class="btn small" data-act="geo-pick" data-i="${i}">Choisir</button></div>`).join('')}</div>`:'<p class="note">Aucune commune trouvée.</p>':''}</div>`;
+  }else if(sheetMode==='cal'){let nEv=0;try{nEv=notifPlan().ev.filter(e=>e.d>=iso(addD(iso(TODAY),-30))).length}catch(e){}
+    h+=`<div class="stack"><div class="row between"><h3>Calendrier</h3><button class="btn small" data-act="relay-back">Retour</button></div>
+    <p class="note" style="color:var(--ink)">Récoltes prévues, semis à repiquer, semis échelonnés, plantations prévues et fins de délai après traitement, en événements « journée entière » dans le Calendrier.</p>
+    ${relayOn()?`<div class="panel"><b>S'abonner (recommandé)</b><span class="note">Le calendrier « Potager » se met à jour tout seul quand tes potagers changent (iPhone, iPad, Mac). Lien privé : ne le partage pas.</span>
+      <div class="row"><button class="btn primary" data-act="cal-sub">S'abonner dans Calendrier</button><button class="btn small" data-act="cal-copy">Copier le lien</button></div>
+      ${calErr?`<div class="alert"><span>${esc(calErr)}</span></div>`:''}
+      <span class="note">Si rien ne s'ouvre : Réglages › Apps › Calendrier › Comptes › Ajouter un compte › Autre › Ajouter un calendrier avec abonnement, puis colle le lien.</span>
+      <button class="btn small danger" data-act="cal-new">Changer le lien (l'ancien cesse de marcher)</button></div>`:`<p class="note">Relie un relais (Synchronisation) pour un calendrier qui se met à jour tout seul.</p>`}
+    <div class="panel"><b>Télécharger une fois</b><span class="note">Ajoute les ${nEv} dates connues aujourd'hui pour « ${esc(S.name)} ». Elles ne suivront pas les changements.</span><button class="btn" data-act="cal-dl">Télécharger (.ics)</button></div></div>`;
   }else if(sheetMode==='notif'){const ps=pushState(),pr=pushPrefs();
     const tg=(k,l,d)=>`<label class="row between nrow"><span><b>${l}</b><span class="note" style="display:block">${d}</span></span><input type="checkbox" data-np="${k}" ${pr[k]!==false?'checked':''}></label>`;
     h+=`<div class="stack"><div class="row between"><h3>Notifications</h3><button class="btn small" data-act="relay-back">Retour</button></div>
     ${ps.why?`<div class="alert"><span>${ps.why}</span></div>`:''}
     ${ps.on?`<div class="alert okay"><span>Activées sur cet appareil.</span></div>`:ps.can?`<p class="note" style="color:var(--ink)">Ton relais t'envoie un résumé le matin et une alerte gel le soir, même app fermée. Chaque appareil s'active séparément (iPhone, iPad).</p><button class="btn primary" data-act="np-on">Activer sur cet appareil</button>`:''}
-    <div class="nlist">${tg('water','Arrosage','planches sans eau depuis plusieurs jours (pluie comprise)')}${tg('harvest',FLW()?'Floraisons':'Récoltes',FLW()?'quand une fleur commence à fleurir':'quand une culture arrive à maturité')}${tg('care','Entretien des fleurs','tailler, pincer, arracher : les gestes du mois (jardins de fleurs)')}${tg('nursery','Semis','quand des semis sont prêts à repiquer')}${tg('plan','Plantations prévues','le jour prévu dans le planning des planches')}${tg('dar','Traitements','fin du délai avant récolte')}${tg('frost','Gel','alerte vers 18 h si la nuit descend sous 2 °C (−2 °C sous serre)')}${tg('gardena','GARDENA','arrosage automatique lancé ou sauté')}</div>
+    <div class="nlist">${tg('water','Arrosage','planches sans eau depuis plusieurs jours (pluie comprise)')}${tg('harvest',FLW()?'Floraisons':'Récoltes',FLW()?'quand une fleur commence à fleurir':'quand une culture arrive à maturité')}${tg('care','Entretien des fleurs','tailler, pincer, arracher : les gestes du mois (jardins de fleurs)')}${tg('nursery','Semis','quand des semis sont prêts à repiquer')}${tg('resow','Semis échelonnés','quand il est temps de ressemer pour récolter en continu')}${tg('plan','Plantations prévues','le jour prévu dans le planning des planches')}${tg('dar','Traitements','fin du délai avant récolte')}${tg('frost','Gel','alerte vers 18 h si la nuit descend sous 2 °C (−2 °C sous serre)')}${tg('gardena','GARDENA','arrosage automatique lancé ou sauté')}</div>
     <label class="field" style="max-width:220px"><span class="lbl">Résumé du matin à</span><select data-np="hour">${[6,7,8,9,10,12,18].map(x=>`<option value="${x}" ${+(pr.hour||8)===x?'selected':''}>${x} h</option>`).join('')}</select></label>
     ${ps.on?`<div class="row"><button class="btn small" data-act="np-test">Envoyer un test</button><button class="btn small" data-act="np-now">Résumé maintenant</button><button class="btn small danger" data-act="np-off">Désactiver ici</button></div>`:''}
     <p class="note">Le relais vérifie toutes les 30 minutes : il faut le déclencheur Cron <code>*/30 * * * *</code> dans ton Worker (Settings → Trigger events). Les notifications portent sur tes potagers synchronisés, pas sur l'exemple.</p></div>`;
@@ -1602,6 +1611,7 @@ function renderSheet(){
     <div class="row between" style="margin-top:8px"><span class="note" style="color:var(--ink)">Météo vivante sur le plan<br><span class="note">pluie, givre, nuit et ombres à l'heure réelle, coupée en mode édition</span></span><button class="btn small ${wxPlanOn()?'on':''}" data-act="wxplan">${wxPlanOn()?'Activée':'Désactivée'}</button></div></div>
     <div class="row between"><span><span class="lbl">Synchronisation</span><br><span class="note">${relayOn()?'Relais relié : iPhone, iPad… à jour':'Ce potager reste sur cet appareil'}</span></span><button class="btn small" data-act="relay">${relayOn()?'Gérer':'Relier'}</button></div>
     ${relayOn()?`<div class="row between"><span><span class="lbl">Notifications</span><br><span class="note">${pushState().txt}</span></span><button class="btn small" data-act="notif">${pushState().on?'Régler':'Activer'}</button></div>`:''}
+    <div class="row between"><span><span class="lbl">Calendrier</span><br><span class="note">Récoltes, semis et repiquages dans le Calendrier de l'iPhone</span></span><button class="btn small" data-act="cal">Ajouter</button></div>
     ${GDN.get().role==='admin'?`<div class="row between"><span><span class="lbl">Amis</span><br><span class="note">Inviter des amis sur ton relais</span></span><button class="btn small" data-act="friends">Gérer</button></div>`:''}
     <div class="row between"><span><span class="lbl">Lieu du potager</span><br><span class="note">${GEO()?esc(GEO().name||'Position enregistrée'):'Pas encore indiqué (météo de Bruxelles)'}</span></span><button class="btn small" data-act="geo">${GEO()?'Changer':'Indiquer'}</button></div>
     ${GDN.get().role==='user'?'':`<div class="row between"><span><span class="lbl">Arrosage automatique</span><br><span class="note">${GDN.get().demo?'Démo':gLinked()?'GARDENA relié':'GARDENA smart system'}</span></span><button class="btn small" data-act="openauto">${gLinked()?'Ouvrir':'Relier'}</button></div>`}
@@ -1678,6 +1688,17 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
   if(a==='flipflow'&&o){o.rot=(o.rot+180)%360;o.bend=-(+o.bend||0);o.wave=+o.wave||0;save();renderPlan();renderSheet();return toast('Sens du courant inversé',true)}
   if(a==='relay'){sheetMode='relay';renderSheet();return}
   if(a==='notif'){sheetMode='notif';renderSheet();return}
+  if(a==='cal'){calErr=null;sheetMode='cal';renderSheet();return}
+  if(a==='cal-sub'||a==='cal-copy'||a==='cal-new'){
+    if(a==='cal-new'&&!b.classList.contains('armed')){b.classList.add('armed');b.textContent='Confirmer : nouveau lien';return}
+    try{const r=await gReq('/cal'+(a==='cal-new'?'?new=1':''));if(!r||!r.url)throw new Error('Ton relais doit être mis à jour : recopie le code gardena-worker.js dans Cloudflare (Edit code → Deploy).');
+      calErr=null;try{await syncPush(GID)}catch(_){}const w=r.url.replace(/^https?:/,'webcal:');
+      if(a==='cal-sub'){location.href=w;return}
+      try{await navigator.clipboard.writeText(w);toast(a==='cal-new'?'Nouveau lien copié':'Lien copié')}catch(_){prompt('Lien du calendrier',w)}
+      if(a==='cal-new')renderSheet()}catch(x){calErr=x.message;renderSheet()}return}
+  if(a==='cal-dl'){const name='potager.ics',blob=new Blob([icsOf(notifPlan().ev,S.name)],{type:'text/calendar'});
+    if(DL){try{await DL.save({filename:name,data:blob})}catch(err){}return}
+    try{const u=URL.createObjectURL(blob),l=document.createElement('a');l.href=u;l.download=name;document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);toast('Calendrier téléchargé : ouvre-le pour ajouter les dates')}catch(_){toast("Le téléchargement n'a pas abouti")}return}
   if(a==='np-on'){b.disabled=true;b.textContent='Activation…';try{await pushOn();toast('Notifications activées')}catch(x){toast(x.message)}renderSheet();return}
   if(a==='np-off'){try{await pushOff();toast('Notifications désactivées sur cet appareil')}catch(x){toast(x.message)}renderSheet();return}
   if(a==='np-test'){try{await gReq('/push/test','POST',{endpoint:GDN.get().pushEp});toast('Test envoyé')}catch(x){toast(x.message)}return}
@@ -2056,6 +2077,18 @@ const TRANSPLANT0={laitue_h:35,tomate:50,poivron:60,aubergine:60,courgette:25,co
 const TRANSPLANT={...TRANSPLANT0,...Object.fromEntries(FLOWERS.filter(p=>(p.sg||[]).length).map(p=>[p.id,p.t==='bisannuelle'?70:p.t==='tubercule'?35:45]))};
 const readyOf=n=>addD(n.d,TRANSPLANT[n.crop]||30);
 const nurseryActive=()=>(S.nursery||[]).filter(n=>n.st==='cours');
+/* ---- semis échelonnés : ressemer à intervalle régulier pour récolter (ou couper) en continu ---- */
+const SUCC={radis:14,laitue:21,epinard:21,mache:21,haricot:21,pois:21,carotte:30,betterave:30,f_glaieul:15,f_tournesol:15};
+function succession(){const mo=TODAY.getMonth()+1,off=S.succOff||{},last={};
+  plantings().forEach(x=>{if(SUCC[x.p.id]&&(!last[x.p.id]||x.d>last[x.p.id]))last[x.p.id]=x.d});
+  (S.nursery||[]).forEach(n=>{if(SUCC[n.crop]&&n.d&&(!last[n.crop]||n.d>last[n.crop]))last[n.crop]=n.d});
+  const out=[];for(const id in last){const p=P[id];if(!p||!PLANTS.includes(p)||off[id]===YEAR)continue;
+    const ago=days(parse(last[id]),TODAY),int=SUCC[id];if(ago>90||ago<0)continue;
+    const next=addD(last[id],int),nm=next.getMonth()+1,season=[...(p.m||[]),...(p.sg||[])];
+    if(!season.includes(nm)&&!(next<=TODAY&&season.includes(mo)))continue;
+    out.push({p,int,ago,next,left:days(TODAY,next)})}
+  return out.sort((a,b)=>a.left-b.left)}
+function freeZone(){for(const o of plantables())if(!serreOf(o))for(let i=0;i<o.zones.length;i++)if(!o.zones[i].crop)return{o,i};return null}
 const nurseryReady=()=>nurseryActive().filter(n=>readyOf(n)<=TODAY);
 function renderInvHome(){const act=nurseryActive(),rd=nurseryReady(),st=S.stock||[];
   const sc=(l,w)=>{const lo=l.filter(isLow).length;return`${l.length} ${w}${l.length>1?'s':''}${lo?` · <b style="display:inline;font-size:inherit;color:var(--sun)">${lo} à racheter</b>`:''}`};
@@ -2313,6 +2346,11 @@ function renderToday(){
   if(sg.length)semis.push(`<div class="tcard"><h3>À semer en godets ce mois-ci</h3><div class="chips">${sg.map(p=>`<span class="chip">${ci((p).id)}${p.n}${hasSeeds(p.id)?' <span class="mono note">· graines ✓</span>':''}</span>`).join('')}</div></div>`);
   /* stock et saison */
   const gen=[];
+  const sc=succession().filter(x=>x.left<=7);
+  if(sc.length){const fz=freeZone(),due=sc.filter(x=>x.left<=0).length;nAct+=due;
+    gen.push(`<div class="tcard"><h3>Semis échelonnés${due?` <span class="n">${due}</span>`:''}</h3>${sc.map(x=>row(ci(x.p.id,.5,'mid'),x.p.n,'semé il y a '+x.ago+' j · tous les '+x.int+' j',x.left<=0?'<span class="due ready">à ressemer</span>':'<span class="due">dans<br>'+x.left+' j</span>',fz?`data-open="${fz.o.id}" data-zi="${fz.i}"`:'data-tgo="crops"')).join('')}
+    <span class="note">${fz?'Place libre : '+esc(fullName(fz.o))+', zone '+(fz.i+1)+'. Touche une ligne pour y semer.':'Aucune place libre en plein air : libère une zone ou ajoute une planche.'}</span>
+    <div class="row">${sc.map(x=>`<button class="btn small" data-succoff="${x.p.id}">Assez ${/^[aeiouyéèêâîh]/i.test(x.p.n)?'d\'':'de '}${esc(x.p.n.toLowerCase())}</button>`).join('')}</div></div>`)}
   if(lows.length)gen.push(`<div class="tcard"><h3>À racheter <span class="n">${lows.length}</span></h3><div class="chips">${lows.map(p=>`<span class="chip">${seedLabel(p)} · ${fq(stockOf(p),p.unit)}</span>`).join('')}</div><div class="row">${lows.some(p=>p.cat==='graine')?'<button class="btn small" data-tinv="graines">Graines</button>':''}${lows.some(p=>p.cat!=='graine')?'<button class="btn small" data-tinv="produits">Produits</button>':''}</div></div>`);
   const sow=PLANTS.filter(p=>p.m.includes(mo));
   gen.push(`<div class="tcard"><h3>À semer ou planter en place ce mois-ci</h3><div class="chips">${sow.map(p=>`<span class="chip">${ci((p).id)}${p.n}${hasSeeds(p.id)?' <span class="mono note">· graines ✓</span>':''}</span>`).join('')||'<span class="note">Rien ce mois-ci.</span>'}</div><button class="btn small" data-tgo="crops" style="justify-self:start">Voir les cultures</button></div>`);
@@ -2339,6 +2377,7 @@ function renderToday(){
   ${sec('Stock et saison','<path d="M4 8l8-4 8 4v10l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v10"/>',gen,0,'gen')}
   ${!secs.length?'<p class="note">Rien à faire sur les planches ni dans la serre.</p>':''}</div>`}
 $('#v-today').addEventListener('click',async e=>{if(swipedAt&&Date.now()-swipedAt<400){e.preventDefault();return}
+  const so=e.target.closest('[data-succoff]');if(so){S.succOff=S.succOff||{};S.succOff[so.dataset.succoff]=YEAR;save();renderToday();return toast('Plus de rappel pour cette saison')}
   const iv=e.target.closest('[data-tinv2]');if(iv){if(iv.dataset.tinv2==='later'){try{localStorage.setItem('potager-noinv','1')}catch(_){}return renderToday()}
     let txt='';try{txt=await navigator.clipboard.readText()}catch(_){}let inv=readInvite(txt);if(!inv){txt=prompt('Colle ici l\'invitation reçue');inv=readInvite(txt)}if(!inv)return toast('Invitation illisible');return applyInvite(inv)}const tj=e.target.closest('[data-tj]');if(tj){const el=document.getElementById('ts-'+tj.dataset.tj);if(el)el.scrollIntoView({block:'start',behavior:'smooth'});return}const t=e.target.closest('[data-tw],[data-train],[data-tinv],[data-tgo],[data-open]');if(!t)return;
   if(t.dataset.tw){const o=obj(t.dataset.tw);o.journal=o.journal||[];o.journal.push({id:uid(),k:'arrosage',d:iso(TODAY),t:''});save();renderToday();return toast('Arrosage noté',true)}
@@ -2763,9 +2802,16 @@ function notifPlan(){const ev=[],seen=new Set(),add=(k,d,txt)=>{const id=k+':'+d
   plantables().forEach(o=>{const bu=blockUntil(o);if(bu)add('dar',iso(bu),`Fin du délai après traitement : ${fullName(o)}`);
     o.zones.forEach(z=>(z.next||[]).forEach(n=>{if(n.date&&P[n.crop])add('plan',n.date,`À planter : ${P[n.crop].n} (${fullName(o)})`)}))});
   nurseryActive().forEach(n=>{if(P[n.crop])add('nursery',iso(readyOf(n)),`Semis de ${P[n.crop].n.toLowerCase()} prêts à repiquer`)});
+  succession().forEach(x=>add('resow',iso(x.next),`Ressemer : ${x.p.n.toLowerCase()} (tous les ${x.int} j)`));
   const water=plantables().filter(isPlanted).map(o=>{const m=(o.journal||[]).filter(x=>x.k==='arrosage').map(x=>x.d).sort().pop()||null,r=serreOf(o)?null:(S.rain||[]).filter(x=>x.mm==null||x.mm>=RAIN_MIN).map(x=>x.d).sort().pop()||null;return{name:fullName(o),serre:!!serreOf(o),last:[m,r].filter(Boolean).sort().pop()||null}});
   const frost=[];plantables().forEach(o=>o.zones.forEach(z=>{if(z.crop&&FROST_SENSITIVE.has(z.crop)&&Object.keys(z.cells).length)frost.push({crop:P[z.crop].n.toLowerCase(),name:fullName(o),serre:!!serreOf(o)})}));
   return{ev,water,frost,geo:geoOr(),at:Date.now()}}
+let calErr=null;
+function icsOf(ev,name){const esc2=t=>String(t).replace(/\\/g,'\\\\').replace(/\n/g,'\\n').replace(/([,;])/g,'\\$1'),dd=d=>d.replace(/-/g,''),from=iso(addD(iso(TODAY),-30));
+  const fold=l=>{const out=[];let cur='';for(const ch of l){if(new TextEncoder().encode(cur+ch).length>73){out.push(cur);cur=' '+ch}else cur+=ch}out.push(cur);return out.join('\r\n')};
+  const st=new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z',L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Atelier Potager//FR','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:'+esc2(name||'Potager')];
+  ev.filter(e=>/^\d{4}-\d{2}-\d{2}$/.test(e.d)&&e.d>=from).forEach((e,i)=>L.push('BEGIN:VEVENT','UID:'+dd(e.d)+'-'+i+'-'+Date.now().toString(36)+'@atelier-potager','DTSTAMP:'+st,'DTSTART;VALUE=DATE:'+dd(e.d),'DTEND;VALUE=DATE:'+dd(iso(addD(e.d,1))),fold('SUMMARY:'+esc2(e.txt)),'TRANSP:TRANSPARENT','END:VEVENT'));
+  L.push('END:VCALENDAR');return L.join('\r\n')+'\r\n'}
 /* les photos partent à part sur le relais : le potager reste léger */
 async function offloadPhotos(){let n=0;for(const o of allObjs())for(const e of (o.journal||[])){if(e.ph&&e.ph.u&&!e.ph.r){try{const r=await gReq('/photo','POST',{data:e.ph.u});e.ph={r:r.url};n++}catch(x){return n}}}if(n)save(true);return n}
 async function syncPush(id){if(!relayOn())return;if(id===GID&&allObjs().some(o=>(o.journal||[]).some(e=>e.ph&&e.ph.u))){if(await offloadPhotos())return}const at=localAtOf(id),j=stateOf(id);if(!at||!j)return;

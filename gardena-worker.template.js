@@ -2,6 +2,7 @@
 // ------------------------------------------------------------------
 // Ce relais tourne en permanence chez Cloudflare (offre gratuite). Il :
 //   0. synchronise les potagers entre appareils, pour toi et les amis que tu invites (base D1) ;
+//      et publie un calendrier (semis, récoltes, repiquages) auquel l'iPhone peut s'abonner ;
 //   1. garde ta clé GARDENA en secret (elle n'est jamais dans l'app) ;
 //   2. lit l'état des vannes, sondes et prises pour l'app ;
 //   3. ouvre ou ferme une vanne quand l'app le demande (arrosage manuel avec minuteur) ;
@@ -306,6 +307,29 @@ async function runNotify(env) {
   for (const r of (await env.DB.prepare('SELECT DISTINCT uid FROM subs').all()).results) { try { await notifyUser(env, r.uid) } catch (e) { } }
 }
 
+/* ---------- calendrier : abonnement iPhone / iPad (se met à jour tout seul) ---------- */
+const icsEsc = t => String(t).replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/([,;])/g, '\\$1');
+const icsFold = l => { const enc = new TextEncoder(), out = []; let cur = ''; for (const ch of l) { if (enc.encode(cur + ch).length > 73) { out.push(cur); cur = ' ' + ch } else cur += ch } out.push(cur); return out.join('\r\n') };
+const icsDay = d => d.replace(/-/g, '');
+const icsNext = d => new Date(Date.parse(d + 'T12:00:00Z') + 864e5).toISOString().slice(0, 10).replace(/-/g, '');
+const icsHash = t => { let h = 5381; for (const c of t) h = ((h * 33) ^ c.charCodeAt(0)) >>> 0; return h.toString(36) };
+const ICS_KIND = { harvest: 'Récolte', care: 'Entretien', dar: 'Traitement', plan: 'Plantation', nursery: 'Repiquage', resow: 'Semis' };
+async function calIcs(env, uid) {
+  const rows = (await env.DB.prepare('SELECT id,name,plan FROM gardens WHERE uid=? AND del=0 AND ex=0 AND plan IS NOT NULL').bind(uid).all()).results;
+  const today = localDay(), multi = rows.length > 1, stamp = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
+  const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Atelier Potager//FR', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:Potager', 'X-WR-TIMEZONE:Europe/Brussels', 'REFRESH-INTERVAL;VALUE=DURATION:PT6H', 'X-PUBLISHED-TTL:PT6H'];
+  for (const r of rows) {
+    let p; try { p = JSON.parse(r.plan) } catch (e) { continue }
+    for (const e of (p.ev || [])) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(e.d || '')) continue;
+      const age = dayDiff(e.d, today); if (age > 60 || age < -400) continue;
+      L.push('BEGIN:VEVENT', 'UID:' + icsHash(r.id + '|' + e.id) + '-' + icsDay(e.d) + '@atelier-potager', 'DTSTAMP:' + stamp, 'DTSTART;VALUE=DATE:' + icsDay(e.d), 'DTEND;VALUE=DATE:' + icsNext(e.d),
+        icsFold('SUMMARY:' + icsEsc((multi ? r.name + ' · ' : '') + e.txt)), icsFold('CATEGORIES:' + icsEsc(ICS_KIND[e.k] || 'Potager')), 'TRANSP:TRANSPARENT', 'END:VEVENT');
+    }
+  }
+  L.push('END:VCALENDAR'); return L.join('\r\n') + '\r\n';
+}
+
 /* ---------- requêtes de l'app ---------- */
 const gid = url => (url.searchParams.get('id') || '').replace(/[^\w-]/g, '').slice(0, 40);
 const ADMIN_ONLY = new Set(['/status', '/water', '/stop', '/config', '/run', '/admin/users', '/admin/invite', '/admin/remove']);
@@ -322,6 +346,13 @@ export default {
         if (!r) return new Response('Photo introuvable', { status: 404, headers: CORS });
         const m = /^data:([^;]+);base64,(.*)$/.exec(r.data); if (!m) return new Response('Photo illisible', { status: 500, headers: CORS });
         return new Response(Uint8Array.from(atob(m[2]), c => c.charCodeAt(0)), { headers: { ...CORS, 'Content-Type': m[1], 'Cache-Control': 'public, max-age=31536000, immutable' } });
+      }
+      /* calendrier : lien secret propre à chaque compte, lu par l'app Calendrier sans code d'accès */
+      const cm = /^\/cal\/([a-z0-9]{16,40})\.ics$/.exec(url.pathname);
+      if (cm) {
+        const r = await env.DB.prepare("SELECT uid FROM meta WHERE k='cal' AND v=?").bind(JSON.stringify(cm[1])).first();
+        if (!r) return new Response('Calendrier introuvable', { status: 404, headers: CORS });
+        return new Response(await calIcs(env, r.uid), { headers: { ...CORS, 'Content-Type': 'text/calendar; charset=utf-8', 'Cache-Control': 'no-cache' } });
       }
       const me = await who(env, req);
       if (!me) return J({ error: 'Code d\'accès refusé.' }, 401);
@@ -354,6 +385,11 @@ export default {
           if (d.length > 1800000) return J({ error: 'Photo trop lourde.' }, 413);
           const id = rid(22); await env.DB.prepare('INSERT INTO photos(id,uid,data,at) VALUES(?,?,?,?)').bind(id, uid, d, Date.now()).run();
           return J({ id, url: url.origin + '/p/' + id });
+        }
+        case '/cal': {
+          let t = await metaGet(env, uid, 'cal');
+          if (!t || url.searchParams.get('new')) { t = rid(24); await metaSet(env, uid, 'cal', t) }
+          return J({ token: t, url: url.origin + '/cal/' + t + '.ics' });
         }
         case '/push/key': return J({ key: (await vapid(env)).pub });
         case '/push/subscribe': {
