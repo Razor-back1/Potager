@@ -148,6 +148,11 @@ main{position:relative;min-height:0;overflow:hidden}
 .wxbits span{font-size:12.5px;padding:3px 9px;border-radius:99px;background:var(--glass);font-family:var(--f-mono)}
 .wxbits .wfrost{background:var(--frost);color:#fff;font-weight:600}
 .glist{display:grid;margin-top:6px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.bloomcal{display:grid;gap:2px;border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:8px 10px;overflow-x:auto}
+.bch,.bcr{display:grid;grid-template-columns:minmax(110px,1.4fr) repeat(12,minmax(14px,1fr));gap:2px;align-items:center}
+.bch span{font-size:11px;color:var(--muted);text-align:center}.bch span.now{color:var(--ink);font-weight:700}
+.bcr .bn{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bcr .bn .ci{width:20px;height:20px;flex:none}
+.bcr span:not(.bn){height:16px;display:grid;border-radius:3px}.bcr span.now{background:var(--surface-2)}.bcr i{display:block;border-radius:3px;margin:2px 0}
 .invguide{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.45);display:grid;place-items:end center;padding:16px 16px max(env(safe-area-inset-bottom),16px)}
 .invcard{background:var(--surface);color:var(--ink);border-radius:20px;padding:18px;display:grid;gap:10px;max-width:440px;width:100%}
 .invcard ol{margin:0;padding-left:20px;display:grid;gap:10px}
@@ -532,7 +537,7 @@ table.cmp tr:last-child td{border-bottom:0}
 <script>
 /* ================= Données cultures ================= */
 /* m : mois de semis direct ou de plantation en place · sg : mois de semis en godets (à l'abri) */
-const PLANTS=[
+const VEG_PLANTS=[
  {id:'tomate',n:'Tomate',f:'Solanacées',c:'#d64b3a',rang:60,pl:50,j:80,m:[5,6],sg:[2,3,4]},
  {id:'pdt',n:'Pomme de terre',f:'Solanacées',c:'#b8925a',rang:60,pl:35,j:100,m:[3,4,5],sg:[]},
  {id:'poivron',n:'Poivron',f:'Solanacées',c:'#e0a020',rang:50,pl:40,j:90,m:[5,6],sg:[2,3]},
@@ -562,7 +567,102 @@ const PLANTS=[
  {id:'fraise',n:'Fraisier',f:'Rosacées',c:'#c8303a',rang:40,pl:30,j:300,m:[3,4,8,9],sg:[]},
  {id:'mache',n:'Mâche',f:'Valérianacées',c:'#6aa04a',rang:15,pl:8,j:70,m:[8,9,10],sg:[]},
 ];
-const P=Object.fromEntries(PLANTS.map(p=>[p.id,p]));
+/* ================= Fleurs d'ornement (jardins de type « fleurs ») =================
+   t : type · m : plantation ou semis en place · sg : semis sous abri · fl : mois de floraison
+   j : jours avant la 1re floraison (semis ou plantation) · ht : hauteur (cm) · hardy : rusticité (°C)
+   sun : heures de soleil souhaitées · cut : fleur à couper · lift : mois d'arrachage ou de rentrée
+   care : gestes du mois. Valeurs indicatives pour un climat belge. */
+const FL_CARE_DEADHEAD={m:[7,8,9],t:'Couper les fleurs fanées pour prolonger la floraison'};
+const FLOWERS=[
+ /* annuelles */
+ {id:'f_cosmos',n:'Cosmos',f:'Astéracées',t:'annuelle',c:'#e86fa8',rang:40,pl:30,j:90,m:[5,6],sg:[3,4],fl:[7,8,9,10],ht:120,hardy:0,sun:6,cut:1,cols:'rose, blanc, pourpre',care:[{m:[6],t:'Pincer les jeunes plants pour les faire ramifier'},FL_CARE_DEADHEAD]},
+ {id:'f_zinnia',n:'Zinnia',f:'Astéracées',t:'annuelle',c:'#f06b3b',rang:30,pl:25,j:80,m:[5,6],sg:[4],fl:[7,8,9],ht:70,hardy:2,sun:6,cut:1,cols:'toutes sauf bleu',care:[{m:[6],t:'Pincer au-dessus de la 3e paire de feuilles'},FL_CARE_DEADHEAD]},
+ {id:'f_souci',n:'Souci',f:'Astéracées',t:'annuelle',c:'#f5a623',rang:30,pl:25,j:60,m:[3,4,5,9],sg:[],fl:[6,7,8,9,10],ht:40,hardy:-10,sun:5,cut:1,cols:'orange, jaune',care:[FL_CARE_DEADHEAD]},
+ {id:'f_capucine',n:'Capucine',f:'Tropaéolacées',t:'annuelle',c:'#f2742c',rang:40,pl:30,j:60,m:[5,6],sg:[4],fl:[7,8,9,10],ht:30,hardy:0,sun:5,cut:0,cols:'orange, rouge, jaune',care:[{m:[5,6],t:'Sol pauvre : pas d\'engrais, sinon que des feuilles'}]},
+ {id:'f_tournesol',n:'Tournesol',f:'Astéracées',t:'annuelle',c:'#f5c518',rang:50,pl:40,j:80,m:[4,5,6],sg:[4],fl:[7,8,9],ht:200,hardy:0,sun:7,cut:1,cols:'jaune, bronze',care:[{m:[6,7],t:'Tuteurer les grandes variétés'}]},
+ {id:'f_pois_senteur',n:'Pois de senteur',f:'Fabacées',t:'annuelle',c:'#c58bd8',rang:30,pl:15,j:90,m:[3,4],sg:[2,3],fl:[6,7,8],ht:180,hardy:-5,sun:6,cut:1,cols:'mauve, rose, blanc',care:[{m:[4,5],t:'Palisser sur un grillage ou des rames'},{m:[6,7,8],t:'Cueillir souvent : plus on coupe, plus il fleurit'}]},
+ {id:'f_nigelle',n:'Nigelle de Damas',f:'Renonculacées',t:'annuelle',c:'#6a8fd8',rang:25,pl:20,j:80,m:[3,4,9],sg:[],fl:[6,7,8],ht:45,hardy:-10,sun:6,cut:1,cols:'bleu, blanc, rose',care:[{m:[8],t:'Laisser quelques capsules : elle se ressème seule'}]},
+ {id:'f_bleuet',n:'Bleuet',f:'Astéracées',t:'annuelle',c:'#4a6fd8',rang:25,pl:20,j:70,m:[3,4,9],sg:[],fl:[6,7,8],ht:70,hardy:-15,sun:6,cut:1,cols:'bleu, rose, blanc',care:[FL_CARE_DEADHEAD]},
+ {id:'f_pavot_cal',n:'Pavot de Californie',f:'Papavéracées',t:'annuelle',c:'#f39a1e',rang:25,pl:20,j:70,m:[3,4,5],sg:[],fl:[6,7,8,9],ht:30,hardy:-10,sun:7,cut:0,cols:'orange, jaune, crème',care:[{m:[3,4],t:'Semer en place : il supporte mal le repiquage'}]},
+ {id:'f_tagete',n:'Œillet d\'Inde',f:'Astéracées',t:'annuelle',c:'#f0a91c',rang:30,pl:25,j:70,m:[5,6],sg:[3,4],fl:[6,7,8,9,10],ht:30,hardy:1,sun:6,cut:0,cols:'orange, jaune, acajou',care:[FL_CARE_DEADHEAD]},
+ {id:'f_muflier',n:'Muflier',f:'Plantaginacées',t:'annuelle',c:'#e0507a',rang:30,pl:25,j:100,m:[4,5],sg:[2,3],fl:[6,7,8,9],ht:60,hardy:-5,sun:6,cut:1,cols:'toutes',care:[{m:[5],t:'Pincer pour avoir plus de tiges'},FL_CARE_DEADHEAD]},
+ {id:'f_reine_marg',n:'Reine-marguerite',f:'Astéracées',t:'annuelle',c:'#9b5fc0',rang:30,pl:25,j:110,m:[5],sg:[3,4],fl:[8,9,10],ht:60,hardy:0,sun:6,cut:1,cols:'violet, rose, blanc',care:[{m:[5],t:'Changer d\'emplacement chaque année (fusariose)'}]},
+ {id:'f_ammi',n:'Ammi',f:'Apiacées',t:'annuelle',c:'#ece8d2',rang:40,pl:30,j:90,m:[3,4,9],sg:[3],fl:[6,7,8],ht:100,hardy:-10,sun:6,cut:1,cols:'blanc',care:[{m:[5,6],t:'Tuteurer légèrement'}]},
+ {id:'f_petunia',n:'Pétunia',f:'Solanacées',t:'annuelle',c:'#c0389a',rang:30,pl:25,j:80,m:[5,6],sg:[2,3],fl:[6,7,8,9,10],ht:30,hardy:2,sun:6,cut:0,cols:'toutes',care:[FL_CARE_DEADHEAD]},
+ {id:'f_impatiens',n:'Impatiens',f:'Balsaminacées',t:'annuelle',c:'#ee5b7c',rang:25,pl:25,j:80,m:[5,6],sg:[2,3],fl:[6,7,8,9],ht:30,hardy:3,sun:2,cut:0,cols:'rose, rouge, blanc',care:[{m:[6,7,8],t:'Arroser régulièrement, il craint le sec'}]},
+ {id:'f_lavatere',n:'Lavatère',f:'Malvacées',t:'annuelle',c:'#e58fb2',rang:50,pl:40,j:80,m:[4,5],sg:[],fl:[7,8,9],ht:100,hardy:0,sun:6,cut:1,cols:'rose, blanc',care:[FL_CARE_DEADHEAD]},
+ {id:'f_scabieuse',n:'Scabieuse',f:'Caprifoliacées',t:'annuelle',c:'#8d6cc6',rang:30,pl:30,j:90,m:[4,5],sg:[3],fl:[7,8,9],ht:80,hardy:-10,sun:6,cut:1,cols:'bordeaux, mauve, blanc',care:[FL_CARE_DEADHEAD]},
+ {id:'f_pelargonium',n:'Géranium des balcons',f:'Géraniacées',t:'annuelle',c:'#e33b4b',rang:30,pl:30,j:60,m:[5],sg:[1,2],fl:[5,6,7,8,9,10],ht:35,hardy:2,sun:6,cut:0,lift:[10],cols:'rouge, rose, blanc',care:[FL_CARE_DEADHEAD,{m:[10],t:'Rentrer les pieds hors gel avant les premières gelées'}]},
+ /* bisannuelles */
+ {id:'f_digitale',n:'Digitale',f:'Plantaginacées',t:'bisannuelle',c:'#c86fb0',rang:40,pl:40,j:300,m:[9,10],sg:[5,6],fl:[6,7],ht:120,hardy:-20,sun:3,cut:1,cols:'pourpre, blanc, abricot',care:[{m:[7],t:'Laisser monter quelques hampes en graines ; plante toxique'}]},
+ {id:'f_myosotis',n:'Myosotis',f:'Boraginacées',t:'bisannuelle',c:'#7fa6e8',rang:20,pl:20,j:220,m:[9,10],sg:[6,7],fl:[4,5],ht:25,hardy:-20,sun:4,cut:0,cols:'bleu, rose, blanc',care:[{m:[6],t:'Arracher après floraison, il se ressème seul'}]},
+ {id:'f_pensee',n:'Pensée',f:'Violacées',t:'bisannuelle',c:'#7b4fc2',rang:20,pl:20,j:120,m:[3,4,9,10],sg:[6,7],fl:[3,4,5,6,10,11],ht:20,hardy:-15,sun:4,cut:0,cols:'toutes',care:[{m:[4,5,10],t:'Couper les fleurs fanées'}]},
+ {id:'f_rose_tremiere',n:'Rose trémière',f:'Malvacées',t:'bisannuelle',c:'#d9547a',rang:50,pl:50,j:330,m:[4,5,9],sg:[5,6],fl:[7,8,9],ht:220,hardy:-20,sun:6,cut:0,cols:'rose, rouge, noir, jaune',care:[{m:[6,7,8],t:'Retirer les feuilles tachées de rouille'},{m:[6],t:'Tuteurer contre un mur'}]},
+ {id:'f_giroflee',n:'Giroflée',f:'Brassicacées',t:'bisannuelle',c:'#e3943a',rang:30,pl:30,j:240,m:[9,10],sg:[5,6],fl:[4,5],ht:45,hardy:-15,sun:6,cut:1,cols:'orange, pourpre, jaune',care:[]},
+ /* vivaces */
+ {id:'f_lavande',n:'Lavande',f:'Lamiacées',t:'vivace',c:'#8f7ad6',rang:60,pl:50,j:90,m:[3,4,5,9,10],sg:[],fl:[6,7,8],ht:60,hardy:-15,sun:8,cut:1,cols:'bleu-violet, blanc, rose',care:[{m:[8,9],t:'Tailler juste après la floraison, sans couper dans le vieux bois'}]},
+ {id:'f_echinacea',n:'Échinacée',f:'Astéracées',t:'vivace',c:'#d4629a',rang:50,pl:45,j:120,m:[3,4,5,9,10],sg:[],fl:[7,8,9],ht:90,hardy:-25,sun:6,cut:1,cols:'rose, blanc, orange',care:[{m:[11],t:'Laisser les têtes sèches en hiver pour les oiseaux'}]},
+ {id:'f_rudbeckia',n:'Rudbeckia',f:'Astéracées',t:'vivace',c:'#f2b31b',rang:50,pl:45,j:120,m:[3,4,5,9,10],sg:[],fl:[7,8,9,10],ht:70,hardy:-25,sun:6,cut:1,cols:'jaune d\'or',care:[{m:[3],t:'Rabattre les tiges sèches au ras du sol'}]},
+ {id:'f_achillee',n:'Achillée',f:'Astéracées',t:'vivace',c:'#e9c46a',rang:40,pl:40,j:120,m:[3,4,9,10],sg:[],fl:[6,7,8,9],ht:70,hardy:-25,sun:6,cut:1,cols:'jaune, rose, rouge, blanc',care:[FL_CARE_DEADHEAD]},
+ {id:'f_sauge',n:'Sauge des bois',f:'Lamiacées',t:'vivace',c:'#6b4fbf',rang:40,pl:40,j:100,m:[3,4,9,10],sg:[],fl:[5,6,7,8,9],ht:50,hardy:-25,sun:6,cut:0,cols:'violet, bleu, rose',care:[{m:[7],t:'Rabattre après la 1re floraison pour une 2e en fin d\'été'}]},
+ {id:'f_geranium',n:'Géranium vivace',f:'Géraniacées',t:'vivace',c:'#8a7ad6',rang:40,pl:40,j:90,m:[3,4,9,10],sg:[],fl:[5,6,7,8],ht:40,hardy:-25,sun:4,cut:0,cols:'bleu, rose, blanc',care:[{m:[7],t:'Rabattre au ras pour une remontée et un feuillage neuf'}]},
+ {id:'f_hemerocalle',n:'Hémérocalle',f:'Asphodélacées',t:'vivace',c:'#ec8a2f',rang:50,pl:50,j:120,m:[3,4,9,10],sg:[],fl:[6,7,8],ht:70,hardy:-25,sun:6,cut:0,cols:'orange, jaune, rouge',care:[{m:[9],t:'Diviser les touffes tous les 4 ans'}]},
+ {id:'f_pivoine',n:'Pivoine',f:'Paeoniacées',t:'vivace',c:'#e46a92',rang:90,pl:90,j:365,m:[9,10,11],sg:[],fl:[5,6],ht:80,hardy:-30,sun:6,cut:1,cols:'rose, blanc, rouge',care:[{m:[4],t:'Tuteurer avant que les boutons ne s\'ouvrent'},{m:[10],t:'Planter peu profond : les yeux à 3 cm sous terre'}]},
+ {id:'f_delphinium',n:'Delphinium',f:'Renonculacées',t:'vivace',c:'#4f6fe0',rang:60,pl:50,j:120,m:[3,4,9],sg:[],fl:[6,7],ht:150,hardy:-25,sun:6,cut:1,cols:'bleu, violet, blanc',care:[{m:[4,5],t:'Protéger les jeunes pousses des limaces'},{m:[5],t:'Tuteurer'}]},
+ {id:'f_lupin',n:'Lupin',f:'Fabacées',t:'vivace',c:'#9a6fd0',rang:50,pl:45,j:120,m:[3,4,9],sg:[3],fl:[5,6],ht:100,hardy:-25,sun:6,cut:0,cols:'toutes',care:[{m:[6],t:'Couper les épis fanés avant les graines'}]},
+ {id:'f_aster',n:'Aster d\'automne',f:'Astéracées',t:'vivace',c:'#9c7fe0',rang:50,pl:50,j:120,m:[3,4,9,10],sg:[],fl:[9,10],ht:100,hardy:-25,sun:6,cut:1,cols:'mauve, rose, blanc',care:[{m:[6],t:'Pincer pour des touffes plus denses'},{m:[8,9],t:'Surveiller l\'oïdium'}]},
+ {id:'f_phlox',n:'Phlox paniculé',f:'Polémoniacées',t:'vivace',c:'#e48ac0',rang:50,pl:50,j:120,m:[3,4,9,10],sg:[],fl:[7,8,9],ht:90,hardy:-25,sun:5,cut:1,cols:'rose, mauve, blanc',care:[{m:[6,7,8],t:'Arroser au pied, il craint l\'oïdium'}]},
+ {id:'f_nepeta',n:'Népéta',f:'Lamiacées',t:'vivace',c:'#9aa0e0',rang:40,pl:40,j:90,m:[3,4,9,10],sg:[],fl:[5,6,7,8,9],ht:40,hardy:-25,sun:6,cut:0,cols:'bleu lavande',care:[{m:[7],t:'Rabattre de moitié après la 1re floraison'}]},
+ {id:'f_alchemille',n:'Alchémille',f:'Rosacées',t:'vivace',c:'#c8d75a',rang:40,pl:40,j:90,m:[3,4,9,10],sg:[],fl:[6,7,8],ht:40,hardy:-25,sun:3,cut:1,cols:'vert acide',care:[{m:[8],t:'Couper les fleurs avant les graines (elle se ressème beaucoup)'}]},
+ {id:'f_hosta',n:'Hosta',f:'Asparagacées',t:'vivace',c:'#a9c48f',rang:50,pl:50,j:120,m:[3,4,9,10],sg:[],fl:[7,8],ht:50,hardy:-30,sun:2,cut:0,cols:'feuillage, fleurs mauves',care:[{m:[4,5],t:'Protéger les jeunes feuilles des limaces'}]},
+ {id:'f_coreopsis',n:'Coréopsis',f:'Astéracées',t:'vivace',c:'#f4c430',rang:40,pl:40,j:100,m:[3,4,5,9],sg:[],fl:[6,7,8,9],ht:50,hardy:-20,sun:6,cut:1,cols:'jaune',care:[FL_CARE_DEADHEAD]},
+ {id:'f_gaura',n:'Gaura',f:'Onagracées',t:'vivace',c:'#f0cfe0',rang:50,pl:50,j:100,m:[4,5],sg:[],fl:[6,7,8,9,10],ht:90,hardy:-12,sun:6,cut:0,cols:'blanc rosé',care:[{m:[4],t:'Sol bien drainé : craint l\'humidité en hiver'}]},
+ {id:'f_rosier',n:'Rosier',f:'Rosacées',t:'arbuste',c:'#d93a5a',rang:80,pl:70,j:120,m:[1,2,3,11,12],sg:[],fl:[6,7,8,9],ht:120,hardy:-20,sun:6,cut:1,cols:'toutes',care:[{m:[3],t:'Taille de printemps, quand les forsythias fleurissent'},{m:[6,7,8,9],t:'Couper les fleurs fanées au-dessus d\'une feuille à 5 folioles'}]},
+ /* bulbes de printemps (rustiques) */
+ {id:'f_tulipe',n:'Tulipe',f:'Liliacées',t:'bulbe',c:'#e5384b',rang:15,pl:12,j:180,m:[10,11],sg:[],fl:[4,5],ht:45,hardy:-25,sun:6,cut:1,cols:'toutes',care:[{m:[5,6],t:'Laisser jaunir le feuillage avant de le couper'}]},
+ {id:'f_narcisse',n:'Narcisse',f:'Amaryllidacées',t:'bulbe',c:'#f6d32b',rang:15,pl:12,j:170,m:[9,10,11],sg:[],fl:[3,4],ht:35,hardy:-25,sun:5,cut:1,cols:'jaune, blanc',care:[{m:[5],t:'Ne pas couper les feuilles avant qu\'elles jaunissent'}]},
+ {id:'f_crocus',n:'Crocus',f:'Iridacées',t:'bulbe',c:'#9d6ad8',rang:10,pl:8,j:150,m:[9,10,11],sg:[],fl:[2,3],ht:10,hardy:-25,sun:5,cut:0,cols:'mauve, jaune, blanc',care:[]},
+ {id:'f_jacinthe',n:'Jacinthe',f:'Asparagacées',t:'bulbe',c:'#5c7fe0',rang:15,pl:15,j:170,m:[10,11],sg:[],fl:[4],ht:25,hardy:-20,sun:5,cut:1,cols:'bleu, rose, blanc',care:[]},
+ {id:'f_allium',n:'Allium',f:'Amaryllidacées',t:'bulbe',c:'#a46bd6',rang:25,pl:20,j:220,m:[9,10,11],sg:[],fl:[5,6],ht:90,hardy:-20,sun:6,cut:1,cols:'violet, blanc',care:[{m:[7],t:'Laisser sécher les têtes : elles restent décoratives'}]},
+ {id:'f_lis',n:'Lis',f:'Liliacées',t:'bulbe',c:'#f08aa0',rang:25,pl:20,j:110,m:[3,4,10,11],sg:[],fl:[6,7,8],ht:100,hardy:-20,sun:6,cut:1,cols:'blanc, rose, orange',care:[{m:[5,6,7],t:'Criocère : ramasser les petits coléoptères rouges'}]},
+ /* bulbes et tubercules d'été (à arracher avant l'hiver) */
+ {id:'f_dahlia',n:'Dahlia',f:'Astéracées',t:'tubercule',c:'#e0457b',rang:70,pl:60,j:100,m:[5,6],sg:[3,4],fl:[7,8,9,10],ht:120,hardy:0,sun:6,cut:1,lift:[10,11],cols:'toutes sauf bleu',care:[{m:[6],t:'Pincer au-dessus de la 3e paire de feuilles'},{m:[6,7],t:'Tuteurer'},FL_CARE_DEADHEAD,{m:[10,11],t:'Arracher les tubercules après le 1er gel et les stocker hors gel'}]},
+ {id:'f_glaieul',n:'Glaïeul',f:'Iridacées',t:'tubercule',c:'#ef6a4a',rang:20,pl:15,j:100,m:[4,5,6],sg:[],fl:[7,8,9],ht:120,hardy:-5,sun:6,cut:1,lift:[10],cols:'toutes',care:[{m:[7],t:'Tuteurer les hampes'},{m:[10],t:'Arracher les bulbes, sécher et stocker au sec'}]},
+ {id:'f_canna',n:'Canna',f:'Cannacées',t:'tubercule',c:'#e2421f',rang:60,pl:50,j:110,m:[5,6],sg:[3,4],fl:[7,8,9,10],ht:150,hardy:0,sun:7,cut:0,lift:[10,11],cols:'rouge, orange, jaune',care:[{m:[10,11],t:'Arracher les rhizomes après le 1er gel, stocker hors gel'}]},
+ {id:'f_anemone',n:'Anémone de Caen',f:'Renonculacées',t:'tubercule',c:'#c9345e',rang:15,pl:10,j:100,m:[3,4,9,10],sg:[],fl:[4,5,6,9],ht:30,hardy:-8,sun:5,cut:1,cols:'rouge, bleu, blanc',care:[{m:[3,9],t:'Faire tremper les griffes 3 h avant de planter'}]},
+ {id:'f_renoncule',n:'Renoncule',f:'Renonculacées',t:'tubercule',c:'#f07a5a',rang:15,pl:12,j:90,m:[2,3,4],sg:[],fl:[5,6],ht:35,hardy:-5,sun:6,cut:1,cols:'toutes',care:[{m:[2,3],t:'Faire tremper les griffes avant de planter, pattes vers le bas'}]}];
+const FL_TYPE={annuelle:'Annuelle',bisannuelle:'Bisannuelle',vivace:'Vivace',arbuste:'Arbuste',bulbe:'Bulbe de printemps',tubercule:'Bulbe ou tubercule d\'été'};
+const FL_CI={f_cosmos:'daisy',f_zinnia:'daisy',f_souci:'daisy',f_tournesol:'daisy',f_bleuet:'daisy',f_tagete:'daisy',f_reine_marg:'daisy',f_echinacea:'daisy',f_rudbeckia:'daisy',f_coreopsis:'daisy',f_aster:'daisy',f_scabieuse:'daisy',f_pensee:'daisy',
+ f_tulipe:'cup',f_crocus:'cup',f_pavot_cal:'cup',f_anemone:'cup',f_lavatere:'cup',f_capucine:'trumpet',f_petunia:'trumpet',f_narcisse:'trumpet',f_lis:'trumpet',f_hemerocalle:'trumpet',f_canna:'trumpet',f_impatiens:'trumpet',f_gaura:'tiny',
+ f_lavande:'spike',f_delphinium:'spike',f_lupin:'spike',f_digitale:'spike',f_muflier:'spike',f_glaieul:'spike',f_sauge:'spike',f_nepeta:'spike',f_rose_tremiere:'spike',f_jacinthe:'spike',f_giroflee:'spike',f_pois_senteur:'spike',
+ f_allium:'ball',f_phlox:'ball',f_achillee:'ball',f_ammi:'ball',f_pelargonium:'ball',
+ f_rosier:'rose',f_pivoine:'rose',f_renoncule:'rose',f_dahlia:'rose',
+ f_myosotis:'tiny',f_alchemille:'tiny',f_nigelle:'daisy',f_geranium:'tiny',f_hosta:'leaf'};
+const FL_PESTS=[
+ {n:'Pucerons',c:['f_rosier','f_lupin','f_capucine','f_dahlia','f_tournesol'],m:[4,5,6,7],t:'Jet d\'eau ou savon noir dilué ; les coccinelles s\'en chargent souvent.'},
+ {n:'Limaces',c:['f_hosta','f_dahlia','f_delphinium','f_lupin','f_tagete','f_zinnia','f_lis'],m:[3,4,5,6,9,10],t:'Ronde le soir, pièges, cendre ou paillage sec autour des jeunes pousses.'},
+ {n:'Oïdium',c:['f_aster','f_phlox','f_rosier','f_zinnia','f_cosmos','f_pois_senteur'],m:[7,8,9],t:'Arrose au pied le matin, aère, retire les feuilles blanches.'},
+ {n:'Maladie des taches noires',c:['f_rosier'],m:[6,7,8,9],t:'Ramasse les feuilles tachées, n\'arrose pas le feuillage.'},
+ {n:'Rouille',c:['f_rose_tremiere','f_rosier'],m:[6,7,8],t:'Retire les feuilles touchées dès les premières pustules orange.'},
+ {n:'Botrytis',c:['f_pivoine','f_tulipe','f_dahlia'],m:[4,5,9,10],t:'Aère, coupe les parties pourries, évite les arrosages du soir.'},
+ {n:'Criocère du lis',c:['f_lis'],m:[4,5,6,7],t:'Ramasse les coléoptères rouges et les larves sous les feuilles.'},
+ {n:'Thrips',c:['f_glaieul'],m:[7,8],t:'Feuilles argentées : traite les bulbes avant de les stocker.'}];
+
+let PLANTS=VEG_PLANTS;
+const ALL_PLANTS=[...VEG_PLANTS,...FLOWERS];
+const P=Object.fromEntries(ALL_PLANTS.map(p=>[p.id,p]));
+const FLW=()=>{try{return!!S&&S.kind==='fleurs'}catch(e){return false}};
+/* le catalogue suit le type du jardin ouvert : potager ou fleurs */
+function setCatalog(){const f=FLW();PLANTS=f?FLOWERS:VEG_PLANTS;JT.recolte=f?'Coupe':'Récolte';
+  try{const h=document.querySelector('.tabs [data-tab="harvest"]'),c=document.querySelector('.tabs [data-tab="crops"]');if(h)h.lastChild.textContent=f?'Floraisons':'Récoltes';if(c)c.lastChild.textContent=f?'Fleurs':'Cultures'}catch(e){}}
+/* date de la première floraison : après le délai j, au premier mois de floraison */
+function bloomStart(d,p){let t=addD(d,p.j||60);for(let i=0;i<14;i++){if(p.fl.includes(t.getMonth()+1))return t;t=new Date(t.getFullYear(),t.getMonth()+1,1,12)}return addD(d,p.j||60)}
+function bloomEndMonth(p,mo){let m=mo;for(let i=0;i<12&&p.fl.includes(m%12+1);i++)m=m%12+1;return m}
+function bloomState(x){const p=x.p,mo=TODAY.getMonth()+1;if(!p.fl)return null;
+  if(x.hv>TODAY)return{k:'wait',short:'dans '+x.left+' j',long:'floraison vers le '+fdate(x.hv)};
+  if(p.fl.includes(mo)){const e=bloomEndMonth(p,mo);return{k:'bloom',short:'en fleur',long:'en fleur'+(e!==mo?' jusqu\'en '+MONTHS[e-1]:' ce mois-ci')}}
+  if(p.t==='annuelle')return{k:'done',short:'fini',long:'floraison terminée (annuelle)'};
+  let n=mo;for(let i=0;i<12;i++){n=n%12+1;if(p.fl.includes(n))break}return{k:'rest',short:'repos',long:'prochaine floraison en '+MONTHS[n-1]}}
 const GOOD=[['tomate','basilic'],['tomate','carotte'],['tomate','persil'],['tomate','oignon'],['tomate','ail'],['tomate','laitue'],['tomate','poireau'],['tomate','celeri'],
 ['carotte','poireau'],['carotte','oignon'],['carotte','ail'],['carotte','laitue'],['carotte','radis'],['carotte','pois'],['carotte','haricot'],
 ['laitue','radis'],['laitue','fraise'],['laitue','concombre'],['laitue','poireau'],['laitue','betterave'],['laitue','chou'],['laitue','oignon'],
@@ -579,7 +679,7 @@ const BAD=[['tomate','pdt'],['tomate','fenouil'],['tomate','chou'],['haricot','o
 const REL={};const rk=(a,b)=>a<b?a+'|'+b:b+'|'+a;
 GOOD.forEach(([a,b])=>REL[rk(a,b)]=1);BAD.forEach(([a,b])=>REL[rk(a,b)]=-1);
 const compat=(a,b)=>a===b?0:(REL[rk(a,b)]||0);
-const FROST_SENSITIVE=new Set(['tomate','poivron','aubergine','courgette','concombre','potiron','mais','haricot','basilic']);
+const FROST_SENSITIVE=new Set(['tomate','poivron','aubergine','courgette','concombre','potiron','mais','haricot','basilic',...FLOWERS.filter(p=>p.hardy>=-1).map(p=>p.id)]);
 const ROT_YEARS=3; /* même famille interdite sur les 3 saisons précédentes (rotation de 4 ans) */
 /* Pluie mensuelle moyenne (mm), ordre de grandeur pour la Hesbaye */
 const RAIN=[69,58,63,47,63,72,75,78,62,66,70,80];
@@ -651,11 +751,19 @@ function cropGlyph(t,c){const G='#4f9a3a',D='#2f6a2a',O='stroke="rgba(0,0,0,.22)
    case'berry':return`<path d="M12 22.4c-5.2-3-8.2-8-7.2-11.2.8-2.2 4-3.2 7.2-2 3.2-1.2 6.4-.2 7.2 2 1 3.2-2 8.2-7.2 11.2z" fill="${c}" ${O}/><g fill="#f5d36b"><circle cx="9" cy="12.6" r=".7"/><circle cx="12" cy="13.4" r=".7"/><circle cx="15" cy="12.6" r=".7"/><circle cx="10.4" cy="16.4" r=".7"/><circle cx="13.6" cy="16.4" r=".7"/><circle cx="12" cy="19.2" r=".7"/></g><path d="M7.6 9.2l4.4-2.4 4.4 2.4-2.2 1h-4.4z" fill="${G}"/>`;
    case'stalk':return`<path d="M9 22.4V10M12 22.4V8M15 22.4V10" stroke="${c}" stroke-width="2.8" stroke-linecap="round"/><circle cx="8.6" cy="7.6" r="2.6" fill="${G}"/><circle cx="12" cy="5.2" r="2.8" fill="${G}"/><circle cx="15.4" cy="7.6" r="2.6" fill="${G}"/>`;
    case'fennel':return`<path d="M6.6 21.6c0-5.4 2.2-8.6 5.4-8.6s5.4 3.2 5.4 8.6z" fill="#eef0d6" ${O}/><path d="M10 13.2C9 9 8 6 6 3.4M12 13V2.6M14 13.2c1-4.2 2-7.2 4-9.8" stroke="${c}" stroke-width="1.6" fill="none" stroke-linecap="round"/>`;
+   case'daisy':return`<path d="M12 22v-7" stroke="${D}" stroke-width="1.4" stroke-linecap="round"/>${[0,45,90,135,180,225,270,315].map(a=>`<ellipse cx="12" cy="6.2" rx="2.1" ry="3.6" fill="${c}" ${O} transform="rotate(${a} 12 10.5)"/>`).join('')}<circle cx="12" cy="10.5" r="2.6" fill="#f2c14e" stroke="rgba(0,0,0,.25)" stroke-width=".6"/>`;
+   case'cup':return`<path d="M12 22v-8" stroke="${D}" stroke-width="1.5" stroke-linecap="round"/><path d="M7.4 21c1.6-2.6 3.2-3.6 4.6-3.6" stroke="${G}" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M6.4 6.5c0 5.2 2.4 8 5.6 8s5.6-2.8 5.6-8l-2.8 2.2L12 4.6 9.2 8.7z" fill="${c}" ${O}/>`;
+   case'trumpet':return`<path d="M12 22v-6" stroke="${D}" stroke-width="1.4" stroke-linecap="round"/>${[0,60,120,180,240,300].map(a=>`<path d="M12 10.5l-2.3-6.2c1.4-1 3.2-1 4.6 0z" fill="${c}" ${O} transform="rotate(${a} 12 10.5)"/>`).join('')}<circle cx="12" cy="10.5" r="2.4" fill="${c}" stroke="rgba(0,0,0,.3)" stroke-width=".7"/><circle cx="12" cy="10.5" r="1" fill="#f6e27a"/>`;
+   case'spike':return`<path d="M12 22.4V4" stroke="${D}" stroke-width="1.4" stroke-linecap="round"/>${[[12,4,1.6],[10.4,6.6,1.9],[13.6,6.6,1.9],[10.2,9.6,2.2],[13.8,9.6,2.2],[10.1,12.8,2.4],[13.9,12.8,2.4],[10.3,16,2.4],[13.7,16,2.4]].map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${c}" ${O}/>`).join('')}<path d="M12 22c-2.6-1-4-2.4-4.4-4.2M12 22c2.6-1 4-2.4 4.4-4.2" stroke="${G}" stroke-width="1.3" fill="none" stroke-linecap="round"/>`;
+   case'ball':return`<path d="M12 22.4V14" stroke="${D}" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="9" r="6.6" fill="${c}" ${O}/>${[[9.6,6.8],[13.6,6.4],[11.6,9.4],[15,9.8],[8.8,10.4],[12.4,12.2]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="1" fill="#fff" opacity=".45"/>`).join('')}`;
+   case'rose':return`<path d="M12 22.4V16" stroke="${D}" stroke-width="1.5" stroke-linecap="round"/><path d="M12 22c-3-.4-4.6-2-5-3.8 2.2-.2 4 .8 5 3.8z" fill="${G}"/><circle cx="12" cy="10" r="7.4" fill="${c}" ${O}/><path d="M12 5.4c3 0 4.6 2.4 4.6 4.6S14.4 14.6 12 14.6s-4.2-1.8-4.2-4 1.6-3.6 3.6-3.6 3 1.4 3 2.8-1 2.6-2.4 2.6-2.2-.8-2.2-2" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1.1" stroke-linecap="round"/>`;
+   case'tiny':return`<path d="M12 22.4V13" stroke="${D}" stroke-width="1.4" stroke-linecap="round"/>${[[12,7.4],[8,9.6],[16,9.6],[9.6,13],[14.4,13],[12,10.6]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="2.5" fill="${c}" ${O}/><circle cx="${x}" cy="${y}" r=".8" fill="#f6e27a"/>`).join('')}`;
+   case'leaf':return cropGlyph('herb',c);
   }return`<circle cx="12" cy="13" r="7" fill="${c}"/>`}
 function cropSprite(){const G='#4f9a3a',D='#2f6a2a',soil='<path d="M5 22.2h14" stroke="#8b6a48" stroke-width="2" stroke-linecap="round"/>';
   let s=`<symbol id="ci-sprout" viewBox="0 0 24 24">${soil}<path d="M12 21.6v-7" stroke="${D}" stroke-width="1.6" stroke-linecap="round"/><path d="M12 16.2c-4 0-6-2.2-6-5.2 3.2 0 6 2.2 6 5.2z" fill="${G}"/><path d="M12 15c0-3.2 2.2-6 6-6 0 3.2-2.4 6-6 6z" fill="${G}"/></symbol>`;
   s+=`<symbol id="ci-young" viewBox="0 0 24 24">${soil}<path d="M12 21.6V7.4" stroke="${D}" stroke-width="1.6" stroke-linecap="round"/><path d="M12 19c-5 0-7.4-3-7.4-6.2 4.2 0 7.4 3 7.4 6.2z" fill="${G}"/><path d="M12 16.6c0-4 3-7.2 7.4-7.2 0 4-3.2 7.2-7.4 7.2z" fill="${G}"/><path d="M12 12.4c-3.8 0-5.4-2.6-5.4-5 3.2 0 5.4 2.4 5.4 5z" fill="#62ad4c"/><path d="M12 10.2c0-3 2-5.4 5.2-5.4 0 3-2.2 5.4-5.2 5.4z" fill="#62ad4c"/></symbol>`;
-  PLANTS.forEach(p=>{s+=`<symbol id="ci-${p.id}" viewBox="0 0 24 24">${cropGlyph(CI_TYPE[p.id]||'round',p.c)}</symbol>`});
+  Object.assign(CI_TYPE,FL_CI);ALL_PLANTS.forEach(p=>{s+=`<symbol id="ci-${p.id}" viewBox="0 0 24 24">${cropGlyph(CI_TYPE[p.id]||'round',p.c)}</symbol>`});
   return`<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>${s}</defs></svg>`}
 document.body.insertAdjacentHTML('afterbegin',cropSprite());
 const stageOf=pr=>pr<.3?0:pr<.85?1:2;
@@ -692,6 +800,19 @@ const cuveL=o=>o.type==='citerne'?(+o.vol||0):Math.PI*(o.w/2)**2*(+o.height||0)/
 function tankCap(){const cs=allObjs().filter(o=>o.type==='cuve'&&+o.height>0||o.type==='citerne'&&+o.vol>0);return cs.length?{n:cs.length,cap:Math.round(cs.reduce((s,o)=>s+cuveL(o),0))}:null}
 
 /* ================= Données exemple ================= */
+function sampleFlowers(){const d=(m,dd,y=YEAR)=>`${y}-${String(m).padStart(2,'0')}-${String(dd).padStart(2,'0')}`,objs=[];
+  const add=(type,x,yy,w,h,ex={})=>{const o={id:uid(),type,x,y:yy,w,h,rot:0,name:TYPES[type].l,height:TYPES[type].ht||0,locked:false,...ex};if(TYPES[type].plant){o.zones=o.zones||[];o.grown=[];o.journal=[]}objs.push(o);return o};
+  const bed=(name,x,y,w,h,zs,J=[])=>{const o=add('planche',x,y,w,h,{name});o.zones=zs.map(([c,len,date,frac])=>{const z={id:uid(),crop:c,len,date,cells:{}};fillZone(o,z,date,frac||1);return z});o.grown=zs.map(([c,,date])=>({y:parse(date).getFullYear(),crop:c}));o.journal=J.map(([k,dd,ex])=>({id:uid(),k,d:dd,...ex}));return o};
+  add('haie',0,0,1600,80,{name:'Haie de charmes',locked:true});
+  bed('Massif de vivaces',150,200,140,700,[['f_echinacea',180,d(4,10,YEAR-1)],['f_lavande',160,d(4,10,YEAR-1)],['f_aster',180,d(4,10,YEAR-1)],['f_nepeta',180,d(4,10,YEAR-1)]],[['amendement',d(3,15),{t:'Compost en surface'}]]);
+  bed('Fleurs à couper',380,200,120,700,[['f_dahlia',300,d(5,15)],['f_cosmos',200,d(5,20)],['f_zinnia',200,d(5,25)]],[['recolte',d(8,20),{crop:'f_dahlia',kg:24,u:'tiges'}],['recolte',d(9,5),{crop:'f_cosmos',kg:30,u:'tiges'}]]);
+  bed('Bordure de bulbes',600,200,90,700,[['f_tulipe',350,d(10,20,YEAR-1)],['f_narcisse',350,d(10,20,YEAR-1)]]);
+  bed('Massif d\'ombre',800,200,140,500,[['f_hosta',250,d(4,1,YEAR-1)],['f_digitale',250,d(9,20,YEAR-1)]]);
+  add('allee',150,960,800,70,{name:'Allée'});
+  add('arbre',1050,250,400,400,{name:'Érable',height:900});
+  add('alleeo',1050,750,300,300,{name:'Allée ronde',ring:60});
+  add('abri',1380,850,180,160,{name:'Abri'});
+  return{v:8,kind:'fleurs',stock:[{id:'g-cos',name:'Cosmos « Sensation »',crop:'f_cosmos',cat:'graine',unit:'graines',min:0,moves:[{d:d(2,1),q:100}]}],nursery:[],rain:[],name:'Jardin de fleurs exemple',w:1600,h:1100,north:0,water:{roof:30,cap:500,level:300},frost:null,objs,example:true}}
 function sample(){
   const d=(m,dd,y=YEAR)=>`${y}-${String(m).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
   const objs=[];
@@ -766,7 +887,7 @@ function addGarden(state,open=true){const id=uid(),g=GL.get();try{localStorage.s
   g.list.push({id,name:state.name,ex:!!state.example});GL.set(g);if(open)switchGarden(id);try{if(relayOn())setTimeout(()=>syncPush(id),300)}catch(e){}return id}
 function deleteGarden(id){const g=GL.get();if(g.list.length<2)return;g.list=g.list.filter(x=>x.id!==id);GL.set(g);
   try{localStorage.removeItem(keyOf(id));localStorage.removeItem(keyAtOf(id))}catch(e){}try{if(relayOn())gReq('/garden?id='+encodeURIComponent(id),'DELETE').catch(()=>{})}catch(e){}if(id===GID){GID=null;switchGarden(g.list[0].id)}}
-const emptyGarden=(name='Mon potager')=>({v:8,shape:null,rain:[],stock:[],nursery:[],name,w:1200,h:800,north:0,water:{roof:40,cap:1000,level:500},frost:null,objs:[],example:false});
+const emptyGarden=(name='Mon potager',kind)=>({v:8,kind:kind||undefined,shape:null,rain:[],stock:[],nursery:[],name,w:1200,h:800,north:0,water:{roof:40,cap:1000,level:500},frost:null,objs:[],example:false});
 function save(coalesce){const j=JSON.stringify(S);if(j!==lastJSON){const now=Date.now();
   if(!(coalesce&&now-lastPush<1500&&past.length)){past.push(lastJSON);if(past.length>80)past.shift()}
   lastPush=coalesce?now:0;future=[];lastJSON=j;localAt=now;persist();schedulePush();syncPushSoon()}renderHeader()}
@@ -849,9 +970,9 @@ function conflicts(o){
   neighbors(o).forEach(n=>mine.forEach(z=>n.zones.forEach(z2=>{if(z2.crop&&compat(z.crop,z2.crop)<0)out.set(rk(z.crop,z2.crop)+n.id,{a:z.crop,b:z2.crop,where:'avec '+n.name})})));
   return[...out.values()];
 }
-function rotIssue(o,crop,Y){if(!crop||crop==='fraise'||!P[crop])return null;const f=P[crop].f;
+function rotIssue(o,crop,Y){if(!crop||crop==='fraise'||!P[crop]||FLW())return null;const f=P[crop].f;
   return(o.grown||[]).filter(g=>g.y<Y&&g.y>=Y-ROT_YEARS&&P[g.crop]&&g.crop!=='fraise'&&P[g.crop].f===f).sort((a,b)=>b.y-a.y)[0]||null}
-function rotIssues(o){const out=[];o.zones.forEach(z=>{const r=rotIssue(o,z.crop,yearOf(z));if(r)out.push({crop:z.crop,prev:r})});return out}
+function rotIssues(o){if(FLW())return[];const out=[];o.zones.forEach(z=>{const r=rotIssue(o,z.crop,yearOf(z));if(r)out.push({crop:z.crop,prev:r})});return out}
 function recordGrown(o,crop,y){if(!crop)return;o.grown=o.grown||[];if(!o.grown.some(g=>g.y===y&&g.crop===crop))o.grown.push({y,crop})}
 function advice(present){
   const good=new Set(),bad=new Set();
@@ -886,8 +1007,9 @@ function sunHoursAt(c,home,excl,doy){let n=0;const casters=home.objs.filter(q=>q
   for(let h=3.25;h<=20.75;h+=.5){const sp=sunPos(doy,h);if(sp.alt<.04)continue;if(!casters.some(q=>shadowPolys(q,sp).some(p=>inPoly(c,p))))n+=.5}return n}
 function sunHours(o,doy){return sunHoursAt({x:o.x+o.w/2,y:o.y+o.h/2},homeOf(o),o,doy)}
 /* ---- besoin en soleil des cultures (heures de soleil direct par jour) ---- */
-const SUN_NEED={laitue_h:3,tomate:6,poivron:6,aubergine:6,courgette:6,concombre:6,potiron:6,mais:6,haricot:6,basilic:6,fraise:6,pdt:6,
+const SUN_NEED0={laitue_h:3,tomate:6,poivron:6,aubergine:6,courgette:6,concombre:6,potiron:6,mais:6,haricot:6,basilic:6,fraise:6,pdt:6,
   carotte:4,betterave:4,poireau:4,oignon:5,ail:5,pois:4,feve:4,chou:4,celeri:4,fenouil:5,blette:4,persil:3,laitue:3,epinard:3,mache:3,radis:3};
+const SUN_NEED={...SUN_NEED0,...Object.fromEntries(FLOWERS.map(p=>[p.id,p.sun]))};
 const sunLabel=n=>n>=6?'plein soleil':n>=4?'soleil ou mi-ombre':'supporte la mi-ombre';
 function zoneCenter(o,zi){let off=0;for(let i=0;i<zi;i++)off+=o.zones[i].len;const L=Math.max(o.w,o.h),u=off+o.zones[zi].len/2-L/2,horiz=o.w>=o.h;
   const lx=horiz?u:0,ly=horiz?0:u,a=o.rot*Math.PI/180;return{x:o.x+o.w/2+lx*Math.cos(a)-ly*Math.sin(a),y:o.y+o.h/2+lx*Math.sin(a)+ly*Math.cos(a)}}
@@ -902,7 +1024,7 @@ function sunIssues(o){const out=[];o.zones.forEach((z,i)=>{const c=sunCheck(o,i,
 function sunMax(doy){let n=0;for(let h=3.25;h<=20.75;h+=.5)if(sunPos(doy,h).alt>=.04)n+=.5;return n}
 
 /* ================= En-tête, onglets, toast ================= */
-function renderHeader(){$('#gInfo').textContent=`${S.name} · ${m2(S.w)} × ${m2(S.h)} m`;$('#exPill').hidden=!S.example;$('#undoBtnH').disabled=!past.length;$('#redoBtnH').disabled=!future.length;
+function renderHeader(){setCatalog();$('#gInfo').textContent=`${S.name} · ${m2(S.w)} × ${m2(S.h)} m`;$('#exPill').hidden=!S.example;$('#undoBtnH').disabled=!past.length;$('#redoBtnH').disabled=!future.length;
   $('#needle').setAttribute('transform',`rotate(${S.north})`)}
 $('#undoBtnH').onclick=undo;$('#redoBtnH').onclick=redo;
 addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)){e.preventDefault();e.shiftKey?redo():undo()}});
@@ -919,7 +1041,7 @@ function toast(msg,canUndo){clearTimeout(toastT);const el=$('#toast');
   el.innerHTML=`${canUndo?'<svg class="tchk" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7 12.5l3.3 3.3L17 9"/></svg>':''}<span>${esc(msg)}</span>${canUndo?'<button id="undoBtn">Annuler</button>':''}`;el.hidden=false;el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');
   if(canUndo)$('#undoBtn').onclick=()=>{el.hidden=true;undo()};
   toastT=setTimeout(()=>el.hidden=true,4500);}
-function refresh(){if(inv)renderInv();if(bed)renderBed();if(tab==='plan'){renderPlan();renderSheet();renderSunbar();renderShapebar();renderCtxbar()}else{$('#shapebar').hidden=true;$('#ctxbar').hidden=true}if(tab==='harvest')renderHarvest();if(tab==='weather')renderWeather();if(tab==='crops')renderCrops();if(tab==='today')renderToday()}
+function refresh(){setCatalog();if(inv)renderInv();if(bed)renderBed();if(tab==='plan'){renderPlan();renderSheet();renderSunbar();renderShapebar();renderCtxbar()}else{$('#shapebar').hidden=true;$('#ctxbar').hidden=true}if(tab==='harvest')renderHarvest();if(tab==='weather')renderWeather();if(tab==='crops')renderCrops();if(tab==='today')renderToday()}
 
 /* ================= Plan ================= */
 const svg=$('#map');
@@ -1151,11 +1273,12 @@ function planStatus(o){/* un seul indicateur par planche, le plus utile d'abord 
   if(rotIssues(o).length)return{c:'amber',t:'↻',l:'Rotation à revoir'};
   return null}
 function cultureSheet(o){const t=TYPES[o.type],inS=!!serreOf(o);
-  let h=`<div class="stack"><div class="cs-head"><div style="min-width:0"><span class="lbl">${t.l}${inS?' · sous serre':''}</span><div class="nm">${esc(o.name)}</div></div><button class="iconbtn" data-act="close" aria-label="Fermer"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`;
+  let h=`<div class="stack"><div class="cs-head"><div style="min-width:0"><span class="lbl">${FLW()&&o.type==='planche'?'Massif':t.l}${inS?' · sous serre':''}</span><div class="nm">${esc(o.name)}</div></div><button class="iconbtn" data-act="close" aria-label="Fermer"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`;
   if(t.plant){
     const pl=plantings().filter(x=>x.o===o);
     h+=`<div class="info"><span class="lbl">Ce qu'il y a dedans</span>`;
-    if(pl.length)h+=`<div class="ilist">${pl.map(x=>{const st=x.bu&&x.left<=0?`<span class="st blocked">Attendre le ${fdate(x.bu)}</span>`:x.left<=0?`<span class="st ready">Prêt</span>`:`<span class="st">dans ${x.left} j</span>`;
+    if(pl.length)h+=`<div class="ilist">${pl.map(x=>{const bs=bloomState(x);if(bs)return`<div class="irow">${ring(x.prog,x.p.id,bs.k==='bloom')}<div style="min-width:0"><b>${x.p.n}</b><span class="note">≈ ${x.n} pied${x.n>1?'s':''} · planté le ${fdate(parse(x.d))} · ${bs.long}</span></div><span class="st ${bs.k==='bloom'?'ready':''}">${bs.short}</span></div>`;
+      const st=x.bu&&x.left<=0?`<span class="st blocked">Attendre le ${fdate(x.bu)}</span>`:x.left<=0?`<span class="st ready">Prêt</span>`:`<span class="st">dans ${x.left} j</span>`;
       return`<div class="irow">${ring(x.prog,x.p.id,x.left<=0&&!x.bu)}<div style="min-width:0"><b>${x.p.n}</b><span class="note">≈ ${x.n} plant${x.n>1?'s':''} · semé le ${fdate(parse(x.d))} · récolte ${fdate(x.hv)}</span></div>${st}</div>`}).join('')}</div>`;
     else h+=`${emptyHTML('sprout','Vide pour l\'instant. Ouvre la planche pour choisir quoi planter.')}`;
     h+=`</div>`;
@@ -1196,7 +1319,7 @@ function renderSheet(){
   if(sheetMode==='add'){
     h+=`<div class="stack"><div class="row between"><h3>Ajouter au potager</h3><button class="btn small" data-act="close">Fermer</button></div>
     <button class="btn primary" data-act="series">Série de planches avec allées</button>
-    <div class="typegrid">${Object.entries(TYPES).filter(([k])=>!(ctx&&(k==='serre'||k==='arbre'||k==='haie'||k==='etang'))).map(([k,t])=>`<button class="typebtn" data-act="add" data-type="${k}"><svg viewBox="0 0 46 30">${ICON[k]}</svg>${t.l}</button>`).join('')}</div>
+    <div class="typegrid">${Object.entries(TYPES).filter(([k])=>!(ctx&&(k==='serre'||k==='arbre'||k==='haie'||k==='etang'))).map(([k,t])=>`<button class="typebtn" data-act="add" data-type="${k}"><svg viewBox="0 0 46 30">${ICON[k]}</svg>${FLW()&&k==='planche'?'Massif ou planche':t.l}</button>`).join('')}</div>
     <p class="note">L'objet apparaît au centre de l'écran. Maintiens le doigt dessus pour le soulever et le déplacer. Tire la poignée jaune pour le redimensionner.</p></div>`;
   }else if(sheetMode==='series'){
     h+=`<div class="stack"><div class="row between"><h3>Série de planches</h3><button class="btn small" data-act="add-back">Retour</button></div>
@@ -1277,7 +1400,7 @@ function renderSheet(){
     h+=`<div class="stack"><div class="row between"><h3>Notifications</h3><button class="btn small" data-act="relay-back">Retour</button></div>
     ${ps.why?`<div class="alert"><span>${ps.why}</span></div>`:''}
     ${ps.on?`<div class="alert okay"><span>Activées sur cet appareil.</span></div>`:ps.can?`<p class="note" style="color:var(--ink)">Ton relais t'envoie un résumé le matin et une alerte gel le soir, même app fermée. Chaque appareil s'active séparément (iPhone, iPad).</p><button class="btn primary" data-act="np-on">Activer sur cet appareil</button>`:''}
-    <div class="nlist">${tg('water','Arrosage','planches sans eau depuis plusieurs jours (pluie comprise)')}${tg('harvest','Récoltes','quand une culture arrive à maturité')}${tg('nursery','Semis','quand des semis sont prêts à repiquer')}${tg('plan','Plantations prévues','le jour prévu dans le planning des planches')}${tg('dar','Traitements','fin du délai avant récolte')}${tg('frost','Gel','alerte vers 18 h si la nuit descend sous 2 °C (−2 °C sous serre)')}${tg('gardena','GARDENA','arrosage automatique lancé ou sauté')}</div>
+    <div class="nlist">${tg('water','Arrosage','planches sans eau depuis plusieurs jours (pluie comprise)')}${tg('harvest',FLW()?'Floraisons':'Récoltes',FLW()?'quand une fleur commence à fleurir':'quand une culture arrive à maturité')}${tg('care','Entretien des fleurs','tailler, pincer, arracher : les gestes du mois (jardins de fleurs)')}${tg('nursery','Semis','quand des semis sont prêts à repiquer')}${tg('plan','Plantations prévues','le jour prévu dans le planning des planches')}${tg('dar','Traitements','fin du délai avant récolte')}${tg('frost','Gel','alerte vers 18 h si la nuit descend sous 2 °C (−2 °C sous serre)')}${tg('gardena','GARDENA','arrosage automatique lancé ou sauté')}</div>
     <label class="field" style="max-width:220px"><span class="lbl">Résumé du matin à</span><select data-np="hour">${[6,7,8,9,10,12,18].map(x=>`<option value="${x}" ${+(pr.hour||8)===x?'selected':''}>${x} h</option>`).join('')}</select></label>
     ${ps.on?`<div class="row"><button class="btn small" data-act="np-test">Envoyer un test</button><button class="btn small" data-act="np-now">Résumé maintenant</button><button class="btn small danger" data-act="np-off">Désactiver ici</button></div>`:''}
     <p class="note">Le relais vérifie toutes les 30 minutes : il faut le déclencheur Cron <code>*/30 * * * *</code> dans ton Worker (Settings → Trigger events). Les notifications portent sur tes potagers synchronisés, pas sur l'exemple.</p></div>`;
@@ -1285,7 +1408,7 @@ function renderSheet(){
     const GLs=GL.get().list;
     h+=`<div class="stack"><div class="row between"><h3>Potager</h3><button class="btn small" data-act="close">Fermer</button></div>
     <div><span class="lbl">Mes potagers</span><div class="glist">${GLs.map(g=>`<div class="grow${g.id===GID?' cur':''}"><span><b>${esc(g.id===GID?S.name:(g.name||'Potager'))}</b>${(g.id===GID?S.example:g.ex)?' <span class="note">· exemple</span>':''}</span>${g.id===GID?'<span class="note">ouvert</span>':`<button class="btn small" data-act="gopen" data-g="${g.id}">Ouvrir</button>`}</div>`).join('')}</div>
-    <div class="row" style="margin-top:8px"><button class="btn small" data-act="gnew">+ Potager vide</button><button class="btn small" data-act="gnewex">+ Exemple</button>${GLs.length>1?'<button class="btn small danger" data-act="gdel">Supprimer celui-ci</button>':''}</div></div>
+    <div class="row" style="margin-top:8px"><button class="btn small" data-act="gnew">+ Potager</button><button class="btn small" data-act="gnewfl">+ Jardin de fleurs</button><button class="btn small" data-act="gnewex">+ Exemple potager</button><button class="btn small" data-act="gnewexfl">+ Exemple fleurs</button>${GLs.length>1?'<button class="btn small danger" data-act="gdel">Supprimer celui-ci</button>':''}</div></div>
     <label class="field"><span class="lbl">Nom</span><input id="g-name" value="${esc(S.name)}"></label>
     ${S.shape?`<div class="row between"><span><span class="lbl">Terrain</span><br><span class="mono">${num(Math.abs(polyArea(S.shape))/1e4)} m² · ${S.shape.length} côtés</span></span><span class="row"><button class="btn small" data-act="shape-rect">Revenir au rectangle</button></span></div>`:
     `<div class="grid2"><label class="field"><span class="lbl">Largeur du terrain (m)</span><input id="g-w" type="number" min="2" step="0.5" value="${S.w/100}"></label>
@@ -1310,7 +1433,7 @@ function renderSheet(){
     const o=obj(selId);if(!o){sheetMode=null;return renderSheet()}h+=cultureSheet(o);
   }else if(sheetMode==='obj'){
     const o=obj(selId);if(!o){sheetMode=null;return renderSheet()}const t=TYPES[o.type],L=o.locked?'disabled':'';
-    h+=`<div class="stack"><div class="row between" style="flex-wrap:nowrap"><div style="min-width:0;flex:1"><span class="lbl">${t.l}${o.locked?' · verrouillé':''}</span><input class="namein" id="o-name" value="${esc(o.name)}" aria-label="Nom"></div><button class="btn small" data-act="close">OK</button></div>`;
+    h+=`<div class="stack"><div class="row between" style="flex-wrap:nowrap"><div style="min-width:0;flex:1"><span class="lbl">${FLW()&&o.type==='planche'?'Massif':t.l}${o.locked?' · verrouillé':''}</span><input class="namein" id="o-name" value="${esc(o.name)}" aria-label="Nom"></div><button class="btn small" data-act="close">OK</button></div>`;
     if(o.type==='serre'&&!ctx){const n=(o.inner&&o.inner.objs||[]).filter(q=>TYPES[q.type].plant).length;h+=`<button class="btn primary" data-act="enterserre">Ouvrir la serre</button><p class="note">${n?n+' planche'+(n>1?'s':'')+' à l\'intérieur.':'Vide pour l\'instant.'} En mode culture, un tap sur la serre l'ouvre directement.</p>`}
     if(o.type==='citerne')h+=`<label class="field" style="max-width:240px"><span class="lbl">Volume (L)</span><input id="o-vol" type="number" min="0" step="100" value="${Math.round(+o.vol||0)}" ${L}></label><p class="note">Citerne enterrée : seul son volume compte, elle s'ajoute à la réserve d'eau (Eau &amp; météo). Pas d'ombre.</p>`;
     else h+=t.round?`<div class="grid2"><label class="field"><span class="lbl">Diamètre (cm)</span><input id="o-w" type="number" min="10" step="5" value="${Math.round(o.w)}" ${L}></label>`:
@@ -1334,7 +1457,7 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
   if(a==='series-align'){const tp=terrainPts();let best=null;tp.forEach((p,i)=>{const q=tp[(i+1)%tp.length],L=Math.hypot(q.x-p.x,q.y-p.y);if(!best||L>best.L)best={L,a:Math.atan2(q.y-p.y,q.x-p.x)*180/Math.PI}});
     const v=$('#sr-o').value==='v';let d=best.a-(v?90:0);d=((d%180)+180)%180;if(d>90)d-=180;$('#sr-a').value=Math.round(d);return}
   if(a==='add'){const t=TYPES[b.dataset.type],r=svg.getBoundingClientRect(),c=world(r.left+r.width/2,r.top+r.height*.3);
-    const n={id:uid(),type:b.dataset.type,x:snap(clamp(c.x-t.w/2,0,G().w-t.w)),y:snap(clamp(c.y-t.h/2,0,G().h-t.h)),w:t.w,h:t.h,rot:0,name:t.l,height:t.ht||0,locked:false};
+    const n={id:uid(),type:b.dataset.type,x:snap(clamp(c.x-t.w/2,0,G().w-t.w)),y:snap(clamp(c.y-t.h/2,0,G().h-t.h)),w:t.w,h:t.h,rot:0,name:FLW()&&b.dataset.type==='planche'?'Massif':t.l,height:t.ht||0,locked:false};
     if(t.plant){n.zones=[{id:uid(),crop:null,len:Math.max(t.w,t.h),date:iso(TODAY),cells:{}}];n.grown=[];n.journal=[]}
     if(n.type==='citerne')n.vol=5000;if(n.type==='alleeo')n.ring=70;if(n.type==='ruisseau')n.wave=100;
     G().objs.push(n);selId=n.id;sheetMode='obj';save();renderSheet();renderPlan()}
@@ -1348,7 +1471,7 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
       const px=(v?x0+i*(W+gap):x0)+w/2-c.x,py=(v?y0:y0+i*(W+gap))+h/2-c.y,qx=c.x+px*Math.cos(ar)-py*Math.sin(ar),qy=c.y+px*Math.sin(ar)+py*Math.cos(ar);
       if(withA&&i<n-1){const aw=v?gap:L,ah=v?L:gap,ax=(v?x0+i*(W+gap)+W:x0)+aw/2-c.x,ay=(v?y0:y0+i*(W+gap)+W)+ah/2-c.y,bx=c.x+ax*Math.cos(ar)-ay*Math.sin(ar),by=c.y+ax*Math.sin(ar)+ay*Math.cos(ar);
         G().objs.push({id:uid(),type:'allee',x:Math.round(bx-aw/2),y:Math.round(by-ah/2),w:aw,h:ah,rot:ang,name:'Allée '+(ka+i+1),height:0,locked:false,grp})}
-      G().objs.push({id,grp,type:'planche',x:Math.round(qx-w/2),y:Math.round(qy-h/2),w,h,rot:ang,name:'Planche '+(k+i+1),height:0,locked:false,grown:[],journal:[],zones:[{id:uid(),crop:null,len:L,date:iso(TODAY),cells:{}}]})}
+      G().objs.push({id,grp,type:'planche',x:Math.round(qx-w/2),y:Math.round(qy-h/2),w,h,rot:ang,name:(FLW()?'Massif ':'Planche ')+(k+i+1),height:0,locked:false,grown:[],journal:[],zones:[{id:uid(),crop:null,len:L,date:iso(TODAY),cells:{}}]})}
     sheetMode=null;save();renderSheet();renderPlan();toast(`${n} planche${n>1?'s':''} placée${n>1?'s':''}, allées de ${gap} cm`,true)}
   if((a==='rot'||a==='rot0')&&o){const d=a==='rot'?+b.dataset.d:-o.rot,ms=grpMembers(o);if(ms){const f=grpFrame(ms,o.rot);rotateMembers(ms.map(q=>({o:q,x:q.x,y:q.y,rot:q.rot})),{x:f.cx,y:f.cy},d)}else o.rot=((o.rot+d)%360+360)%360;save();renderSheet();renderPlan()}
   if(a==='ungroup'&&o){delete o.grp;const rest=G().objs.filter(q=>q.grp&&!grpMembers(q));rest.forEach(q=>delete q.grp);save();renderSheet();renderPlan();return toast(o.name+' détaché du bloc',true)}
@@ -1416,6 +1539,8 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
   if(a==='reload'){S=sample();selId=null;sheetMode=null;save();fit();renderSheet();toast('Exemple remis à zéro',true)}
   if(a==='gopen'){switchGarden(b.dataset.g);sheetMode='menu';renderSheet();return toast('Potager ouvert : '+S.name)}
   if(a==='gnew'){const n=GL.get().list.length+1;addGarden(emptyGarden('Potager '+n));sheetMode='menu';renderSheet();return toast('Nouveau potager créé')}
+  if(a==='gnewfl'){const n=GL.get().list.length+1;addGarden(emptyGarden('Jardin de fleurs '+n,'fleurs'));sheetMode='menu';renderSheet();return toast('Nouveau jardin de fleurs créé')}
+  if(a==='gnewexfl'){addGarden(sampleFlowers());sheetMode='menu';renderSheet();return toast('Exemple de jardin de fleurs ajouté')}
   if(a==='gnewex'){addGarden(sample());sheetMode='menu';renderSheet();return toast('Exemple ajouté')}
   if(a==='gdel'){if(!b.classList.contains('armed')){b.classList.add('armed');b.textContent='Confirmer : supprimer « '+S.name+' »';return}const nm=S.name;deleteGarden(GID);sheetMode='menu';renderSheet();return toast('« '+nm+' » supprimé')}
   if(a==='export'&&!DL){const name=`potager-${iso(TODAY)}.json`,blob=new Blob([lastJSON],{type:'application/json'});
@@ -1489,7 +1614,7 @@ function renderBed(){
   const jk=bed.jk;
   let jform=`<div class="seg">${Object.entries(JT).map(([k,l])=>`<button data-act="jk" data-k="${k}" aria-pressed="${jk===k}">${l}</button>`).join('')}</div>
   <div class="grid2"><label class="field"><span class="lbl">Date</span><input id="j-date" type="date" value="${iso(TODAY)}"></label>`;
-  if(jk==='recolte')jform+=`<label class="field"><span class="lbl">Poids (kg)</span><input id="j-kg" type="number" min="0" step="0.1" placeholder="0,0"></label><label class="field span2"><span class="lbl">Culture</span><select id="j-crop">${(zc.length?zc:PLANTS.map(q=>q.id)).map(c=>`<option value="${c}">${P[c].n}</option>`).join('')}</select></label>`;
+  if(jk==='recolte')jform+=FLW()?`<label class="field"><span class="lbl">Nombre de tiges</span><input id="j-kg" type="number" min="0" step="1" placeholder="0"></label>`:`<label class="field"><span class="lbl">Poids (kg)</span><input id="j-kg" type="number" min="0" step="0.1" placeholder="0,0"></label><label class="field span2"><span class="lbl">Culture</span><select id="j-crop">${(zc.length?zc:PLANTS.map(q=>q.id)).map(c=>`<option value="${c}">${P[c].n}</option>`).join('')}</select></label>`;
   else if(isProdJ(jk)){const zc0=z.crop;const prods=(S.stock||[]).filter(q=>q.cat===JCAT(jk)).sort((a,b)=>(b.crop===zc0)-(a.crop===zc0)),avail=prods.filter(q=>stockOf(q)>0&&!expired(q));
     if(!avail.length)jform+=`<div class="alert amber span2"><span>${prods.length?'Plus rien en stock pour ':'Aucun produit dans l\'inventaire pour '}${jk==='traitement'?'les traitements':jk==='semis'?'les graines':'les amendements'}. Ajoute-le d'abord dans l'abri.</span><button class="btn small" data-act="openinv" style="justify-self:start">Ouvrir l'inventaire</button></div>`;
     else{const cur=avail.find(q=>q.id===bed.pid)||avail[0];bed.pid=cur.id;
@@ -1506,7 +1631,7 @@ function renderBed(){
   else jform+=`<button class="btn primary" data-act="jadd" ${blockRec?'disabled':''}>Ajouter au journal</button>`;
   const jl=(o.journal||[]).slice().sort((a,b)=>b.d.localeCompare(a.d));
   const jlist=jl.length?`<div class="jlist">${jl.map(e=>{let det='';
-    if(e.k==='recolte')det=`${P[e.crop]?P[e.crop].n:''} · <span class="mono">${num(e.kg)} kg</span>`;
+    if(e.k==='recolte')det=`${P[e.crop]?P[e.crop].n:''} · <span class="mono">${num(e.kg)} ${e.u||'kg'}</span>`;
     if(e.k==='maladie')det=`${e.crop&&P[e.crop]?P[e.crop].n+' · ':''}<b>${esc(e.diag&&e.diag.diagnostic||'Symptômes notés')}</b>${e.diag&&e.diag.confiance?` <span class="conf ${esc(e.diag.confiance)}">${esc(e.diag.confiance)}</span>`:''}`;
     if(isProdJ(e.k)){const u=addD(e.d,+e.dar||0);det=e.prod?`${e.crop&&P[e.crop]&&e.k==='semis'?P[e.crop].n+' · ':''}${esc(e.prod)}${+e.qty?` · <span class="mono">${num(e.qty,2)} ${e.unit||''}</span>`:''}${e.dose?' · '+esc(e.dose):''}${e.k==='traitement'&&+e.dar?` · DAR ${e.dar} j${u>TODAY?' → '+fdate(u):''}`:''}`:''}
     return`<div class="jent"><span class="d">${fdate(parse(e.d))}</span><div style="min-width:0"><span class="k ${e.k}">${JT[e.k]}</span>${det?`<div>${det}</div>`:''}${e.t?`<div class="note" style="color:var(--ink)">${esc(e.t)}</div>`:''}${e.ph?`<img src="${photoSrc(e.ph)}" alt="Photo du ${fdate(parse(e.d))}" loading="lazy">`:''}</div><button class="del" data-act="jdel" data-id="${e.id}" aria-label="Supprimer l'entrée">×</button></div>`}).join('')}</div>`:`${emptyHTML('book','Le journal est vide. Note ici arrosages, traitements, récoltes et observations.')}`;
@@ -1589,7 +1714,7 @@ bedEl.addEventListener('click',async e=>{if(!bed)return;const jp=e.target.closes
   if(a==='ungrow'){o.grown=o.grown.filter(x=>!(x.y===+b.dataset.y&&x.crop===b.dataset.crop))}
   if(a==='jdel'){o.journal=o.journal.filter(x=>x.id!==b.dataset.id);save();renderBed();return toast('Entrée supprimée',true)}
   if(a==='jadd'){const k=bed.jk,en={id:uid(),k,d:$('#j-date').value||iso(TODAY),t:$('#j-text').value.trim()};
-    if(k==='recolte'){en.crop=$('#j-crop').value;en.kg=parseFloat(String($('#j-kg').value).replace(',','.'))||0;if(!en.kg)return toast('Indique le poids récolté')}
+    if(k==='recolte'){en.crop=$('#j-crop').value;en.kg=parseFloat(String($('#j-kg').value).replace(',','.'))||0;if(FLW())en.u='tiges';if(!en.kg)return toast(FLW()?'Indique le nombre de tiges coupées':'Indique le poids récolté')}
     if(isProdJ(k)){const pr=(S.stock||[]).find(q=>q.id===$('#j-pid').value);if(!pr)return toast('Choisis un produit en stock');
       const q=parseFloat(String($('#j-qty').value).replace(',','.'))||0,st=stockOf(pr);if(q<=0)return toast('Indique la quantité utilisée');
       if(q>st+1e-9)return toast(`Stock insuffisant : il reste ${fq(st,pr.unit)}`);
@@ -1741,7 +1866,8 @@ function renderStockTab(seedsTab){const st=(S.stock||[]).filter(p=>seedsTab?p.ca
   <div class="bedbody">${lows.length?`<div class="alert amber"><span>À racheter : ${lows.map(p=>`<b>${esc(p.name)}</b> (${fq(stockOf(p),p.unit)})`).join(', ')}.</span></div>`:''}${form}${seedsTab?group('graine'):group('amendement')+group('traitement')}
   <p class="note">${seedsTab?'Les graines se déduisent toutes seules quand tu notes un semis dans le journal d\'une planche ou un semis en godets. Les graines périmées ne sont plus proposées.':'Le stock baisse tout seul quand tu notes un amendement ou un traitement dans le journal d\'une planche.'} Supprimer l'entrée du journal remet la quantité en stock.</p></div>`;
 }
-const TRANSPLANT={laitue_h:35,tomate:50,poivron:60,aubergine:60,courgette:25,concombre:25,potiron:25,mais:21,chou:35,poireau:70,celeri:60,laitue:30,basilic:40,oignon:50,fenouil:30,blette:30,persil:40,fraise:60,betterave:30,epinard:30,mache:30,feve:25,pois:21,haricot:18};
+const TRANSPLANT0={laitue_h:35,tomate:50,poivron:60,aubergine:60,courgette:25,concombre:25,potiron:25,mais:21,chou:35,poireau:70,celeri:60,laitue:30,basilic:40,oignon:50,fenouil:30,blette:30,persil:40,fraise:60,betterave:30,epinard:30,mache:30,feve:25,pois:21,haricot:18};
+const TRANSPLANT={...TRANSPLANT0,...Object.fromEntries(FLOWERS.filter(p=>(p.sg||[]).length).map(p=>[p.id,p.t==='bisannuelle'?70:p.t==='tubercule'?35:45]))};
 const readyOf=n=>addD(n.d,TRANSPLANT[n.crop]||30);
 const nurseryActive=()=>(S.nursery||[]).filter(n=>n.st==='cours');
 const nurseryReady=()=>nurseryActive().filter(n=>readyOf(n)<=TODAY);
@@ -1816,14 +1942,26 @@ $('#invView').addEventListener('change',e=>{const t=e.target;
 /* ================= Récoltes ================= */
 function plantings(){const out=[];plantables().forEach(o=>{const bu=blockUntil(o);o.zones.forEach((z,zi)=>{const p=P[z.crop];if(!p)return;const g=zoneGrid(o,z),by={};
   for(const k in z.cells)(by[z.cells[k]]=by[z.cells[k]]||[]).push(k);
-  for(const d in by){const hv=addD(d,p.j);out.push({o,z,zi,p,d,n:by[d].length*g.per,hv,bu,left:days(TODAY,hv),prog:clamp(days(parse(d),TODAY)/p.j,0,1)})}})});
+  for(const d in by){const hv=p.fl?bloomStart(d,p):addD(d,p.j);out.push({o,z,zi,p,d,n:by[d].length*g.per,hv,bu,left:days(TODAY,hv),prog:clamp(days(parse(d),TODAY)/Math.max(1,p.fl?days(parse(d),hv):p.j),0,1)})}})});
   return out.sort((a,b)=>a.hv-b.hv)}
 function hvRow(x){const due=x.bu&&x.left<=0?`<span class="due blocked">bloquée<br>→ ${fdate(x.bu)}</span>`:`<span class="due ${x.left<=0?'ready':''}">${x.left<=0?(x.left<-14?'prête depuis<br>'+(-x.left)+' j':'prête'):'dans<br>'+x.left+' j'}</span>`;
   return`<button class="hv" data-open="${x.o.id}" data-zi="${x.zi}">${ring(x.prog,x.p.id,x.left<=0&&!x.bu)}<span style="min-width:0"><span class="t">${x.p.n}</span> <span class="s">· ${esc(fullName(x.o))} · ≈ ${x.n} plant${x.n>1?'s':''}</span>
   <span class="s" style="display:block">Semé le ${fdate(parse(x.d))} → récolte ${fdate(x.hv)}${x.bu?' · traitement en cours':''}</span><span class="bar"><span style="width:${Math.round(x.prog*100)}%"></span></span></span>${due}</button>`}
 let hvYear=YEAR;
 function allHarvests(){const out=[];plantables().forEach(o=>(o.journal||[]).forEach(e=>{if(e.k==='recolte'&&e.kg>0)out.push({o,crop:e.crop,kg:+e.kg,y:parse(e.d).getFullYear()})}));return out}
-function renderHarvest(){
+function renderBlooms(){const all=plantings(),mo=TODAY.getMonth()+1,v=$('#v-harvest');
+  const now=all.filter(x=>{const b=bloomState(x);return b&&b.k==='bloom'}),soon=all.filter(x=>x.left>0&&x.left<=60).sort((a,b)=>a.left-b.left);
+  const species=[...new Map(all.map(x=>[x.p.id,x.p])).values()].sort((a,b)=>Math.min(...a.fl)-Math.min(...b.fl));
+  const cuts=[];allObjs().forEach(o=>(o.journal||[]).forEach(e=>{if(e.k==='recolte'&&parse(e.d).getFullYear()===YEAR)cuts.push({o,e})}));
+  const byF={};cuts.forEach(({e})=>{byF[e.crop]=(byF[e.crop]||0)+(+e.kg||0)});const totC=cuts.reduce((a,{e})=>a+(+e.kg||0),0);
+  const r=x=>{const b=bloomState(x);return`<button class="hv" data-open="${x.o.id}" data-zi="${x.zi}">${ring(b.k==='bloom'?1:x.prog,x.p.id,b.k==='bloom')}<span><span class="t">${x.p.n}</span> <span class="s">· ${esc(fullName(x.o))}</span><span class="s" style="display:block">${b.long}${x.p.cut?' · à couper':''}</span></span><span class="due ${b.k==='bloom'?'ready':''}">${b.k==='bloom'?'en fleur':b.k==='wait'?'dans<br>'+x.left+' j':b.short}</span></button>`};
+  v.innerHTML=`<div class="page"><div><h2>Floraisons</h2><span class="note">${now.length?now.length+' en fleur en '+MONTHS[mo-1]:'Rien en fleur en '+MONTHS[mo-1]}</span></div>
+  ${now.length?`<div class="stack"><span class="lbl">En fleur maintenant</span><div class="hvlist">${now.map(r).join('')}</div></div>`:''}
+  ${soon.length?`<div class="stack"><span class="lbl">Bientôt</span><div class="hvlist">${soon.map(r).join('')}</div></div>`:''}
+  ${species.length?`<div class="stack"><span class="lbl">Calendrier de floraison</span><div class="bloomcal"><div class="bch"><span></span>${MSHORT.map((l,i)=>`<span class="${i+1===mo?'now':''}">${l}</span>`).join('')}</div>${species.map(p=>`<div class="bcr"><span class="bn">${ci(p.id)}${p.n}</span>${MSHORT.map((l,i)=>`<span class="${i+1===mo?'now':''}">${p.fl.includes(i+1)?`<i style="background:${p.c}"></i>`:''}</span>`).join('')}</div>`).join('')}</div></div>`:emptyHTML('sprout','Aucune fleur plantée pour l\'instant. Ouvre un massif pour choisir quoi y mettre.')}
+  <div class="stack"><div class="section-t"><span class="lbl">Coupes ${YEAR}</span><span class="mono note">${num(totC,0)} tige${totC>1?'s':''}</span></div>${cuts.length?`<div class="hvlist">${Object.entries(byF).sort((a,b)=>b[1]-a[1]).map(([id,n])=>`<div class="hv" style="cursor:default">${ci(id)}<span><span class="t">${P[id]?P[id].n:id}</span></span><span class="due">${num(n,0)} tiges</span></div>`).join('')}</div>`:'<p class="note">Note tes coupes dans le journal d\'un massif (« Coupe ») pour suivre ce que donnent tes fleurs.</p>'}</div>
+  <p class="note">Dates indicatives pour la Belgique : la floraison dépend de l'exposition et de la météo de l'année.</p></div>`}
+function renderHarvest(){if(FLW())return renderBlooms();
   const all=plantings(),ready=all.filter(x=>x.left<=0),soon=all.filter(x=>x.left>0),mo=TODAY.getMonth()+1;
   const H=allHarvests(),yrs=[...new Set([YEAR,...H.map(h=>h.y)])].sort((a,b)=>b-a);
   const cur=H.filter(h=>h.y===hvYear),tot=cur.reduce((s,h)=>s+h.kg,0);
@@ -1935,6 +2073,7 @@ const PESTS=[
  {n:'Limaces',c:['laitue','laitue_h','chou','courgette','fraise','mache','epinard','haricot'],m:[3,4,5,6,9,10],t:'Ronde le soir après la pluie, pièges à bière, paillage sec autour des plants.'},
  {n:'Oïdium',c:['courgette','concombre','potiron','pois'],m:[7,8,9],t:'Arrose au pied, retire les feuilles blanches ; le soufre agit en préventif.'},
  {n:'Botrytis',c:['fraise','laitue','laitue_h','tomate'],m:[5,6,9,10],t:'Aère, retire les parties pourries, évite les arrosages tardifs.'}];
+PESTS.push(...FL_PESTS);
 function pestsNow(){const mo=TODAY.getMonth()+1,inPlace=[];plantables().forEach(o=>o.zones.forEach(z=>{if(z.crop&&Object.keys(z.cells).length)inPlace.push({o,crop:z.crop})}));
   return PESTS.filter(p=>p.m.includes(mo)).map(p=>({...p,where:inPlace.filter(x=>p.c.includes(x.crop))})).filter(p=>p.where.length)}
 const MABR=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
@@ -1948,7 +2087,7 @@ function renderToday(){
   const hasSeeds=id=>(S.stock||[]).some(q=>q.cat==='graine'&&q.crop===id&&stockOf(q)>0&&!expired(q));
   const row=(color,main,sub,right,attrs)=>`<button class="trow" ${attrs}>${/^(#|var\()/.test(color)?`<i style="background:${color}"></i>`:color}<span><b>${main}</b>${sub?` <span class="note">· ${sub}</span>`:''}</span>${right}</button>`;
   /* une section par lieu : plein air, chaque serre */
-  const locs=[{key:'out',t:'Planches en plein air',ico:'<path d="M4 20h16M6 20V10M18 20V10M3 10l9-6 9 6"/>',f:o=>!serreOf(o)}];
+  const locs=[{key:'out',t:FLW()?'Massifs en plein air':'Planches en plein air',ico:'<path d="M4 20h16M6 20V10M18 20V10M3 10l9-6 9 6"/>',f:o=>!serreOf(o)}];
   S.objs.filter(o=>o.type==='serre').forEach(se=>locs.push({key:se.id,t:se.name,ico:'<path d="M3 20V11a9 9 0 0 1 18 0v9z"/><path d="M12 2v18M3 14h18"/>',f:o=>serreOf(o)===se,serre:true}));
   let nAct=0;
   const secs=locs.map(L=>{const pls=plantables().filter(L.f),mine=pl.filter(x=>pls.includes(x.o));
@@ -1957,9 +2096,14 @@ function renderToday(){
     const pe=pests.map(p=>({...p,where:p.where.filter(w=>pls.includes(w.o))})).filter(p=>p.where.length);
     const free=[];pls.forEach(o=>o.zones.forEach((z,i)=>{if(!z.crop)free.push({o,i,z})}));
     const c=[];
-    if(fp.lvl>0&&sens.length){const danger=fr!=null&&fr<=2;c.push(`<div class="tcard ${L.serre?'':'frost'}"><h3>Gel${fr!=null?` · ${num(fr)} °C prévus`:''}</h3><span>${L.serre?'Serre non chauffée : protège d\'un voile si une nuit sous −2 °C est annoncée. Cultures sensibles :':danger?'Couvre ou rentre ce soir :':fp.txt+'. Cultures sensibles :'} ${sens.map(x=>`<b>${P[x.z.crop].n.toLowerCase()}</b> (${esc(x.o.name)})`).join(', ')}.</span>${fr==null&&!L.serre?'<button class="btn small" data-tgo="weather" style="justify-self:start">Indiquer le minimum prévu</button>':''}</div>`);nAct++}
-    if(ready.length){c.push(`<div class="tcard"><h3>À récolter <span class="n">${ready.length}</span></h3>${ready.map(x=>`<div class="swrap"><div class="swbg ok">Noter la récolte ›</div>${row(ring(1,x.p.id,true),x.p.n,esc(x.o.name),`<span class="due ready">${x.left<-14?'depuis '+(-x.left)+' j':'prêt'}</span>`,`data-open="${x.o.id}" data-zi="${x.zi}" data-sw="h:${x.o.id}:${x.zi}:${x.p.id}"`)}</div>`).join('')}<span class="note swhint">Glisse une ligne vers la gauche pour noter la récolte.</span></div>`);nAct+=ready.length}
-    if(blocked.length)c.push(`<div class="tcard"><h3>Récolte à attendre</h3>${blocked.map(x=>row(ring(1,x.p.id,false),x.p.n,esc(x.o.name)+' · délai après traitement',`<span class="due blocked">${fdate(x.bu)}</span>`,`data-open="${x.o.id}" data-zi="${x.zi}"`)).join('')}</div>`);
+    if(fp.lvl>0&&sens.length){const danger=fr!=null&&fr<=2;c.push(`<div class="tcard ${L.serre?'':'frost'}"><h3>Gel${fr!=null?` · ${num(fr)} °C prévus`:''}</h3><span>${L.serre?'Serre non chauffée : protège d\'un voile si une nuit sous −2 °C est annoncée. '+(FLW()?'Plantes sensibles :':'Cultures sensibles :'):danger?(FLW()?'Couvre, rentre ou arrache ce soir :':'Couvre ou rentre ce soir :'):fp.txt+(FLW()?'. Plantes sensibles :':'. Cultures sensibles :')} ${sens.map(x=>`<b>${P[x.z.crop].n.toLowerCase()}</b> (${esc(x.o.name)})`).join(', ')}.</span>${fr==null&&!L.serre?'<button class="btn small" data-tgo="weather" style="justify-self:start">Indiquer le minimum prévu</button>':''}</div>`);nAct++}
+    if(FLW()){const bl=mine.filter(x=>{const b=bloomState(x);return b&&b.k==='bloom'}),soon=mine.filter(x=>x.left>0&&x.left<=30);
+      const care=[];const seen=new Set();mine.forEach(x=>(x.p.care||[]).forEach(cr=>{if(cr.m.includes(mo)){const k=x.p.id+cr.t;if(seen.has(k)){care.find(q=>q.k===k).where.add(x.o.name);return}seen.add(k);care.push({k,p:x.p,t:cr.t,where:new Set([x.o.name])})}}));
+      if(care.length){c.push(`<div class="tcard"><h3>Entretien ce mois-ci <span class="n">${care.length}</span></h3>${care.map(q=>row(ci(q.p.id),q.p.n,[...q.where].map(esc).join(', '),'',`data-open="${mine.find(x=>x.p===q.p).o.id}" data-zi="0"`).replace('</b>','</b><span class="note" style="display:block;color:var(--ink)">'+esc(q.t)+'</span>')).join('')}</div>`);nAct+=care.length}
+      if(bl.length)c.push(`<div class="tcard"><h3>En fleur <span class="n">${bl.length}</span></h3>${bl.map(x=>row(ring(1,x.p.id,true),x.p.n,esc(x.o.name),`<span class="due ready">${x.p.cut?'à couper':'en fleur'}</span>`,`data-open="${x.o.id}" data-zi="${x.zi}"`)).join('')}</div>`);
+      if(soon.length)c.push(`<div class="tcard"><h3>Bientôt en fleur</h3>${soon.map(x=>row(ring(x.prog,x.p.id,false),x.p.n,esc(x.o.name),`<span class="due">dans<br>${x.left} j</span>`,`data-open="${x.o.id}" data-zi="${x.zi}"`)).join('')}</div>`)}
+    else if(ready.length){c.push(`<div class="tcard"><h3>À récolter <span class="n">${ready.length}</span></h3>${ready.map(x=>`<div class="swrap"><div class="swbg ok">Noter la récolte ›</div>${row(ring(1,x.p.id,true),x.p.n,esc(x.o.name),`<span class="due ready">${x.left<-14?'depuis '+(-x.left)+' j':'prêt'}</span>`,`data-open="${x.o.id}" data-zi="${x.zi}" data-sw="h:${x.o.id}:${x.zi}:${x.p.id}"`)}</div>`).join('')}<span class="note swhint">Glisse une ligne vers la gauche pour noter la récolte.</span></div>`);nAct+=ready.length}
+    if(blocked.length&&!FLW())c.push(`<div class="tcard"><h3>Récolte à attendre</h3>${blocked.map(x=>row(ring(1,x.p.id,false),x.p.n,esc(x.o.name)+' · délai après traitement',`<span class="due blocked">${fdate(x.bu)}</span>`,`data-open="${x.o.id}" data-zi="${x.zi}"`)).join('')}</div>`);
     if(th.length){c.push(`<div class="tcard urgent"><h3>À arroser <span class="n">${th.length}</span></h3>${th.map(o=>`<div class="swrap"><div class="swbg water">Arrosé ✓</div><div class="trow" data-sw="w:${o.id}"><i style="background:var(--water)"></i><span><b>${esc(o.name)}</b><span class="note" style="display:block">${waterText(lastWater(o))}</span></span><button class="btn small" data-tw="${o.id}">Arrosé</button></div></div>`).join('')}${L.serre?'':'<button class="btn small" data-train="1" style="justify-self:start">Il a plu aujourd\'hui</button>'}</div>`);nAct+=th.length}
     if(pe.length)c.push(`<div class="tcard"><h3>À surveiller</h3>${pe.map(p=>`<div class="pest"><span><b>${p.n}</b> <span class="note">· ${[...new Set(p.where.map(w=>P[w.crop].n.toLowerCase()+' ('+w.o.name+')'))].map(esc).join(', ')}</span></span><span class="note" style="color:var(--ink)">${esc(p.t)}</span></div>`).join('')}</div>`);
     if(free.length)c.push(`<div class="tcard"><h3>Place libre <span class="n">${free.length}</span></h3>${free.map(f=>row('var(--soil)',esc(f.o.name),'zone '+(f.i+1)+', '+m2(f.z.len)+' m','<span class="note">Que planter ? ›</span>',`data-open="${f.o.id}" data-zi="${f.i}"`)).join('')}</div>`);
@@ -2024,18 +2168,21 @@ function renderCrops(){
     const acts2=(x.sgNow&&x.seeds&&!x.pl.length)?`<button class="btn small primary" data-cact="sow" data-crop="${p.id}">Semer en godets</button>`:'';
     const acts3=(!x.seeds&&!x.pl.length&&(x.now||x.sgNow))?`<button class="btn small" data-cact="buy" data-crop="${p.id}">Ajouter aux graines à acheter</button>`:'';
     return`<div class="crop">
-   <div class="row between"><div class="row">${ci(p.id,1,'big')}<h3>${p.n}</h3><span class="note">${p.f}</span></div><span class="mono note">≈ ${p.j} j${FROST_SENSITIVE.has(p.id)?' · gélive':''}</span></div>
+   <div class="row between"><div class="row">${ci(p.id,1,'big')}<h3>${p.n}</h3><span class="note">${p.f}</span></div><span class="mono note">${p.fl?FL_TYPE[p.t]:'≈ '+p.j+' j'}${FROST_SENSITIVE.has(p.id)?' · gélive':''}</span></div>
    ${st?`<div class="rs">${st}</div>`:''}
-   <div class="mono note">Rangs ${p.rang} cm · plants ${p.pl} cm · ☀ ${SUN_NEED[p.id]} h+ (${sunLabel(SUN_NEED[p.id])})</div>
+   <div class="mono note">${p.fl?`Hauteur ${m2(p.ht)} m · espacement ${p.pl} cm · rustique jusqu'à ${p.hardy} °C`:`Rangs ${p.rang} cm · plants ${p.pl} cm`} · ☀ ${SUN_NEED[p.id]} h+ (${sunLabel(SUN_NEED[p.id])})</div>
+   ${p.fl?`<div class="note" style="color:var(--ink)">${esc(p.cols||'')}${p.cut?' · fleur à couper':''}${p.lift?' · à rentrer ou arracher avant l\'hiver':''}</div>`:''}
    <div class="stack" style="gap:6px">${(p.sg||[]).length?`<div class="row" style="flex-wrap:nowrap"><span class="mlbl">Semis en godets</span><div class="months" style="flex:1">${MSHORT.map((l,i)=>`<span class="${p.sg.includes(i+1)?'on':''} ${i+1===mo?'now':''}" title="${MONTHS[i]}">${l}</span>`).join('')}</div></div>`:''}
-   <div class="row" style="flex-wrap:nowrap"><span class="mlbl">Plantation / semis direct</span><div class="months" style="flex:1">${MSHORT.map((l,i)=>`<span class="${p.m.includes(i+1)?'on':''} ${i+1===mo?'now':''}" title="${MONTHS[i]}">${l}</span>`).join('')}</div></div></div>
+   <div class="row" style="flex-wrap:nowrap"><span class="mlbl">${p.t==='bulbe'||p.t==='tubercule'?'Plantation des bulbes':'Plantation / semis direct'}</span><div class="months" style="flex:1">${MSHORT.map((l,i)=>`<span class="${p.m.includes(i+1)?'on':''} ${i+1===mo?'now':''}" title="${MONTHS[i]}">${l}</span>`).join('')}</div></div>
+   ${p.fl?`<div class="row" style="flex-wrap:nowrap"><span class="mlbl">Floraison</span><div class="months" style="flex:1">${MSHORT.map((l,i)=>`<span class="${i+1===mo?'now':''}" ${p.fl.includes(i+1)?`style="background:${p.c};color:#fff;border-color:${p.c}"`:''} title="${MONTHS[i]}">${l}</span>`).join('')}</div></div>`:''}</div>
+   ${p.fl&&(p.care||[]).length?`<div class="note"><b style="color:var(--ink)">Entretien</b> · ${p.care.map(cr=>`${mRange(cr.m)} : ${esc(cr.t.charAt(0).toLowerCase()+cr.t.slice(1))}`).join(' · ')}</div>`:''}
    ${acts||acts2||acts3?`<div class="row">${acts}${acts2}${acts3}</div>`:''}
    ${g.length?`<div><span class="lbl">Bons voisins</span><div class="chips" style="margin-top:4px">${g.map(q=>chip(q.id,'good')).join('')}</div></div>`:''}
    ${b.length?`<div><span class="lbl">À éviter à côté</span><div class="chips" style="margin-top:4px">${b.map(q=>chip(q.id,'bad')).join('')}</div></div>`:''}
    ${ps.length?`<div class="note">À surveiller : ${ps.map(y=>`${y.n} (${mRange(y.m)})`).join(', ')}</div>`:''}
   </div>`};
   const groups=cropGroups().map(g=>({...g,l:g.l.filter(x=>!q||(x.p.n+' '+x.p.f).toLowerCase().includes(q))})).filter(g=>g.l.length);
-  v.innerHTML=`<div class="page"><h2>Cultures</h2><input id="cq" class="search" placeholder="Chercher une culture ou une famille" value="${esc(cq)}" aria-label="Chercher">
+  v.innerHTML=`<div class="page"><h2>${FLW()?'Fleurs':'Cultures'}</h2><input id="cq" class="search" placeholder="${FLW()?'Chercher une fleur ou une famille':'Chercher une culture ou une famille'}" value="${esc(cq)}" aria-label="Chercher">
   ${groups.map(g=>`<div class="stack"><div><div class="section-t"><span class="lbl">${g.k} · ${g.t}</span><span class="mono note">${g.l.length}</span></div><span class="note">${g.d}</span></div>${g.l.map(card).join('')}</div>`).join('')||'<p class="note">Aucune culture ne correspond.</p>'}
   <p class="note">Classement pour ${MONTHS[mo-1]} (le point jaune sous le calendrier marque le mois en cours, les cases vertes les mois possibles). Cadre vert : bon voisin. Cadre rouge : à éviter. Valeurs indicatives pour un climat belge.</p></div>`;
   if(had){const i=$('#cq');i.focus();i.setSelectionRange(cq.length,cq.length)}
@@ -2400,7 +2547,8 @@ const localAtOf=id=>id===GID?localAt:(+localStorage.getItem(keyAtOf(id))||0);
 const stateOf=id=>id===GID?lastJSON:localStorage.getItem(keyOf(id));
 /* ce que le relais doit surveiller pour les notifications (calculé ici, avec toutes les règles de l'app) */
 function notifPlan(){const ev=[],seen=new Set(),add=(k,d,txt)=>{const id=k+':'+d+':'+txt;if(!seen.has(id)){seen.add(id);ev.push({id,k,d,txt})}};
-  plantings().forEach(x=>{if(x.left>-30)add('harvest',iso(x.bu&&x.bu>x.hv?x.bu:x.hv),`${x.p.n} prêt à récolter (${fullName(x.o)})`)});
+  plantings().forEach(x=>{if(x.left>-30)add('harvest',iso(x.bu&&x.bu>x.hv?x.bu:x.hv),x.p.fl?`${x.p.n} en fleur (${fullName(x.o)})`:`${x.p.n} prêt à récolter (${fullName(x.o)})`)});
+  if(FLW()){const m0=new Date(YEAR,TODAY.getMonth(),1,12),seen=new Set();plantings().forEach(x=>(x.p.care||[]).forEach(cr=>{const k=x.p.id+cr.t;if(cr.m.includes(TODAY.getMonth()+1)&&!seen.has(k)){seen.add(k);add('care',iso(m0),`${x.p.n} : ${cr.t.charAt(0).toLowerCase()+cr.t.slice(1)}`)}}))}
   plantables().forEach(o=>{const bu=blockUntil(o);if(bu)add('dar',iso(bu),`Fin du délai après traitement : ${fullName(o)}`);
     o.zones.forEach(z=>(z.next||[]).forEach(n=>{if(n.date&&P[n.crop])add('plan',n.date,`À planter : ${P[n.crop].n} (${fullName(o)})`)}))});
   nurseryActive().forEach(n=>{if(P[n.crop])add('nursery',iso(readyOf(n)),`Semis de ${P[n.crop].n.toLowerCase()} prêts à repiquer`)});
@@ -2510,7 +2658,7 @@ function renderQ(){if(!q)return;const el=$('#qsheet');let h='<div class="grab"><
   if(q.step==='menu'){const th=plantables().filter(o=>thirsty(o)).length,rd=plantings().filter(x=>x.left<=0&&!x.bu).length;
     h+=`<div class="stack">${head('Noter')}<div class="qgrid">
     <button class="qbtn" data-q="water">${ico('<path d="M4 14h10l3-4h3M7 14v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-4"/><path d="M19 13v.01M20 16v.01M18 18v.01"/>')}Arrosage<span>${th?th+' planche'+(th>1?'s':'')+' à arroser':'Planches arrosées'}</span></button>
-    <button class="qbtn" data-q="harvest">${ico('<path d="M4 9h16l-2 11H6z"/><path d="M8 9a4 4 0 0 1 8 0"/>')}Récolte<span>${rd?rd+' prête'+(rd>1?'s':''):'Peser une récolte'}</span></button>
+    <button class="qbtn" data-q="harvest">${ico('<path d="M4 9h16l-2 11H6z"/><path d="M8 9a4 4 0 0 1 8 0"/>')}${FLW()?'Coupe':'Récolte'}<span>${FLW()?'Compter les tiges coupées':rd?rd+' prête'+(rd>1?'s':''):'Peser une récolte'}</span></button>
     <button class="qbtn" data-q="rain">${ico('<path d="M7 15a4 4 0 0 1 .6-8A5 5 0 0 1 17 8a3.5 3.5 0 0 1 0 7z"/><path d="M9 18l-1 2M13 18l-1 2M17 18l-1 2"/>')}Pluie<span>Si la station n'est pas reliée</span></button>
     <button class="qbtn" data-q="semis">${ico('<path d="M6 20h12l-1.5-7h-9z"/><path d="M12 13V8"/><path d="M12 9c0-3 2-5 5-5 0 3-2 5-5 5z"/>')}Semis en godets<span>Dans l'abri</span></button>
     <button class="qbtn wide" data-q="note">${ico('<path d="M4 7h3l2-3h6l2 3h3v13H4z"/><circle cx="12" cy="13" r="4"/>')}Note ou photo<span>Observation sur une planche</span></button></div></div>`}
@@ -2520,9 +2668,9 @@ function renderQ(){if(!q)return;const el=$('#qsheet');let h='<div class="grab"><
   else if(q.step==='rain'){h+=`<div class="stack">${head('Pluie')}<div class="grid2"><label class="field"><span class="lbl">Date</span><input id="q-d" type="date" value="${iso(TODAY)}"></label><label class="field"><span class="lbl">Quantité (mm)</span><input id="q-mm" type="number" min="0" step="0.5" placeholder="facultatif"></label></div><button class="btn primary" data-q="dorain">Noter la pluie</button></div>`}
   else if(q.step==='harvest'){const L=qPlanches(),rdIds=new Set(plantings().filter(x=>x.left<=0&&!x.bu).map(x=>x.o.id));L.sort((a,b)=>(rdIds.has(b.id)-rdIds.has(a.id))||(!!blockUntil(a)-!!blockUntil(b)));
     const o=obj(q.o)||L[0];if(o)q.o=o.id;const crops=o?[...new Set(o.zones.filter(z=>z.crop).map(z=>z.crop))]:[];const bu=o&&blockUntil(o);
-    h+=`<div class="stack">${head('Récolte')}<div class="grid2"><label class="field span2"><span class="lbl">Planche</span><select id="q-o">${L.map(x=>`<option value="${x.id}" ${o&&x.id===o.id?'selected':''}>${esc(fullName(x))}${rdIds.has(x.id)?' · prête':''}</option>`).join('')}</select></label>
-    <label class="field"><span class="lbl">Culture</span><select id="q-c">${crops.map(c=>`<option value="${c}">${P[c].n}</option>`).join('')}</select></label><label class="field"><span class="lbl">Poids (kg)</span><input id="q-kg" type="number" min="0" step="0.1" inputmode="decimal"></label></div>
-    ${bu?`<div class="alert"><span>Récolte impossible avant le <b>${fdate(bu)}</b> : délai après traitement.</span></div>`:''}<button class="btn primary" data-q="doharvest" ${bu?'disabled':''}>Noter la récolte</button></div>`}
+    h+=`<div class="stack">${head(FLW()?'Coupe':'Récolte')}<div class="grid2"><label class="field span2"><span class="lbl">${FLW()?'Massif':'Planche'}</span><select id="q-o">${L.map(x=>`<option value="${x.id}" ${o&&x.id===o.id?'selected':''}>${esc(fullName(x))}${rdIds.has(x.id)?' · prête':''}</option>`).join('')}</select></label>
+    <label class="field"><span class="lbl">Culture</span><select id="q-c">${crops.map(c=>`<option value="${c}">${P[c].n}</option>`).join('')}</select></label><label class="field"><span class="lbl">${FLW()?'Nombre de tiges':'Poids (kg)'}</span><input id="q-kg" type="number" min="0" step="${FLW()?1:0.1}" inputmode="decimal"></label></div>
+    ${bu?`<div class="alert"><span>Récolte impossible avant le <b>${fdate(bu)}</b> : délai après traitement.</span></div>`:''}<button class="btn primary" data-q="doharvest" ${bu?'disabled':''}>${FLW()?'Noter la coupe':'Noter la récolte'}</button></div>`}
   else if(q.step==='note'){const L=plantables();h+=`<div class="stack">${head('Note ou photo')}<label class="field"><span class="lbl">Planche</span><select id="q-o">${L.map(x=>`<option value="${x.id}">${esc(fullName(x))}</option>`).join('')}</select></label>
     <label class="field"><span class="lbl">Note</span><textarea id="q-t" placeholder="Ce que tu observes"></textarea></label>
     <div class="photoprev">${q.photo?`<img src="${photoSrc(q.photo)}" alt="Photo jointe"><button class="btn small" data-q="nophoto">Retirer</button>`:'<label class="btn small" for="q-ph">Ajouter une photo</label>'}<input id="q-ph" type="file" accept="image/*" hidden></div>
@@ -2538,8 +2686,8 @@ $('#qsheet').addEventListener('click',e=>{const b=e.target.closest('[data-q]');i
   if(a==='dowater'){const ids=[...$('#qsheet').querySelectorAll('.qlist input:checked')].map(i=>i.value);if(!ids.length)return toast('Coche au moins une planche');
     ids.forEach(id=>{const o=obj(id);o.journal=o.journal||[];o.journal.push({id:uid(),k:'arrosage',d:iso(TODAY),t:''})});save();closeQ();refresh();return toast(`Arrosage noté sur ${ids.length} planche${ids.length>1?'s':''}`,true)}
   if(a==='dorain'){const v=parseFloat(String($('#q-mm').value).replace(',','.'));addRain(isNaN(v)?null:v,$('#q-d').value||iso(TODAY));save();closeQ();refresh();return toast('Pluie notée',true)}
-  if(a==='doharvest'){const o=obj($('#q-o').value),kg=parseFloat(String($('#q-kg').value).replace(',','.'))||0;if(!o)return;if(!kg)return toast('Indique le poids récolté');
-    const cr=$('#q-c').value;o.journal=o.journal||[];o.journal.push({id:uid(),k:'recolte',d:iso(TODAY),crop:cr,kg});save();closeQ();refresh();return toast(`${P[cr]?P[cr].n:'Récolte'} : ${num(kg)} kg notés`,true)}
+  if(a==='doharvest'){const o=obj($('#q-o').value),kg=parseFloat(String($('#q-kg').value).replace(',','.'))||0;if(!o)return;if(!kg)return toast(FLW()?'Indique le nombre de tiges':'Indique le poids récolté');
+    const cr=$('#q-c').value,fu=FLW();o.journal=o.journal||[];o.journal.push({id:uid(),k:'recolte',d:iso(TODAY),crop:cr,kg,...(fu?{u:'tiges'}:{})});save();closeQ();refresh();return toast(`${P[cr]?P[cr].n:'Récolte'} : ${num(kg)} ${fu?'tiges notées':'kg notés'}`,true)}
   if(a==='nophoto'){q.photo=null;return renderQ()}
   if(a==='donote'){const o=obj($('#q-o').value),t=$('#q-t').value.trim();if(!t&&!q.photo)return toast('Écris une note ou ajoute une photo');
     o.journal=o.journal||[];const en={id:uid(),k:'note',d:iso(TODAY),t};if(q.photo)en.ph=q.photo;o.journal.push(en);save();closeQ();refresh();return toast('Note enregistrée : '+o.name,true)}});
