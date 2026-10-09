@@ -32,7 +32,7 @@ img{max-width:100%}
 </head>
 <body>
 <div id="splash" aria-hidden="true"><img src="icon-512.png" alt=""><span>Atelier Potager</span></div>
-<script>try{if((localStorage.getItem('potager-ui')||'glass')==='glass'){document.documentElement.dataset.ui='glass';document.documentElement.dataset.theme='dark'}}catch(e){}</script>
+<script>try{var d=document.documentElement,u=localStorage.getItem('potager-ui')||'glass';d.dataset.ui=u;if(u==='glass')d.dataset.theme='dark';else if(u!=='classic')d.dataset.theme='light'}catch(e){}</script>
 <style>
 /* Layout: one-screen app — header, full-bleed plan canvas with a bottom sheet, bottom tab bar. Plan reads like a surveyor's sheet on sage paper. */
 :root{
@@ -508,47 +508,126 @@ table.cmp tr:last-child td{border-bottom:0}
 .toast button{border:0;background:none;color:var(--sun);font-weight:700}
 @media (min-width:760px){ .sheet{left:auto;right:16px;bottom:16px;width:380px;border-radius:18px;border:1px solid var(--line);max-height:calc(100% - 32px)} .sunbar{right:auto;width:420px}}
 @media (prefers-reduced-motion:no-preference){ .sheet{animation:up .18s ease-out} @keyframes up{from{transform:translateY(16px);opacity:.6}} }
-/* ===== Style « Verre sombre » — Menu › Style ; « Classique » rend l'ancien look ===== */
+/* ===== Styles d'interface — Menu › Style : Classique (d'origine), iOS, Verre sombre, Widgets ===== */
+.gpill,.thero,.tsum{display:none}
+:root:is([data-ui="ios"],[data-ui="glass"],[data-ui="widgets"]){
+  --f-display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",system-ui,sans-serif;
+  --f-body:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif;
+  --f-mono:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif;
+}
+:root:is([data-ui="ios"],[data-ui="glass"],[data-ui="widgets"]) body{font-variant-numeric:tabular-nums}
+:root:is([data-ui="ios"],[data-ui="glass"],[data-ui="widgets"]) .brand{display:none}
+:root:is([data-ui="ios"],[data-ui="glass"],[data-ui="widgets"]) .gpill{display:inline-flex;align-items:center;gap:4px;max-width:100%;min-height:40px;border:0;background:none;font-size:17px;font-weight:600;padding:0;color:var(--accent)}
+.gpill span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gpill svg{width:15px;height:15px;flex:none;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+:root:is([data-ui="ios"],[data-ui="glass"],[data-ui="widgets"]) .page>h2:first-child,:root:is([data-ui="ios"],[data-ui="glass"],[data-ui="widgets"]) .page>div:first-child>h2:first-child{font-size:34px;line-height:1.1;letter-spacing:-.02em}
+:root:is([data-ui="glass"],[data-ui="widgets"]) .tsum{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+:root:is([data-ui="ios"],[data-ui="glass"],[data-ui="widgets"]) #redoBtnH:disabled{display:none}
+:root:is([data-ui="ios"],[data-ui="glass"],[data-ui="widgets"]) .swrap{border-radius:0}
+:root:is([data-ui="ios"],[data-ui="glass"],[data-ui="widgets"]) .swrap+.swrap{border-top:1px solid var(--card-line,var(--line))}
+:root:is([data-ui="ios"],[data-ui="glass"],[data-ui="widgets"]) .swrap .trow{background:transparent}
+:root:is([data-ui="ios"],[data-ui="glass"],[data-ui="widgets"]) .swbg{opacity:0}
+:root:is([data-ui="ios"],[data-ui="glass"],[data-ui="widgets"]) .swrap:has(.trow[style*="translate"]) .trow{background:var(--surface)}
+:root:is([data-ui="ios"],[data-ui="glass"],[data-ui="widgets"]) .swrap:has(.trow[style*="translate"]) .swbg{opacity:1}
+.tt{display:flex;flex-direction:column;justify-content:space-between;gap:14px;min-height:132px;padding:14px 16px;border-radius:22px;border:0;text-align:left;width:100%;min-width:0}
+.tt .tl{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;letter-spacing:.02em}
+.tt .tl svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round}
+.tt .big{display:block;font-size:36px;font-weight:800;line-height:1;letter-spacing:-.02em}
+.tt .sm{display:block;font-size:13px;font-weight:500;margin-top:6px;line-height:1.3}
+
+/* --- iOS natif --- */
+:root[data-ui="ios"]{--bg:#f2f2f7;--surface:#fff;--surface-2:#f2f2f7;--ink:#000;--muted:#6c6c70;--line:#e5e5ea;--accent:#248a3d;--accent-ink:#fff;--halo:#fff;--ground:#e6ebdd;color-scheme:light}
+:root[data-ui="ios"] body{background:#f2f2f7}
+:root[data-ui="ios"] header.top{background:rgba(242,242,247,.92);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-bottom:0;gap:2px}
+:root[data-ui="ios"] .iconbtn{border:0;background:none;color:var(--accent);width:40px}
+:root[data-ui="ios"] .iconbtn:disabled{color:#c7c7cc;opacity:1}
+:root[data-ui="ios"] .iconbtn svg{stroke-width:2}
+:root[data-ui="ios"] .tabs{background:rgba(249,249,249,.94);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-top:1px solid #d1d1d6}
+:root[data-ui="ios"] .tabs button{font-size:10px;font-weight:500;color:#8a8a8e}
+:root[data-ui="ios"] .tabs button[aria-current="page"]{color:var(--accent)}
+:root[data-ui="ios"] .tsec-h{border-top:0;padding-top:8px}
+:root[data-ui="ios"] .tsec-h h2{font-size:22px!important}
+:root[data-ui="ios"] :is(.tcard,.panel,.crop,.stat,.aucard,.wxadv,.abcard,.sg,.glist,.nlist,.jlist,.hvlist,.qbtn,.info,.alert){background:#fff;border:0;border-radius:12px}
+:root[data-ui="ios"] .tcard h3{font-size:13px;font-weight:400;text-transform:uppercase;letter-spacing:.02em;color:var(--muted)}
+:root[data-ui="ios"] .tcard h3 .n{background:#f2f2f7;color:var(--muted)}
+:root[data-ui="ios"] .tcard.frost h3{color:#0a64c2;font-weight:600}
+:root[data-ui="ios"] .tcard.urgent h3{color:#b25000;font-weight:600}
+:root[data-ui="ios"] .alert{box-shadow:inset 0 0 0 1px currentColor}
+:root[data-ui="ios"] .trow{border-top:1px solid #e5e5ea}
+:root[data-ui="ios"] :is(.hv,.prod,.nrow){background:#fff;border-color:#e5e5ea}
+:root[data-ui="ios"] .btn{border:0;border-radius:99px;background:rgba(36,138,61,.12);color:#1b6b2f}
+:root[data-ui="ios"] .btn.primary{background:var(--accent);color:#fff}
+:root[data-ui="ios"] .btn.danger{background:rgba(215,0,21,.1);color:#c4000f}
+:root[data-ui="ios"] .btn.on{background:var(--sun);color:#1d1404}
+:root[data-ui="ios"] .btn.danger.armed{background:var(--danger);color:#fff}
+:root[data-ui="ios"] .fab .btn:not(.primary):not(.on){background:rgba(255,255,255,.94);box-shadow:0 2px 10px rgba(0,0,0,.15)}
+:root[data-ui="ios"] .seg{background:#e3e3e8;border-radius:9px;padding:2px;gap:0;flex-wrap:nowrap}
+:root[data-ui="ios"] .seg button{flex:1;border:0;background:none;border-radius:7px;font-weight:500;padding:0 6px;color:#000}
+:root[data-ui="ios"] .seg button[aria-pressed="true"]{background:#fff;color:#000;box-shadow:0 1px 3px rgba(0,0,0,.14)}
+:root[data-ui="ios"] :is(.chip,.bednav button){border:0;background:#fff}
+:root[data-ui="ios"] .tcard .chip{background:#f2f2f7}
+:root[data-ui="ios"] :is(.field input,.field select,.field textarea){border:0;background:#f2f2f7;border-radius:10px}
+:root[data-ui="ios"] .search{border:0;background:#e3e3e8;border-radius:10px}
+:root[data-ui="ios"] .sheet{border:0;border-radius:14px 14px 0 0;box-shadow:0 -6px 30px rgba(0,0,0,.14)}
+:root[data-ui="ios"] :is(.ctxbar,.sunbar,.compass){border:0;box-shadow:0 2px 12px rgba(0,0,0,.14)}
+:root[data-ui="ios"] .bedhead{background:rgba(242,242,247,.92);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
+:root[data-ui="ios"] .notefab{box-shadow:0 6px 18px rgba(36,138,61,.35)}
+@media (min-width:760px){:root[data-ui="ios"] .sheet{border-radius:14px}}
+
+/* --- Verre sombre --- */
 :root[data-ui="glass"]{
   --bg:#0d1411; --surface:#18211d; --surface-2:#222c27; --ink:#f2f6f3; --muted:#a3b0a8; --line:rgba(255,255,255,.13);
   --accent:#9be7a8; --accent-ink:#0d1411; --halo:#0d1411; --glass:rgba(255,255,255,.08);
   --card:rgba(255,255,255,.065); --card-line:rgba(255,255,255,.11); --bar:rgba(30,40,35,.78); --blur:saturate(160%) blur(22px);
   --wall:radial-gradient(520px 420px at -12% -6%,rgba(38,104,66,.5),transparent 70%),radial-gradient(420px 380px at 112% 42%,rgba(30,70,110,.42),transparent 70%),#0d1411;
-  --f-display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",system-ui,sans-serif;
-  --f-body:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif;
-  --f-mono:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif;
   color-scheme:dark;
 }
-:root[data-ui="glass"] body{background:var(--wall);font-variant-numeric:tabular-nums}
-:root[data-ui="glass"] header.top{background:transparent;border-bottom:0;padding-block:12px 6px;gap:6px}
-:root[data-ui="glass"] .brand{font-size:17px;letter-spacing:-.02em}
-:root[data-ui="glass"] .brand small{font-size:12px;letter-spacing:0}
-:root[data-ui="glass"] .iconbtn{width:40px;height:40px;border-radius:50%;background:var(--card);border-color:var(--card-line)}
+:root[data-ui="glass"] body{background:var(--wall)}
+:root[data-ui="glass"] header.top{background:transparent;border-bottom:0;padding-block:12px 4px;gap:8px}
+:root[data-ui="glass"] .gpill{background:var(--card);border:1px solid var(--card-line);border-radius:22px;padding:0 14px;color:var(--ink);font-size:15px}
+:root[data-ui="glass"] .iconbtn{width:42px;height:42px;border-radius:50%;background:var(--card);border-color:var(--card-line)}
 :root[data-ui="glass"] .iconbtn.on{background:var(--sun);border-color:var(--sun)}
-:root[data-ui="glass"] .tabs{margin:6px 10px max(env(safe-area-inset-bottom,0px),12px);padding:5px;gap:0;border:1px solid var(--card-line);border-radius:32px;background:var(--bar);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:0 10px 30px rgba(0,0,0,.35)}
-:root[data-ui="glass"] .tabs button{border-radius:26px;padding:8px 0 6px;font-size:10px;font-weight:600;letter-spacing:-.01em;color:#b9c4bd}
+:root[data-ui="glass"] .tabs{margin:6px 12px max(env(safe-area-inset-bottom,0px),12px);padding:5px;gap:0;border:1px solid var(--card-line);border-radius:32px;background:var(--bar);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:0 10px 30px rgba(0,0,0,.35)}
+:root[data-ui="glass"] .app:has(#noteBtn:not([hidden])) .tabs{margin-right:86px}
+:root[data-ui="glass"] .tabs button{font-size:0;gap:0;padding:12px 0;border-radius:26px;color:#b9c4bd}
+:root[data-ui="glass"] .tabs button svg{width:24px;height:24px;stroke-width:2}
 :root[data-ui="glass"] .tabs button[aria-current="page"]{background:rgba(255,255,255,.14);color:var(--accent)}
-:root[data-ui="glass"] .notefab{border-radius:30px;box-shadow:0 10px 26px rgba(0,0,0,.45)}
+:root[data-ui="glass"] #noteBtn{position:fixed;right:12px;bottom:max(env(safe-area-inset-bottom,0px),12px);width:62px;height:62px;min-height:0;padding:0;justify-content:center;border-radius:50%;box-shadow:0 10px 26px rgba(0,0,0,.45)}
+:root[data-ui="glass"] #noteBtn span{display:none}
+:root[data-ui="glass"] #noteBtn svg{width:26px;height:26px}
+:root[data-ui="glass"] #v-today .ttitle,:root[data-ui="glass"] #v-today .wxhero{display:none}
+:root[data-ui="glass"] .thero{display:grid;gap:2px}
+:root[data-ui="glass"] .thero span{font-size:15px;font-weight:500;color:var(--muted)}
+:root[data-ui="glass"] .thero b{font-size:40px;font-weight:700;line-height:1.05;letter-spacing:-.02em}
+:root[data-ui="glass"] .tt{background:var(--card);box-shadow:inset 0 0 0 1px var(--card-line);color:var(--ink)}
+:root[data-ui="glass"] .tt .tl{color:var(--muted)}
+:root[data-ui="glass"] .tt .big{font-size:44px;font-weight:300}
+:root[data-ui="glass"] .tt .sm{color:#c9d3cd}
+:root[data-ui="glass"] .tt.t-gel{background:rgba(120,190,255,.12);box-shadow:inset 0 0 0 1px rgba(140,200,255,.25)}
+:root[data-ui="glass"] .tt.t-gel :is(.tl,.big,.sm){color:#b9defc}
+:root[data-ui="glass"] :is(.t-rec,.t-eau,.t-pest){display:none}
 :root[data-ui="glass"] .page h2{letter-spacing:-.02em}
-:root[data-ui="glass"] .page>h2:first-child,:root[data-ui="glass"] .page>div:first-child>h2:first-child{font-size:34px;line-height:1.1}
 :root[data-ui="glass"] .tsec-h{border-top:0;padding-top:10px}
-:root[data-ui="glass"] :is(.tcard,.panel,.crop,.stat,.aucard,.wxadv,.abcard,.sg,.glist,.nlist,.jlist,.hvlist,.qbtn,.info){background:var(--card);border-color:var(--card-line);border-radius:22px}
+:root[data-ui="glass"] .tsec-h h2{font-size:17px!important}
+:root[data-ui="glass"] :is(.tcard,.panel,.crop,.stat,.aucard,.wxadv,.abcard,.sg,.glist,.nlist,.jlist,.hvlist,.qbtn,.info){background:var(--card);border-color:var(--card-line);border-radius:26px}
+:root[data-ui="glass"] .tcard h3{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}
+:root[data-ui="glass"] .tcard h3 .n{background:var(--accent);color:var(--accent-ink);font-weight:700}
 :root[data-ui="glass"] :is(.hv,.prod,.nrow){background:transparent;border-color:var(--card-line)}
 :root[data-ui="glass"] .trow{border-top:1px solid var(--card-line)}
 :root[data-ui="glass"] .plrow{border-color:var(--card-line)}
 :root[data-ui="glass"] .tcard.frost,:root[data-ui="glass"] .alert.frost{background:rgba(120,190,255,.11);border-color:rgba(140,200,255,.32)}
+:root[data-ui="glass"] .tcard.frost h3{color:#b9defc}
 :root[data-ui="glass"] .tcard.urgent{border-color:rgba(240,180,69,.55)}
-:root[data-ui="glass"] .alert{border-radius:18px;background:var(--card)}
+:root[data-ui="glass"] .alert{border-radius:20px;background:var(--card)}
 :root[data-ui="glass"] .wxhero{border-color:var(--card-line);border-radius:26px}
 :root[data-ui="glass"] .btn{border-radius:99px;background:var(--card);border-color:var(--card-line)}
 :root[data-ui="glass"] .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 :root[data-ui="glass"] .btn.on{background:var(--sun);border-color:var(--sun);color:#1d1404}
 :root[data-ui="glass"] .btn.danger.armed{background:var(--danger);border-color:var(--danger);color:#fff}
-:root[data-ui="glass"] .fab .btn:not(.primary){background:var(--bar);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur)}
-:root[data-ui="glass"] .fab .btn.on{background:var(--sun)}
+:root[data-ui="glass"] .fab .btn:not(.primary):not(.on){background:var(--bar);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur)}
 :root[data-ui="glass"] :is(.ctxbar,.sunbar,.compass){background:var(--bar);border-color:var(--card-line);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur)}
 :root[data-ui="glass"] :is(.ctxbar,.sunbar){border-radius:20px}
-:root[data-ui="glass"] .sheet{background:rgba(22,30,26,.88);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border-color:var(--card-line);border-radius:26px 26px 0 0;box-shadow:0 -14px 40px rgba(0,0,0,.45)}
+:root[data-ui="glass"] .sheet{background:rgba(22,30,26,.88);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border-color:var(--card-line);border-radius:28px 28px 0 0;box-shadow:0 -14px 40px rgba(0,0,0,.45)}
 :root[data-ui="glass"] .bed{background:var(--wall)}
 :root[data-ui="glass"] .bedhead{background:rgba(13,20,17,.78);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border-color:var(--card-line)}
 :root[data-ui="glass"] .bednav button{background:var(--card);border-color:var(--card-line)}
@@ -558,12 +637,57 @@ table.cmp tr:last-child td{border-bottom:0}
 :root[data-ui="glass"] .invcard{border-radius:26px;border:1px solid var(--card-line)}
 :root[data-ui="glass"] .toast{background:rgba(40,52,46,.94);color:var(--ink);border:1px solid var(--card-line);border-radius:18px;-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur)}
 :root[data-ui="glass"] .hint{background:rgba(40,52,46,.94);color:var(--ink);border-radius:12px}
-@media (min-width:760px){:root[data-ui="glass"] .sheet{border-radius:26px}}
+@media (min-width:760px){:root[data-ui="glass"] .sheet{border-radius:28px}}
+
+/* --- Widgets couleur --- */
+:root[data-ui="widgets"]{--bg:#f3f4f0;--surface:#fff;--surface-2:#f0f1ec;--ink:#151a16;--muted:#5b6159;--line:#e2e4de;--accent:#1f7a3a;--accent-ink:#fff;--halo:#fff;--ground:#e4ead8;color-scheme:light;
+  --f-display:-apple-system,BlinkMacSystemFont,"SF Pro Rounded","SF Pro Display","Helvetica Neue",system-ui,sans-serif}
+:root[data-ui="widgets"] body{background:#f3f4f0}
+:root[data-ui="widgets"] header.top{background:transparent;border-bottom:0;padding-block:12px 4px;gap:6px}
+:root[data-ui="widgets"] .gpill{background:var(--accent);color:#fff;border-radius:20px;padding:0 14px;font-size:15px;font-weight:700}
+:root[data-ui="widgets"] .iconbtn{width:40px;height:40px;border-radius:50%;border:0;background:#fff}
+:root[data-ui="widgets"] .page h2,:root[data-ui="widgets"] .tcard h3,:root[data-ui="widgets"] .cs-head .nm{font-weight:800}
+:root[data-ui="widgets"] .tt .big{font-family:var(--f-display)}
+:root[data-ui="widgets"] .t-wx{display:none}
+:root[data-ui="widgets"] .t-rec{background:#ffe9d6;color:#8a3b00}
+:root[data-ui="widgets"] .t-gel{background:#dcebff;color:#123e8c}
+:root[data-ui="widgets"] .t-eau{background:#d8f2f0;color:#0b5550}
+:root[data-ui="widgets"] .t-pest{background:#f1e3fa;color:#5b2386}
+:root[data-ui="widgets"] .tsec-h{border-top:0;padding-top:8px}
+:root[data-ui="widgets"] .tsec-h h2{font-size:20px!important}
+:root[data-ui="widgets"] :is(.tcard,.panel,.crop,.stat,.aucard,.wxadv,.abcard,.sg,.glist,.nlist,.jlist,.hvlist,.qbtn,.info,.alert){background:#fff;border:0;border-radius:22px}
+:root[data-ui="widgets"] .tcard h3{font-size:18px}
+:root[data-ui="widgets"] .tcard.frost{background:#dcebff;color:#123e8c}
+:root[data-ui="widgets"] .tcard.urgent{background:#d8f2f0;color:#0b5550}
+:root[data-ui="widgets"] .tcard:is(.frost,.urgent) :is(.trow,.note,b){color:inherit;border-color:rgba(0,0,0,.08)}
+:root[data-ui="widgets"] .alert{box-shadow:inset 0 0 0 1.5px currentColor}
+:root[data-ui="widgets"] .trow{border-top:1px solid #eceee8}
+:root[data-ui="widgets"] :is(.hv,.prod,.nrow){background:#fff;border-color:#eceee8}
+:root[data-ui="widgets"] .wxhero{border:0;border-radius:24px}
+:root[data-ui="widgets"] .btn{border:0;border-radius:99px;background:var(--surface-2)}
+:root[data-ui="widgets"] .btn.primary{background:var(--ink);color:#fff}
+:root[data-ui="widgets"] .btn.on{background:var(--sun);color:#1d1404}
+:root[data-ui="widgets"] .btn.danger.armed{background:var(--danger);color:#fff}
+:root[data-ui="widgets"] .fab .btn:not(.primary):not(.on){background:#fff;box-shadow:0 4px 14px rgba(0,0,0,.12)}
+:root[data-ui="widgets"] .seg button,:root[data-ui="widgets"] .chip{border:0;background:var(--surface-2)}
+:root[data-ui="widgets"] .seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+:root[data-ui="widgets"] .bednav button{border:0;background:#fff}
+:root[data-ui="widgets"] :is(.field input,.field select,.field textarea){border:0;background:var(--surface-2);border-radius:14px}
+:root[data-ui="widgets"] .search{border:0;border-radius:99px}
+:root[data-ui="widgets"] .sheet{border:0;border-radius:26px 26px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.12)}
+:root[data-ui="widgets"] :is(.ctxbar,.sunbar,.compass){border:0;box-shadow:0 4px 14px rgba(0,0,0,.12)}
+:root[data-ui="widgets"] :is(.ctxbar,.sunbar){border-radius:20px}
+:root[data-ui="widgets"] .bedhead{background:rgba(243,244,240,.92);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border:0}
+:root[data-ui="widgets"] .tabs{background:rgba(255,255,255,.95);border-top:1px solid var(--line)}
+:root[data-ui="widgets"] .tabs button{font-size:10px;font-weight:600;color:#8a8a8e}
+:root[data-ui="widgets"] .tabs button[aria-current="page"]{color:var(--accent)}
+:root[data-ui="widgets"] .notefab{background:var(--ink);color:#fff;box-shadow:0 8px 20px rgba(0,0,0,.18)}
+@media (min-width:760px){:root[data-ui="widgets"] .sheet{border-radius:26px}}
 </style>
 
 <div class="app">
   <header class="top">
-    <div><div class="brand">Atelier Potager<small id="gInfo"></small></div></div>
+    <div><div class="brand">Atelier Potager<small id="gInfo"></small></div><button class="gpill" id="gPill" aria-label="Changer de potager"><span></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></div>
     <span class="pill" id="exPill" hidden>Exemple</span>
     <button class="iconbtn" id="undoBtnH" aria-label="Annuler l'action" title="Annuler l'action"><svg viewBox="0 0 24 24"><path d="M9 7L4 12l5 5"/><path d="M4 12h11a5 5 0 0 1 0 10h-3"/></svg></button>
     <button class="iconbtn" id="redoBtnH" aria-label="Rétablir l'action" title="Rétablir l'action"><svg viewBox="0 0 24 24"><path d="M15 7l5 5-5 5"/><path d="M20 12H9a5 5 0 0 0 0 10h3"/></svg></button>
@@ -1112,7 +1236,7 @@ function sunIssues(o){const out=[];o.zones.forEach((z,i)=>{const c=sunCheck(o,i,
 function sunMax(doy){let n=0;for(let h=3.25;h<=20.75;h+=.5)if(sunPos(doy,h).alt>=.04)n+=.5;return n}
 
 /* ================= En-tête, onglets, toast ================= */
-function renderHeader(){setCatalog();$('#gInfo').textContent=`${S.name} · ${m2(S.w)} × ${m2(S.h)} m`;$('#exPill').hidden=!S.example;$('#undoBtnH').disabled=!past.length;$('#redoBtnH').disabled=!future.length;
+function renderHeader(){setCatalog();$('#gInfo').textContent=`${S.name} · ${m2(S.w)} × ${m2(S.h)} m`;$('#gPill span').textContent=S.name;$('#exPill').hidden=!S.example;$('#undoBtnH').disabled=!past.length;$('#redoBtnH').disabled=!future.length;
   $('#needle').setAttribute('transform',`rotate(${S.north})`)}
 $('#undoBtnH').onclick=undo;$('#redoBtnH').onclick=redo;
 addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)){e.preventDefault();e.shiftKey?redo():undo()}});
@@ -1504,8 +1628,8 @@ function renderSheet(){
     `<div class="grid2"><label class="field"><span class="lbl">Largeur du terrain (m)</span><input id="g-w" type="number" min="2" step="0.5" value="${S.w/100}"></label>
     <label class="field"><span class="lbl">Longueur du terrain (m)</span><input id="g-h" type="number" min="2" step="0.5" value="${S.h/100}"></label></div>`}
     <div class="row between"><span><span class="lbl">Station météo</span><br><span class="note">${WU.get().key?'Station '+esc(WU.get().id)+' reliée':'Pas de station reliée'}</span></span><button class="btn small" data-act="wu">${WU.get().key?'Modifier':'Relier ma station'}</button></div>
-    <div><span class="lbl">Style</span><div class="seg" style="margin-top:6px">${[['glass','Verre sombre'],['classic','Classique']].map(([k,l])=>`<button data-act="ui" data-k="${k}" aria-pressed="${uiPref()===k}">${l}</button>`).join('')}</div></div>
-    <div>${uiPref()==='glass'?'':`<span class="lbl">Apparence</span><div class="seg" style="margin-top:6px">${[['auto','Automatique'],['light','Clair'],['dark','Sombre']].map(([k,l])=>`<button data-act="theme" data-k="${k}" aria-pressed="${themePref()===k}">${l}</button>`).join('')}</div>`}
+    <div><span class="lbl">Style</span><div class="seg" style="margin-top:6px">${[['classic','Classique'],['ios','iOS'],['glass','Verre sombre'],['widgets','Widgets']].map(([k,l])=>`<button data-act="ui" data-k="${k}" aria-pressed="${uiPref()===k}">${l}</button>`).join('')}</div></div>
+    <div>${uiPref()!=='classic'?'':`<span class="lbl">Apparence</span><div class="seg" style="margin-top:6px">${[['auto','Automatique'],['light','Clair'],['dark','Sombre']].map(([k,l])=>`<button data-act="theme" data-k="${k}" aria-pressed="${themePref()===k}">${l}</button>`).join('')}</div>`}
     <div class="row between" style="margin-top:8px"><span class="note" style="color:var(--ink)">Météo vivante sur le plan<br><span class="note">pluie, givre, nuit et ombres à l'heure réelle, coupée en mode édition</span></span><button class="btn small ${wxPlanOn()?'on':''}" data-act="wxplan">${wxPlanOn()?'Activée':'Désactivée'}</button></div></div>
     <div class="row between"><span><span class="lbl">Synchronisation</span><br><span class="note">${relayOn()?'Relais relié : iPhone, iPad… à jour':'Ce potager reste sur cet appareil'}</span></span><button class="btn small" data-act="relay">${relayOn()?'Gérer':'Relier'}</button></div>
     ${relayOn()?`<div class="row between"><span><span class="lbl">Notifications</span><br><span class="note">${pushState().txt}</span></span><button class="btn small" data-act="notif">${pushState().on?'Régler':'Activer'}</button></div>`:''}
@@ -2192,13 +2316,13 @@ function renderToday(){
   /* une section par lieu : plein air, chaque serre */
   const locs=[{key:'out',t:FLW()?'Massifs en plein air':'Planches en plein air',ico:'<path d="M4 20h16M6 20V10M18 20V10M3 10l9-6 9 6"/>',f:o=>!serreOf(o)}];
   S.objs.filter(o=>o.type==='serre').forEach(se=>locs.push({key:se.id,t:se.name,ico:'<path d="M3 20V11a9 9 0 0 1 18 0v9z"/><path d="M12 2v18M3 14h18"/>',f:o=>serreOf(o)===se,serre:true}));
-  let nAct=0;
+  let nAct=0;const T={rec:[],eau:0,pest:new Set(),sens:0};
   const secs=locs.map(L=>{const pls=plantables().filter(L.f),mine=pl.filter(x=>pls.includes(x.o));
     const ready=mine.filter(x=>x.left<=0&&!x.bu),blocked=mine.filter(x=>x.left<=0&&x.bu),th=pls.filter(o=>thirsty(o));
     const sens=[];pls.forEach(o=>o.zones.forEach(z=>{if(z.crop&&FROST_SENSITIVE.has(z.crop)&&Object.keys(z.cells).length)sens.push({o,z})}));
     const pe=pests.map(p=>({...p,where:p.where.filter(w=>pls.includes(w.o))})).filter(p=>p.where.length);
     const free=[];pls.forEach(o=>o.zones.forEach((z,i)=>{if(!z.crop)free.push({o,i,z})}));
-    const c=[];
+    const c=[];T.rec.push(...ready.map(x=>x.p.n));T.eau+=th.length;pe.forEach(p=>T.pest.add(p.n));T.sens+=sens.length;
     if(fp.lvl>0&&sens.length){const danger=fr!=null&&fr<=2;c.push(`<div class="tcard ${L.serre?'':'frost'}"><h3>Gel${fr!=null?` · ${num(fr)} °C prévus`:''}</h3><span>${L.serre?'Serre non chauffée : protège d\'un voile si une nuit sous −2 °C est annoncée. '+(FLW()?'Plantes sensibles :':'Cultures sensibles :'):danger?(FLW()?'Couvre, rentre ou arrache ce soir :':'Couvre ou rentre ce soir :'):fp.txt+(FLW()?'. Plantes sensibles :':'. Cultures sensibles :')} ${sens.map(x=>`<b>${P[x.z.crop].n.toLowerCase()}</b> (${esc(x.o.name)})`).join(', ')}.</span>${fr==null&&!L.serre?'<button class="btn small" data-tgo="weather" style="justify-self:start">Indiquer le minimum prévu</button>':''}</div>`);nAct++}
     if(FLW()){const bl=mine.filter(x=>{const b=bloomState(x);return b&&b.k==='bloom'}),soon=mine.filter(x=>x.left>0&&x.left<=30);
       const care=[];const seen=new Set();mine.forEach(x=>(x.p.care||[]).forEach(cr=>{if(cr.m.includes(mo)){const k=x.p.id+cr.t;if(seen.has(k)){care.find(q=>q.k===k).where.add(x.o.name);return}seen.add(k);care.push({k,p:x.p,t:cr.t,where:new Set([x.o.name])})}}));
@@ -2225,7 +2349,18 @@ function renderToday(){
   gen.push(`<div class="tcard"><h3>À semer ou planter en place ce mois-ci</h3><div class="chips">${sow.map(p=>`<span class="chip">${ci((p).id)}${p.n}${hasSeeds(p.id)?' <span class="mono note">· graines ✓</span>':''}</span>`).join('')||'<span class="note">Rien ce mois-ci.</span>'}</div><button class="btn small" data-tgo="crops" style="justify-self:start">Voir les cultures</button></div>`);
   const sec=(t,ico,cards,n,id)=>`<section class="tsec" id="ts-${id}"><div class="tsec-h"><svg viewBox="0 0 24 24">${ico}</svg><h2>${esc(t)}</h2>${n?`<span class="n">${n}</span>`:''}</div>${cards.join('')}</section>`;
   const count=c=>c.length;
-  $('#v-today').innerHTML=`<div class="ptr" id="ptr"><span class="spin"></span><span id="ptrt">Tire pour actualiser la météo</span></div><div class="page"><div><h2>Aujourd'hui</h2><span class="note">${TODAY.toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'})} · ${nAct?nAct+' chose'+(nAct>1?'s':'')+' à faire':'rien d\'urgent'}</span></div>
+  const dTxt=TODAY.toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'});
+  const wT=wx&&(wx.now&&wx.now.t!=null?wx.now.t:wx.cur?wx.cur.t:null),wK=wx&&wx.cur&&wx.cur.code!=null?wxKind(wx.cur.code):null,wR=wx&&wx.now&&wx.now.rain!=null?wx.now.rain:null,nt=wx&&wx.night!=null?wx.night:fr;
+  const tile=(cls,ico,lbl,big,sm,attr)=>`<button class="tt ${cls}" ${attr||''}><span class="tl"><svg viewBox="0 0 24 24" aria-hidden="true">${ico}</svg>${lbl}</span><span><span class="big">${big}</span><span class="sm">${sm}</span></span></button>`;
+  const recU=[...new Set(T.rec)],pl2=a=>a.slice(0,2).join(', ').toLowerCase()+(a.length>2?', +'+(a.length-2):''),j0=secs.length?`data-tj="${secs[0].L.key}"`:'';
+  const tsum=`<div class="thero"><span>${dTxt[0].toUpperCase()+dTxt.slice(1)}</span><b>${nAct?nAct+' chose'+(nAct>1?'s':'')+'<br>à faire':'Rien<br>d\'urgent'}</b></div><div class="tsum">${
+    tile('t-wx','<path d="M7 18a4 4 0 1 1 1-7.9A5 5 0 0 1 18 12a3 3 0 0 1 0 6z"/>','Météo',wT!=null?num(wT,0)+'°':'–',[wK?WX_TXT[wK]:'',wR?num(wR,1)+' mm':''].filter(Boolean).join(' · ')||'pas de données','data-tgo="weather"')}${
+    tile('t-gel'+(nt!=null&&nt<=2?' cold':''),'<path d="M12 2v20M4 7l16 10M20 7L4 17"/>','Gel',nt!=null?num(nt,0)+'°':'–',nt!=null?'cette nuit'+(T.sens?' · '+T.sens+' sensible'+(T.sens>1?'s':''):''):fp.lvl>0?'période de gelées':'pas de risque','data-tgo="weather"')}${
+    tile('t-rec','<path d="M5 9h14l-1.5 10.5a2 2 0 0 1-2 1.5h-7a2 2 0 0 1-2-1.5z"/><path d="M9 9l3-5 3 5"/>',FLW()?'À couper':'Récolter',T.rec.length,pl2(recU)||'rien de prêt',j0)}${
+    tile('t-eau','<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>','Arrosage',T.eau,T.eau?(T.eau>1?'planches':'planche')+' à arroser':wR?'pluie suffisante':'rien à arroser','data-tgo="weather"')}${
+    tile('t-pest','<ellipse cx="12" cy="14" rx="5" ry="6"/><path d="M12 8V5M7 12H4M20 12h-3M7 16H4M20 16h-3"/>','Surveiller',T.pest.size,pl2([...T.pest])||'rien à signaler',j0)}</div>`;
+  $('#v-today').innerHTML=`<div class="ptr" id="ptr"><span class="spin"></span><span id="ptrt">Tire pour actualiser la météo</span></div><div class="page"><div class="ttitle"><h2>Aujourd'hui</h2><span class="note">${TODAY.toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'})} · ${nAct?nAct+' chose'+(nAct>1?'s':'')+' à faire':'rien d\'urgent'}</span></div>
+  ${tsum}
   <div class="bednav">${secs.map(x=>`<button data-tj="${x.L.key}">${esc(x.L.t)}</button>`).join('')}${semis.length?'<button data-tj="semis">Semis</button>':''}<button data-tj="gen">Stock et saison</button></div>
   ${inviteBanner()}
   ${weatherHero()}
@@ -2788,6 +2923,7 @@ function renderQ(){if(!q)return;const el=$('#qsheet');let h='<div class="grab"><
     <button class="btn primary" data-q="donote">Enregistrer</button></div>`}
   el.innerHTML=h}
 $('#noteBtn').onclick=()=>openQ();
+$('#gPill').onclick=()=>$('#menuBtn').click();
 $('#qback').onclick=closeQ;
 $('#qsheet').addEventListener('click',e=>{const b=e.target.closest('[data-q]');if(!b)return;const a=b.dataset.q;
   if(a==='close')return closeQ();
@@ -2845,8 +2981,9 @@ function themePref(){try{return localStorage.getItem('potager-theme')||'auto'}ca
 function setTheme(k){try{localStorage.setItem('potager-theme',k)}catch(e){}applyTheme()}
 function uiPref(){try{return localStorage.getItem('potager-ui')||'glass'}catch(e){return'glass'}}
 function setUI(k){try{localStorage.setItem('potager-ui',k)}catch(e){}applyTheme()}
-function applyTheme(){const g=uiPref()==='glass',k=g?'dark':themePref(),r=document.documentElement;r.dataset.ui=g?'glass':'classic';if(k==='auto')delete r.dataset.theme;else r.dataset.theme=k;
-  const dark=k==='dark'||(k==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);document.querySelectorAll('meta[name="theme-color"]').forEach(m=>m.setAttribute('content',g?'#0d1411':dark?'#1d1e20':'#fafbf6'))}
+const UI_BAR={glass:'#0d1411',ios:'#f2f2f7',widgets:'#f3f4f0'};
+function applyTheme(){let u=uiPref();if(!['classic','ios','glass','widgets'].includes(u))u='glass';const k=u==='glass'?'dark':u==='classic'?themePref():'light',r=document.documentElement;r.dataset.ui=u;if(k==='auto')delete r.dataset.theme;else r.dataset.theme=k;
+  const dark=k==='dark'||(k==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);document.querySelectorAll('meta[name="theme-color"]').forEach(m=>m.setAttribute('content',UI_BAR[u]||(dark?'#1d1e20':'#fafbf6')))}
 applyTheme();
 let seenHelp=false;try{seenHelp=!!localStorage.getItem('potager-aide-vue');localStorage.setItem('potager-aide-vue','1')}catch(e){}
 if(!seenHelp)sheetMode='help';
@@ -2857,7 +2994,7 @@ setTimeout(()=>syncStation(false),600);
 
 <script>
 setTimeout(()=>{const s=document.getElementById('splash');if(s){s.classList.add('out');setTimeout(()=>s.remove(),600)}},matchMedia('(display-mode: standalone)').matches||navigator.standalone?650:120);
-/* version 4d30a76af3 : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
+/* version 33701bad86 : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
 if('serviceWorker' in navigator&&location.protocol==='https:'){
   navigator.serviceWorker.register('sw.js').then(r=>r.update()).catch(()=>{});
   let reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!reloaded){reloaded=true;location.reload()}});
