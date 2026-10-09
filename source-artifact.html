@@ -1508,6 +1508,11 @@ bedEl.addEventListener('click',async e=>{if(!bed)return;const jp=e.target.closes
   if(a==='openinv'){openInv(bed&&bed.jk==='semis'?'graines':'produits');return}
   if(a==='d-photo-x'){const D=bed.diag;D.blob=null;D.url=null;D.ref=null;D.res=null;D.file=null;renderBed();return}
   if(a==='d-run'){runDiag(o);return}
+  if(a==='d-claude'){const D=bed.diag||{},crop=D.crop&&P[D.crop]?P[D.crop].n:'inconnue',desc=(($('#d-desc')||{}).value||D.desc||'').trim();
+    const prods=(S.stock||[]).filter(q=>q.cat!=='graine'&&stockOf(q)>0&&!expired(q)).map(q=>`- ${q.name}${q.cat?' ('+q.cat+')':''} : ${fq(stockOf(q),q.unit)}`).join('\n')||'- (aucun produit en stock)';
+    const voisins=[...new Set(o.zones.filter(z=>z.crop).map(z=>P[z.crop].n))].join(', ')||'—';
+    const txt=`Diagnostic de maladie au potager (Belgique, Hesbaye). Je t'envoie une photo dans mon prochain message : attends-la avant de répondre en détail.\n\nCulture touchée : ${crop}\nPlanche : ${fullName(o)}${serreOf(o)?' (sous serre)':' (plein air)'} · cultures présentes : ${voisins}\nDate : ${fdate(TODAY)}${desc?'\nCe que je vois : '+desc:''}\n\nMon stock de produits :\n${prods}\n\nJ'ai la phytolicence. Une fois la photo reçue : 1) la maladie ou le ravageur le plus probable (et les alternatives), 2) si un produit de mon stock convient, la dose, le volume de bouillie et le délai avant récolte, 3) sinon quoi acheter, 4) les mesures sans produit. Sois concis.`;
+    window.open('https://claude.ai/new?q='+encodeURIComponent(txt),'_blank');return}
   if(a==='d-apply'){const D=bed.diag;bed.jk='traitement';bed.pid=b.dataset.id;bed.prefill={qty:b.dataset.q,dar:b.dataset.dar,t:D.res?'Contre : '+D.res.diagnostic:''};renderBed();const j=$('#jpanel');if(j)j.scrollIntoView({block:'start'});return}
   if(a==='d-buy'){const x=bed.diag.res.a_acheter[+b.dataset.i];S.stock=S.stock||[];if(!S.stock.some(q=>q.name.toLowerCase()===String(x.produit).toLowerCase())){S.stock.push({id:uid(),name:String(x.produit).slice(0,60),cat:x.type==='amendement'?'amendement':'traitement',unit:'L',min:0,dar:0,moves:[]});save();renderBed();toast('Ajouté à l\'inventaire comme « à acheter »',true)}else toast('Déjà dans l\'inventaire');return}
   if(a==='d-save'){const D=bed.diag;const en={id:uid(),k:'maladie',d:D.date||iso(TODAY),crop:D.crop||null,t:(D.desc||'').trim()};
@@ -1544,7 +1549,7 @@ bedEl.addEventListener('change',async e=>{if(!bed)return;const o=obj(bed.id),z=o
   if(t.id==='j-pid'){bed.pid=t.value;const note=$('#j-text').value,dt=$('#j-date').value;renderBed();$('#j-text').value=note;$('#j-date').value=dt;return}
   if(t.id==='d-photo'){const f=t.files[0];if(!f)return;const D=bed.diag||(bed.diag={});try{D.blob=await photoBlob(f);D.url=URL.createObjectURL(D.blob);D.file=f;D.res=null;D.err=null;renderBed()}catch(_){toast("La photo n'a pas pu être lue")}return}
   if(t.id==='d-crop'){bed.diag.crop=t.value;return}
-  if(t.id==='d-desc'){bed.diag.desc=t.value;renderBed();return}
+  if(t.id==='d-desc'){bed.diag.desc=t.value;const r=document.querySelector('[data-act="d-run"]');if(r&&!bed.diag.loading)r.disabled=!bed.diag.blob&&!t.value.trim();return}
   if(t.id==='j-date'&&bed.jk==='maladie'){bed.diag.date=t.value;return}
   if(t.id==='j-photo'){const f=t.files[0];if(!f)return;try{bed.photo=await processPhoto(f);renderBed()}catch(_){toast("La photo n'a pas pu être lue")}return}
   if(['h-y','h-c','j-date','j-kg','j-crop','j-dar','j-qty','j-text'].includes(t.id))return;
@@ -1595,7 +1600,7 @@ function diagHTML(o){const D=bed.diag||(bed.diag={});const zc=[...new Set(o.zone
   <label class="field"><span class="lbl">Culture touchée</span><select id="d-crop">${(zc.length?zc:PLANTS.map(q=>q.id)).map(c=>`<option value="${c}" ${c===D.crop?'selected':''}>${P[c].n}</option>`).join('')}<option value="" ${!D.crop?'selected':''}>Autre / inconnue</option></select></label>
   <label class="field span2"><span class="lbl">Ce que tu vois (facultatif)</span><textarea id="d-desc" placeholder="ex. taches brunes sur les feuilles du bas, duvet blanc dessous">${esc(D.desc||'')}</textarea></label></div>
   <div class="photoprev">${D.url?`<img src="${D.url}" alt="Photo des symptômes"><button class="btn small" data-act="d-photo-x">Changer la photo</button>`:`<label class="btn small" for="d-photo">Photo des symptômes</label>`}<input id="d-photo" type="file" accept="image/jpeg,image/png,image/webp" hidden></div>`;
-  if(!SAMPLE||!SAMPLE_IMG)h+=`<p class="note">L'analyse par Claude n'est pas disponible ici (autorisation refusée, ou app ouverte hors de Claude : l'analyse y arrivera avec une clé API). Tu peux quand même noter les symptômes.</p>`;
+  if(!SAMPLE||!SAMPLE_IMG)h+=`<button class="btn primary" data-act="d-claude">Diagnostiquer dans Claude</button><p class="note">Ouvre une conversation Claude (incluse dans ton abonnement) avec la culture, ce que tu as décrit et ton stock de produits. Ajoute-y ta photo, Claude te dit la maladie, ce que tu as pour traiter et la dose, ou quoi acheter. Note ensuite le résultat ici.</p>`;
   else h+=`<button class="btn primary" data-act="d-run" ${(!D.blob&&!(D.desc||'').trim())||D.loading?'disabled':''}>${D.loading?'<span class="spin"></span> Analyse en cours…':D.res?'Relancer l\'analyse':'Analyser la photo'}</button>`;
   if(D.err)h+=`<div class="alert"><span>${esc(D.err)}</span></div>`;
   if(D.res){const r=D.res,st=(r.en_stock||[]).map(x=>({...x,p:(S.stock||[]).find(q=>q.id===x.id)})).filter(x=>x.p);
