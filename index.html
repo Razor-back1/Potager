@@ -784,19 +784,19 @@ function load(){try{return migrate(JSON.parse(localStorage.getItem(keyOf(GID))))
 let past=[],future=[],lastJSON='',lastPush=0;
 function persist(){try{localStorage.setItem(keyOf(GID),lastJSON);localStorage.setItem(keyAtOf(GID),String(localAt))}catch(e){}
   const g=GL.get(),it=g.list.find(x=>x.id===GID);if(it&&(it.name!==S.name||it.ex!==!!S.example)){it.name=S.name;it.ex=!!S.example;GL.set(g)}}
-function switchGarden(id){if(id===GID)return;persist();GID=id;const g=GL.get();g.cur=id;GL.set(g);
+function switchGarden(id){if(id===GID)return;if(GID)persist();GID=id;const g=GL.get();g.cur=id;GL.set(g);
   try{localAt=+localStorage.getItem(keyAtOf(id))||0}catch(e){localAt=0}S=load()||sample();lastJSON=JSON.stringify(S);past=[];future=[];
   ctx=null;selId=null;sheetMode=null;editMode=false;shapeEdit=null;closeBed();closeInv();if(typeof closeAuto==='function')closeAuto();persist();
   if(typeof subscribeDoc==='function')subscribeDoc();fit();renderSheet();renderHeader();refresh();if(typeof updateModeUI==='function')updateModeUI()}
 function addGarden(state,open=true){const id=uid(),g=GL.get();try{localStorage.setItem(keyOf(id),JSON.stringify(state));localStorage.setItem(keyAtOf(id),String(Date.now()))}catch(e){toast('Mémoire de l\'appareil pleine');return null}
-  g.list.push({id,name:state.name,ex:!!state.example});GL.set(g);if(open)switchGarden(id);return id}
+  g.list.push({id,name:state.name,ex:!!state.example});GL.set(g);if(open)switchGarden(id);try{if(relayOn())setTimeout(()=>syncPush(id),300)}catch(e){}return id}
 function deleteGarden(id){const g=GL.get();if(g.list.length<2)return;g.list=g.list.filter(x=>x.id!==id);GL.set(g);
-  try{localStorage.removeItem(keyOf(id));localStorage.removeItem(keyAtOf(id))}catch(e){}if(id===GID){GID=null;switchGarden(g.list[0].id)}}
+  try{localStorage.removeItem(keyOf(id));localStorage.removeItem(keyAtOf(id))}catch(e){}try{if(relayOn())gReq('/garden?id='+encodeURIComponent(id),'DELETE').catch(()=>{})}catch(e){}if(id===GID){GID=null;switchGarden(g.list[0].id)}}
 const emptyGarden=(name='Mon potager')=>({v:8,shape:null,rain:[],stock:[],nursery:[],name,w:1200,h:800,north:0,water:{roof:40,cap:1000,level:500},frost:null,objs:[],example:false});
 function save(coalesce){const j=JSON.stringify(S);if(j!==lastJSON){const now=Date.now();
   if(!(coalesce&&now-lastPush<1500&&past.length)){past.push(lastJSON);if(past.length>80)past.shift()}
-  lastPush=coalesce?now:0;future=[];lastJSON=j;localAt=now;persist();schedulePush()}renderHeader()}
-function restore(j){lastJSON=j;S=migrate(JSON.parse(j));localAt=Date.now();persist();schedulePush();if(selId&&!obj(selId)){selId=null;if(sheetMode==='obj')sheetMode=null}renderHeader();refresh()}
+  lastPush=coalesce?now:0;future=[];lastJSON=j;localAt=now;persist();schedulePush();syncPushSoon()}renderHeader()}
+function restore(j){lastJSON=j;S=migrate(JSON.parse(j));localAt=Date.now();persist();schedulePush();syncPushSoon();if(selId&&!obj(selId)){selId=null;if(sheetMode==='obj')sheetMode=null}renderHeader();refresh()}
 function undo(){if(!past.length)return;future.push(lastJSON);restore(past.pop());toast('Action annulée')}
 function redo(){if(!future.length)return;past.push(lastJSON);restore(future.pop());toast('Action rétablie')}
 let S=load()||sample();lastJSON=JSON.stringify(S);
@@ -862,7 +862,7 @@ function subscribeDoc(){if(!DBH)return;try{if(typeof UNSUB==='function')UNSUB()}
     },()=>{syncState='error';renderSyncLine()});
   }catch(e){syncState='error';renderSyncLine()}
 }
-function syncText(){return{local:'Enregistré sur cet appareil uniquement',wait:'Connexion à ton compte…',ok:'Synchronisé avec ton compte Claude',error:'Synchronisation interrompue, enregistré sur cet appareil'}[syncState]}
+function syncText(){try{if(relayOn())return syncErr?'Synchronisation en échec : '+syncErr:syncAt?'Synchronisé via ton relais · '+hhmm(syncAt):'Synchronisation via ton relais…'}catch(e){}return{local:'Enregistré sur cet appareil uniquement',wait:'Connexion à ton compte…',ok:'Synchronisé avec ton compte Claude',error:'Synchronisation interrompue, enregistré sur cet appareil'}[syncState]}
 function renderSyncLine(){const el=$('#syncLine');if(el)el.textContent=syncText()}
 
 /* ================= Compagnonnage & rotation ================= */
@@ -1264,6 +1264,23 @@ function renderSheet(){
     <div class="row"><button class="btn primary" data-act="wu-save">Relier et tester</button>${c.key?'<button class="btn danger" data-act="wu-del">Délier</button>':''}</div>
     <div class="note"><b>Où les trouver</b> : connecte-toi sur wunderground.com, ouvre le menu de ton profil, puis <b>My Devices</b> pour l'identifiant de la station (il commence par I) et <b>API Keys</b> pour la clé (bouton « Generate » si tu n'en as pas encore). La clé est gratuite pour les stations qui envoient leurs données.</div>
     <p class="note">La clé reste sur cet appareil : elle n'est jamais envoyée ailleurs que chez Weather Underground, ni enregistrée dans le plan.</p></div>`;
+  }else if(sheetMode==='relay'){const c=GDN.get(),tok=c.token||(window._rtok||(window._rtok=newToken()));
+    h+=`<div class="stack"><div class="row between"><h3>Synchronisation</h3><button class="btn small" data-act="relay-back">Retour</button></div>
+    ${relayOn()?`<div class="alert okay"><span>${esc(syncText())}</span></div><div class="row"><button class="btn small primary" data-act="relay-sync">Synchroniser maintenant</button><button class="btn small danger" data-act="relay-unlink">Délier cet appareil</button></div>
+      <p class="note"><b>Sur ton autre appareil</b> : Menu → Synchronisation → « J'ai déjà un relais », puis la même adresse et le même code d'accès :</p><div class="row"><code class="autok">${esc(c.url)}</code></div><div class="row"><code class="autok">${esc(c.token)}</code><button class="btn small" data-act="relay-copytok">Copier le code</button></div>`:
+    `<p class="note" style="color:var(--ink)">Ton potager est enregistré sur cet appareil uniquement. Un petit relais gratuit chez Cloudflare le garde en ligne : chaque modification part tout de suite, et ton iPhone et ton iPad se mettent à jour à l'ouverture. Le même relais sert ensuite à l'arrosage GARDENA. Compte 10 minutes, plus simple sur un ordinateur.</p>
+    <div class="seg"><button data-act="relay-mode" data-m="new" aria-pressed="${!window._rhave}">Créer mon relais</button><button data-act="relay-mode" data-m="have" aria-pressed="${!!window._rhave}">J'ai déjà un relais</button></div>
+    ${window._rhave?'':`<ol class="austeps">
+     <li><b>Compte.</b> Crée un compte gratuit sur <a href="https://dash.cloudflare.com" target="_blank" rel="noopener">dash.cloudflare.com</a>.</li>
+     <li><b>Relais.</b> Workers &amp; Pages → Create → Worker → Deploy. Puis <b>Edit code</b>, remplace tout par le code du relais et Deploy.<div class="row" style="margin-top:6px"><button class="btn small" data-act="relay-copycode">Copier le code du relais</button><a class="btn small" href="${WORKER_URL}" target="_blank" rel="noopener">Ouvrir le code</a></div></li>
+     <li><b>Stockage.</b> Storage &amp; Databases → KV → Create, nomme-le « potager ». Dans ton Worker : Settings → Bindings → Add → KV namespace, nom de variable <code>POTAGER</code>, choisis « potager ».</li>
+     <li><b>Code d'accès.</b> Worker → Settings → Variables and Secrets → Add, type <b>Secret</b>, nom <code>APP_TOKEN</code>, valeur :<div class="row" style="margin-top:6px"><code class="autok">${esc(tok)}</code><button class="btn small" data-act="relay-copytok">Copier</button></div></li>
+     <li><b>Ici.</b> Copie l'adresse du Worker (elle finit par <code>workers.dev</code>) et colle-la ci-dessous.</li></ol>
+     <p class="note">Les intitulés de Cloudflare peuvent varier un peu. Personne ne peut lire ni modifier ton potager sans ce code d'accès.</p>`}
+    <label class="field"><span class="lbl">Adresse du relais</span><input id="rl-url" value="${esc(c.url||'')}" placeholder="https://potager.xxx.workers.dev" autocomplete="off" spellcheck="false" inputmode="url"></label>
+    <label class="field"><span class="lbl">Code d'accès (APP_TOKEN)</span><input id="rl-tok" value="${esc(window._rhave&&!c.token?'':tok)}" placeholder="le code du relais" autocomplete="off" spellcheck="false"></label>
+    <p class="alert" id="rl-err" hidden></p>
+    <button class="btn primary" data-act="relay-link">Relier et synchroniser</button>`}</div>`;
   }else if(sheetMode==='menu'){
     const GLs=GL.get().list;
     h+=`<div class="stack"><div class="row between"><h3>Potager</h3><button class="btn small" data-act="close">Fermer</button></div>
@@ -1276,6 +1293,7 @@ function renderSheet(){
     <div class="row between"><span><span class="lbl">Station météo</span><br><span class="note">${WU.get().key?'Station '+esc(WU.get().id)+' reliée':'Pas de station reliée'}</span></span><button class="btn small" data-act="wu">${WU.get().key?'Modifier':'Relier ma station'}</button></div>
     <div><span class="lbl">Apparence</span><div class="seg" style="margin-top:6px">${[['auto','Automatique'],['light','Clair'],['dark','Sombre']].map(([k,l])=>`<button data-act="theme" data-k="${k}" aria-pressed="${themePref()===k}">${l}</button>`).join('')}</div>
     <div class="row between" style="margin-top:8px"><span class="note" style="color:var(--ink)">Météo vivante sur le plan<br><span class="note">pluie, givre, nuit et ombres à l'heure réelle, coupée en mode édition</span></span><button class="btn small ${wxPlanOn()?'on':''}" data-act="wxplan">${wxPlanOn()?'Activée':'Désactivée'}</button></div></div>
+    <div class="row between"><span><span class="lbl">Synchronisation</span><br><span class="note">${relayOn()?'Relais relié : iPhone, iPad… à jour':'Ce potager reste sur cet appareil'}</span></span><button class="btn small" data-act="relay">${relayOn()?'Gérer':'Relier'}</button></div>
     <div class="row between"><span><span class="lbl">Arrosage automatique</span><br><span class="note">${GDN.get().demo?'Démo':gLinked()?'GARDENA relié':'GARDENA smart system'}</span></span><button class="btn small" data-act="openauto">${gLinked()?'Ouvrir':'Relier'}</button></div>
     <div class="row"><button class="btn" data-act="help">Comment ça marche</button><button class="btn" data-act="openinv">Inventaire</button></div>
     ${ctx?'':`<button class="btn" data-act="shape-edit">${S.shape?'Modifier la forme du terrain':'Dessiner une forme libre'}</button>`}
@@ -1348,6 +1366,20 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
   if(a==='openinv'){sheetMode=null;renderSheet();openInv()}
   if(a==='mkcircle'&&o){const d=Math.round((o.w+o.h)/2),cx=o.x+o.w/2,cy=o.y+o.h/2;o.w=o.h=d;o.x=cx-d/2;o.y=cy-d/2;save();renderPlan();renderSheet();return toast('Allée circulaire de '+m2(d)+' m',true)}
   if(a==='flipflow'&&o){o.rot=(o.rot+180)%360;o.bend=-(+o.bend||0);o.wave=+o.wave||0;save();renderPlan();renderSheet();return toast('Sens du courant inversé',true)}
+  if(a==='relay'){sheetMode='relay';renderSheet();return}
+  if(a==='relay-back'){sheetMode='menu';renderSheet();return}
+  if(a==='relay-mode'){window._rhave=b.dataset.m==='have';renderSheet();return}
+  if(a==='relay-copytok'){try{await navigator.clipboard.writeText(($('#rl-tok')&&$('#rl-tok').value.trim())||GDN.get().token||'');toast('Code copié')}catch(err){toast('Copie impossible : sélectionne le code à la main')}return}
+  if(a==='relay-copycode'){try{const r=await fetch('gardena-worker.js');if(!r.ok)throw 0;await navigator.clipboard.writeText(await r.text());toast('Code du relais copié')}catch(err){window.open(WORKER_URL,'_blank')}return}
+  if(a==='relay-unlink'){const c=GDN.get();GDN.set({demo:c.demo});gdst=null;syncErr=null;renderSheet();return toast('Cet appareil n\'est plus synchronisé (ton potager y reste)')}
+  if(a==='relay-sync'){await syncPull(true);renderSheet();return}
+  if(a==='relay-link'){const url=$('#rl-url').value.trim().replace(/\/+$/,''),token=$('#rl-tok').value.trim(),err=$('#rl-err');
+    if(!/^https:\/\//.test(url)){err.hidden=false;err.textContent='L\'adresse doit commencer par https://';return}
+    if(!token){err.hidden=false;err.textContent='Il manque le code d\'accès.';return}
+    b.disabled=true;b.textContent='Test…';
+    try{const l=await gReq('/gardens','GET',null,{url,token});GDN.set({...GDN.get(),url,token,gardena:!!l.gardena});window._rtok=null;
+      await syncPull(true);sheetMode='relay';renderSheet();toast(l.list.filter(x=>!x.del).length?'Relié : potagers récupérés':'Relié : ton potager est en ligne')}
+    catch(x){err.hidden=false;err.textContent=x.status===401?'Code d\'accès refusé : vérifie APP_TOKEN.':x.message;b.disabled=false;b.textContent='Relier et synchroniser'}return}
   if(a==='openauto'){sheetMode=null;renderSheet();openAuto();return}
   if(a==='autowater'){openAuto(b.dataset.v);return}
   if(a==='wu'){sheetMode='wu';renderSheet();return}
@@ -2150,7 +2182,8 @@ let gdst=null,gdBusy=false,auto=null,cfgT=null;
 const autoCfg=()=>S.auto||(S.auto={zones:{},pump:{kind:'auto',id:''},tankMin:150});
 const zc=id=>({...ZDEF,...((S.auto&&S.auto.zones||{})[id]||{})});
 function setZ(id,patch){const c=autoCfg();c.zones[id]={...zc(id),...patch};save(true);pushCfgSoon()}
-const gLinked=()=>{const c=GDN.get();return!!(c.demo||c.url&&c.token)};
+const relayOn=()=>{const c=GDN.get();return!!(c.url&&c.token)};
+const gLinked=()=>{const c=GDN.get();return!!(c.demo||c.url&&c.token&&c.gardena)};
 const gDemo=()=>!!GDN.get().demo;
 const gValves=()=>gdst&&gdst.state?gdst.state.valves.filter(v=>!(autoCfg().pump.kind==='valve'&&autoCfg().pump.id===v.id)):[];
 const gSensors=()=>gdst&&gdst.state?gdst.state.sensors:[];
@@ -2185,11 +2218,11 @@ function demoStop(id){const v=gdst.state.valves.find(x=>x.id===id);if(!v)return;
 async function gReq(path,method='GET',body,cfg){const c=cfg||GDN.get();if(!c.url)throw new Error('Aucun relais relié.');
   let r;try{r=await fetch(c.url.trim().replace(/\/+$/,'')+path,{method,headers:{'X-Potager-Key':c.token||'','Content-Type':'application/json'},body:body?JSON.stringify(body):undefined})}
   catch(e){throw new Error(inClaude()?'Le relais ne se joint que depuis l\'app installée, pas dans Claude.':'Relais injoignable : vérifie l\'adresse et la connexion.')}
-  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||('Le relais a répondu '+r.status+'.'));return j}
+  const j=await r.json().catch(()=>({}));if(!r.ok){const er=new Error(j.error||('Le relais a répondu '+r.status+'.'));er.status=r.status;er.data=j;throw er}return j}
 function gdSet(j){gdst={state:j.state,log:j.log||[],at:Date.now(),err:j.state&&j.state.err||null,cfgAt:j.cfgAt||null};gImport()}
 async function gSync(fresh){const c=GDN.get();
   if(c.demo){if(!gdst||!gdst.demo)gdst=demoInit();demoTick();renderAutoAll();return}
-  if(!c.url||gdBusy)return;gdBusy=true;renderAutoAll();
+  if(!gLinked()||gdBusy)return;gdBusy=true;renderAutoAll();
   try{gdSet(await gReq('/status'+(fresh?'?fresh=1':'')))}catch(e){gdst={...(gdst||{}),err:e.message,at:gdst&&gdst.at}}
   finally{gdBusy=false;renderAutoAll()}}
 /* les arrosages faits par GARDENA s'inscrivent dans le journal des planches et vident la cuve */
@@ -2200,7 +2233,7 @@ function gImport(){if(!gdst||gdst.demo||!gdst.log)return;const seen=new Set(S.au
     if(e.type==='stop'&&e.left>0&&fromTank&&S.water){S.water.level=Math.min(S.water.cap,Math.round(S.water.level+flow*e.left));ch=true}});
   const nv=[...seen].slice(-300);if(ch||nv.length!==(S.autoSeen||[]).length){S.autoSeen=nv;save(true)}if(ch)pushCfgSoon()}
 function pushCfgSoon(){clearTimeout(cfgT);cfgT=setTimeout(pushCfg,1500)}
-async function pushCfg(){const c=GDN.get();if(c.demo||!c.url)return;const a=autoCfg();
+async function pushCfg(){const c=GDN.get();if(c.demo||!gLinked())return;const a=autoCfg();
   try{await gReq('/config','PUT',{zones:a.zones,pump:a.pump,tankMin:a.tankMin,tank:a.pump.kind!=='none'&&S.water?{level:S.water.level,at:Date.now()}:null,geo:HOME_GEO});if(gdst)gdst.cfgAt=Date.now();renderAutoAll()}
   catch(e){toast('Réglages non envoyés au relais : '+e.message)}}
 async function gWater(id,min){try{if(gDemo())demoWater(id,min);else gdSet(await gReq('/water','POST',{id,seconds:min*60}));toast(`${valveName(id)} : arrosage ${min} min lancé`)}catch(e){toast(e.message)}renderAutoAll()}
@@ -2220,21 +2253,18 @@ function closeAuto(){if(!auto)return;auto=null;$('#autoView').hidden=true;if(typ
 function renderAutoAll(){if(auto)renderAuto();if(tab==='weather'&&!bed&&!inv)renderWeather();if(tab==='today'&&!bed&&!inv)renderToday()}
 function newToken(){const a=new Uint8Array(18);crypto.getRandomValues(a);return Array.from(a,b=>'abcdefghjkmnpqrstuvwxyz23456789'[b%31]).join('')}
 const AU_BACK='<button class="iconbtn" data-au="back" aria-label="Retour"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>';
-function autoSetupHTML(){const c=GDN.get(),tok=c.token||(auto.tok||(auto.tok=newToken()));
-  return`<div class="panel" id="au-setup"><h3>Relier ton GARDENA smart system</h3>
-  <p class="note" style="color:var(--ink)">L'app ne parle pas directement à GARDENA. Un petit relais gratuit chez Cloudflare garde ta clé, ouvre les vannes quand tu le demandes et applique tes règles toutes les 30 minutes, même app fermée. Compte une vingtaine de minutes, plus simple sur un ordinateur.</p>
+function autoSetupHTML(){const c=GDN.get(),demoBtn=c.demo?'<button class="btn danger" data-au="unlink">Quitter la démo</button>':'<button class="btn" data-au="demo">Essayer en démo</button>';
+  if(!relayOn())return`<div class="panel" id="au-setup"><h3>Relier ton GARDENA smart system</h3>
+    <p class="note" style="color:var(--ink)">L'arrosage passe par ton relais Cloudflare, le même que pour la synchronisation entre ton iPhone et ton iPad. Crée-le d'abord (Menu → Synchronisation), puis reviens ici pour ajouter GARDENA.</p>
+    <div class="row"><button class="btn primary" data-au="gorelay">Créer le relais</button>${demoBtn}</div></div>`;
+  return`<div class="panel" id="au-setup"><h3>Ajouter GARDENA à ton relais</h3>
+  <p class="note" style="color:var(--ink)">Ton relais est en place. Il lui manque ta clé GARDENA, qui ne quittera jamais Cloudflare.</p>
   <ol class="austeps">
-   <li><b>Clé GARDENA.</b> Sur <a href="https://developer.husqvarnagroup.cloud" target="_blank" rel="noopener">developer.husqvarnagroup.cloud</a>, connecte-toi avec ton compte GARDENA (le même que l'app GARDENA), crée une application et relie-lui <b>Authentication API</b> et <b>GARDENA smart system API</b>. Garde l'<b>Application key</b> et l'<b>Application secret</b>.</li>
-   <li><b>Relais.</b> Sur <a href="https://dash.cloudflare.com" target="_blank" rel="noopener">dash.cloudflare.com</a> (compte gratuit) : Workers &amp; Pages → Create → Worker → Deploy. Puis <b>Edit code</b>, remplace tout par le code du relais et Deploy.<div class="row" style="margin-top:6px"><button class="btn small" data-au="copycode">Copier le code du relais</button><a class="btn small" href="${WORKER_URL}" target="_blank" rel="noopener">Ouvrir le code</a></div></li>
-   <li><b>Stockage.</b> Storage &amp; Databases → KV → Create, nomme-le « potager ». Dans ton Worker : Settings → Bindings → Add → KV namespace, nom de variable <code>POTAGER</code>.</li>
-   <li><b>Secrets.</b> Worker → Settings → Variables and Secrets, trois entrées de type <b>Secret</b> : <code>GARDENA_KEY</code> (Application key), <code>GARDENA_SECRET</code> (Application secret) et <code>APP_TOKEN</code> avec ce code :<div class="row" style="margin-top:6px"><code class="autok">${esc(tok)}</code><button class="btn small" data-au="copytok">Copier</button></div></li>
-   <li><b>Automatique.</b> Worker → Settings → Trigger events → Cron : <code>*/30 * * * *</code></li>
-   <li><b>Ici.</b> Colle l'adresse du Worker (elle finit par <code>workers.dev</code>) et teste.</li></ol>
-  <p class="note">Les intitulés de Cloudflare peuvent varier un peu. La clé GARDENA ne quitte jamais le relais ; l'app ne garde que l'adresse et le code d'accès, sur cet appareil.</p>
-  <label class="field"><span class="lbl">Adresse du relais</span><input id="au-url" value="${esc(c.url||'')}" placeholder="https://potager.xxx.workers.dev" autocomplete="off" spellcheck="false" inputmode="url"></label>
-  <label class="field"><span class="lbl">Code d'accès (APP_TOKEN)</span><input id="au-tok" value="${esc(tok)}" autocomplete="off" spellcheck="false"></label>
+   <li><b>Clé GARDENA.</b> Sur <a href="https://developer.husqvarnagroup.cloud" target="_blank" rel="noopener">developer.husqvarnagroup.cloud</a>, connecte-toi avec ton compte GARDENA, crée une application et relie-lui <b>Authentication API</b> et <b>GARDENA smart system API</b>. Garde l'<b>Application key</b> et l'<b>Application secret</b>.</li>
+   <li><b>Secrets.</b> Dans ton Worker : Settings → Variables and Secrets, deux entrées de type <b>Secret</b> : <code>GARDENA_KEY</code> (Application key) et <code>GARDENA_SECRET</code> (Application secret).</li>
+   <li><b>Automatique.</b> Worker → Settings → Trigger events → Cron : <code>*/30 * * * *</code></li></ol>
   <p class="alert" id="au-err" hidden></p>
-  <div class="row"><button class="btn primary" data-au="link">Relier et tester</button>${c.url||c.demo?`<button class="btn danger" data-au="unlink">${c.demo?'Quitter la démo':'Délier'}</button>`:''}${gLinked()?'<button class="btn" data-au="setup">Fermer</button>':'<button class="btn" data-au="demo">Essayer en démo</button>'}</div></div>`}
+  <div class="row"><button class="btn primary" data-au="gcheck">Vérifier</button>${demoBtn}${gLinked()?'<button class="btn" data-au="setup">Fermer</button>':''}</div></div>`}
 function zoneCard(v){const id=v.id,z=zc(id),key=id.replace(/[^\w-]/g,'_'),run=isRun(v),sen=z.sensor&&gSensors().find(s=>s.id===z.sensor),d=decideNow(id),open=auto.open===id;
   const objsL=(z.objs||[]).map(obj).filter(Boolean),log=(gdst.log||[]),last=log.find(e=>e.type==='water'&&e.valve===id),dur=auto.dur[id]||z.min||15;
   const ML={off:'À la demande',sensor:'Auto · sonde',program:'Auto · programme'};
@@ -2294,18 +2324,15 @@ $('#autoView').addEventListener('click',async e=>{const b=e.target.closest('[dat
   if(a==='back'){closeAuto();refresh();return}
   if(a==='sync'){gSync(true);return}
   if(a==='setup'){auto.setup=!auto.setup;renderAuto();if(auto.setup)$('#autoView').scrollTop=0;return}
-  if(a==='demo'){GDN.set({demo:true});gdst=demoInit();demoSetup();auto.setup=false;renderAuto();$('#autoView').scrollTop=0;return toast('Démo : appareils fictifs, rien ne s\'ouvre pour de vrai')}
-  if(a==='unlink'){const was=GDN.get();GDN.set({});gdst=null;if(was.demo){const c=autoCfg();Object.keys(c.zones).filter(k=>k.startsWith('demo')).forEach(k=>delete c.zones[k]);if(String(c.pump.id).startsWith('demo'))c.pump={kind:'auto',id:''};save()}auto.setup=true;renderAuto();return toast(was.demo?'Démo fermée':'Relais délié de cet appareil')}
-  if(a==='copytok'){try{await navigator.clipboard.writeText($('#au-tok').value.trim());toast('Code copié')}catch(err){toast('Copie impossible : sélectionne le code à la main')}return}
-  if(a==='copycode'){try{const r=await fetch('gardena-worker.js');if(!r.ok)throw 0;await navigator.clipboard.writeText(await r.text());toast('Code du relais copié')}catch(err){window.open(WORKER_URL,'_blank')}return}
-  if(a==='link'){const url=$('#au-url').value.trim(),token=$('#au-tok').value.trim(),err=$('#au-err');
-    if(!/^https:\/\//.test(url)){err.hidden=false;err.textContent='L\'adresse doit commencer par https://';return}
-    b.disabled=true;b.textContent='Test…';
-    try{const j=await gReq('/status?fresh=1','GET',null,{url,token});GDN.set({url,token});
-      const c=autoCfg();Object.keys(c.zones).filter(k=>k.startsWith('demo')).forEach(k=>delete c.zones[k]);if(String(c.pump.id).startsWith('demo'))c.pump={kind:'auto',id:''};
+  if(a==='gorelay'){closeAuto();setTab('plan');selId=null;sheetMode='relay';renderSheet();renderPlan();return}
+  if(a==='demo'){GDN.set({...GDN.get(),demo:true});gdst=demoInit();demoSetup();auto.setup=false;renderAuto();$('#autoView').scrollTop=0;return toast('Démo : appareils fictifs, rien ne s\'ouvre pour de vrai')}
+  if(a==='unlink'){const was=GDN.get();GDN.set({...was,demo:false});gdst=null;if(was.demo){const c=autoCfg();Object.keys(c.zones).filter(k=>k.startsWith('demo')).forEach(k=>delete c.zones[k]);if(String(c.pump.id).startsWith('demo'))c.pump={kind:'auto',id:''};save()}auto.setup=true;renderAuto();if(gLinked())gSync(true);return toast('Démo fermée')}
+  if(a==='gcheck'){const err=$('#au-err');b.disabled=true;b.textContent='Vérification…';
+    try{const l=await gReq('/gardens');GDN.set({...GDN.get(),gardena:!!l.gardena,demo:false});if(!l.gardena)throw new Error('Le relais ne voit pas encore GARDENA_KEY et GARDENA_SECRET. Après les avoir ajoutés, attends quelques secondes et réessaie.');
+      const j=await gReq('/status?fresh=1');const c=autoCfg();Object.keys(c.zones).filter(k=>k.startsWith('demo')).forEach(k=>delete c.zones[k]);if(String(c.pump.id).startsWith('demo'))c.pump={kind:'auto',id:''};
       S.autoSeen=(j.log||[]).map(x=>x.id);save();gdSet(j);auto.setup=false;pushCfg();renderAuto();$('#autoView').scrollTop=0;
       toast(`GARDENA relié : ${j.state.valves.length} vanne${j.state.valves.length>1?'s':''}, ${j.state.sensors.length} sonde${j.state.sensors.length>1?'s':''}`)}
-    catch(x){err.hidden=false;err.textContent=x.message;b.disabled=false;b.textContent='Relier et tester'}return}
+    catch(x){if(err){err.hidden=false;err.textContent=x.message}b.disabled=false;b.textContent='Vérifier'}return}
   if(a==='dur'){auto.dur[id]=+b.dataset.m;renderAuto();return}
   if(a==='go'){const m=auto.dur[id]||zc(id).min||15;b.disabled=true;await gWater(id,m);return}
   if(a==='stop'){b.disabled=true;await gStop(id);return}
@@ -2327,6 +2354,36 @@ setInterval(()=>{const n=Date.now();document.querySelectorAll('[data-end]').forE
   if(gdst&&gdst.state){const ended=gdst.state.valves.some(v=>v.end&&v.end<=n&&v.activity!=='CLOSED');if(ended&&n-auEndSeen>20000){auEndSeen=n;if(gDemo())demoTick();else{gdst.state.valves.forEach(v=>{if(v.end&&v.end<=n){v.activity='CLOSED';v.end=null}});setTimeout(()=>gSync(true),4000)}renderAutoAll()}}},1000);
 setInterval(()=>{if(!document.hidden&&gLinked()&&(auto||tab==='weather'||tab==='today'))gSync(false)},60000);
 setTimeout(()=>{if(gLinked())gSync(false)},400);
+/* ---- synchronisation des potagers entre appareils, via le relais ---- */
+var syncT=null,syncBusy=false,syncErr=null,syncAt=0;
+function syncPushSoon(){try{if(!relayOn())return;clearTimeout(syncT);syncT=setTimeout(()=>syncPush(GID),2500)}catch(e){}}
+const localAtOf=id=>id===GID?localAt:(+localStorage.getItem(keyAtOf(id))||0);
+const stateOf=id=>id===GID?lastJSON:localStorage.getItem(keyOf(id));
+async function syncPush(id){if(!relayOn())return;const at=localAtOf(id),j=stateOf(id);if(!at||!j)return;
+  try{await gReq('/garden?id='+encodeURIComponent(id),'PUT',{state:JSON.parse(j),at});syncErr=null;syncAt=Date.now()}
+  catch(e){if(e.status===409){syncPull()}else syncErr=e.message}renderSyncLine()}
+async function syncPull(manual){if(!relayOn()||syncBusy)return;syncBusy=true;
+  try{const r=await gReq('/gardens'),c=GDN.get();if(c.gardena!==!!r.gardena)GDN.set({...c,gardena:!!r.gardena});
+    const reg=GL.get();let regCh=false,curCh=false;
+    for(const g of r.list){const loc=reg.list.find(x=>x.id===g.id);
+      if(g.del){if(loc&&reg.list.length>1){reg.list=reg.list.filter(x=>x.id!==g.id);regCh=true;try{localStorage.removeItem(keyOf(g.id));localStorage.removeItem(keyAtOf(g.id))}catch(e){}if(g.id===GID)curCh='gone'}continue}
+      if(g.at>localAtOf(g.id)){const d=await gReq('/garden?id='+encodeURIComponent(g.id));if(!d||!d.state)continue;
+        if(g.id===GID){past.push(lastJSON);if(past.length>80)past.shift();future=[];S=migrate(d.state);lastJSON=JSON.stringify(S);localAt=d.at;persist();curCh=true}
+        else{try{localStorage.setItem(keyOf(g.id),JSON.stringify(d.state));localStorage.setItem(keyAtOf(g.id),String(d.at))}catch(e){}}
+        if(!loc){reg.list.push({id:g.id,name:g.name,ex:g.ex});regCh=true}}}
+    if(regCh){const cur=GL.get();cur.list=reg.list.map(x=>({...x}));GL.set(cur)}
+    /* ce que le relais n'a pas encore, ou en plus ancien */
+    for(const l of GL.get().list){const g=r.list.find(x=>x.id===l.id);if(g&&g.del)continue;if(localAtOf(l.id)>(g?g.at:0))await syncPush(l.id)}
+    syncErr=null;syncAt=Date.now();
+    if(curCh==='gone'){GID=null;switchGarden(GL.get().list[0].id)}
+    else if(curCh){if(selId&&!obj(selId)){selId=null;if(sheetMode==='obj')sheetMode=null}renderHeader();refresh();if(manual)toast('Potager mis à jour depuis ton autre appareil')}
+    else if(manual)toast('Tout est à jour')}
+  catch(e){syncErr=e.status===401?'Code d\'accès refusé par le relais':e.message;if(manual)toast(syncErr)}
+  finally{syncBusy=false;renderSyncLine();if(sheetMode==='menu'||sheetMode==='relay')renderSheet()}}
+addEventListener('visibilitychange',()=>{if(!document.hidden)syncPull()});
+setInterval(()=>{if(!document.hidden)syncPull()},60000);
+setTimeout(()=>syncPull(),700);
+
 
 /* ================= Météo vivante sur le plan (jamais en mode édition) ================= */
 const wxPlanOn=()=>{try{return localStorage.getItem('potager-wxplan')!=='off'}catch(e){return true}};
@@ -2446,7 +2503,7 @@ setTimeout(()=>syncStation(false),600);
 
 <script>
 setTimeout(()=>{const s=document.getElementById('splash');if(s){s.classList.add('out');setTimeout(()=>s.remove(),600)}},matchMedia('(display-mode: standalone)').matches||navigator.standalone?650:120);
-/* version 4445bcefb9 : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
+/* version ff8f554906 : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
 if('serviceWorker' in navigator&&location.protocol==='https:'){
   navigator.serviceWorker.register('sw.js').then(r=>r.update()).catch(()=>{});
   let reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!reloaded){reloaded=true;location.reload()}});

@@ -1,13 +1,14 @@
-// Atelier Potager — relais GARDENA smart system (Cloudflare Worker)
+// Atelier Potager — relais Cloudflare : synchronisation des potagers et GARDENA smart system
 // ------------------------------------------------------------------
 // Ce relais tourne en permanence chez Cloudflare (offre gratuite). Il :
+//   0. synchronise tes potagers entre tes appareils (iPhone, iPad…) ;
 //   1. garde ta clé GARDENA en secret (elle n'est jamais dans l'app) ;
 //   2. lit l'état des vannes, sondes et prises pour l'app ;
 //   3. ouvre ou ferme une vanne quand l'app le demande (arrosage manuel avec minuteur) ;
 //   4. toutes les 30 minutes, applique tes règles d'arrosage automatique, même app fermée.
 //
 // À régler dans Cloudflare (Worker > Settings) :
-//   Variables and Secrets : GARDENA_KEY, GARDENA_SECRET, APP_TOKEN (type « Secret »)
+//   Variables and Secrets : APP_TOKEN (obligatoire), GARDENA_KEY et GARDENA_SECRET (seulement pour l'arrosage), type « Secret »
 //   Bindings              : KV namespace, nom de variable POTAGER
 //   Triggers > Cron       : */30 * * * *
 //
@@ -18,7 +19,7 @@ const AUTH = 'https://api.authentication.husqvarnagroup.dev/v1/oauth2/token';
 const API = 'https://api.smart.gardena.dev/v2';
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
+  'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type,X-Potager-Key',
   'Access-Control-Max-Age': '86400'
 };
@@ -177,6 +178,11 @@ async function runAuto(env) {
   }
 }
 
+/* ---------- synchronisation des potagers ---------- */
+const gList = async env => (await env.POTAGER.get('gardens', { type: 'json' })) || [];
+async function gSetList(env, fn) { const l = await gList(env); const n = fn(l) || l; await env.POTAGER.put('gardens', JSON.stringify(n)); return n }
+const gid = url => (url.searchParams.get('id') || '').replace(/[^\w-]/g, '').slice(0, 40);
+
 /* ---------- requêtes de l'app ---------- */
 export default {
   async fetch(req, env) {
@@ -188,14 +194,31 @@ export default {
       const body = req.method === 'POST' || req.method === 'PUT' ? await req.json().catch(() => ({})) : {};
       const out = async (maxAge) => ({ state: await state(env, maxAge), log: (await getLog(env)).slice(0, 60), cfgAt: (await getCfg(env)).at || null });
       switch (url.pathname) {
-        case '/status': return J(await out(url.searchParams.get('fresh') ? 120000 : 600000));
+        case '/gardens': return J({ list: await gList(env), gardena: !!(env.GARDENA_KEY && env.GARDENA_SECRET) });
+        case '/garden': {
+          const id = gid(url); if (!id) return J({ error: 'Identifiant manquant.' }, 400);
+          if (req.method === 'GET') { const g = await env.POTAGER.get('garden:' + id, { type: 'json' }); return g ? J(g) : J({ error: 'Potager inconnu.' }, 404) }
+          if (req.method === 'DELETE') { await env.POTAGER.delete('garden:' + id); await gSetList(env, l => [...l.filter(x => x.id !== id), { id, del: true, at: Date.now() }]); return J({ ok: true }) }
+          if (req.method === 'PUT') {
+            if (!body || !body.state || !body.at) return J({ error: 'Potager vide.' }, 400);
+            const raw = JSON.stringify(body); if (raw.length > 24e6) return J({ error: 'Potager trop lourd (photos) pour la synchronisation.' }, 413);
+            const cur = (await gList(env)).find(x => x.id === id);
+            if (cur && !cur.del && cur.at > body.at) return J({ error: 'Version plus récente sur un autre appareil.', at: cur.at }, 409);
+            await env.POTAGER.put('garden:' + id, raw);
+            await gSetList(env, l => [...l.filter(x => x.id !== id), { id, name: String(body.state.name || 'Potager').slice(0, 80), at: body.at, ex: !!body.state.example, size: raw.length }]);
+            return J({ ok: true, at: body.at });
+          }
+          return J({ error: 'Méthode non prise en charge.' }, 405);
+        }
+        case '/status':
+          if (!env.GARDENA_KEY || !env.GARDENA_SECRET) return J({ error: 'GARDENA n\'est pas encore configuré sur le relais (secrets GARDENA_KEY et GARDENA_SECRET).', nogardena: true }, 400); return J(await out(url.searchParams.get('fresh') ? 120000 : 600000));
         case '/water': await water(env, body.id, +body.seconds || 600, 'manuel', ''); return J(await out(600000));
         case '/stop': await stop(env, body.id); return J(await out(600000));
         case '/config':
           if (req.method === 'PUT') { if (JSON.stringify(body).length > 50000) return J({ error: 'Réglages trop volumineux.' }, 400); await env.POTAGER.put('cfg', JSON.stringify({ ...body, at: Date.now() })); return J({ ok: true }) }
           return J(await getCfg(env));
         case '/run': await runAuto(env); return J(await out(600000));
-        default: return J({ ok: true, app: 'Atelier Potager — relais GARDENA' });
+        default: return J({ ok: true, app: 'Atelier Potager — relais', gardena: !!(env.GARDENA_KEY && env.GARDENA_SECRET) });
       }
     } catch (e) { return J({ error: e.message }, 502) }
   },
