@@ -1687,7 +1687,6 @@ function renderWeather(){
   ch+=`</svg>`;
   
   $('#v-weather').innerHTML=`<div class="page">
-   ${autoCard(false)}
    ${weatherPanel()}
    <h2>Gel</h2>${frost}
    <p class="note">Les seuils viennent du calendrier climatique de la Hesbaye. Le minimum de la nuit se remplit tout seul avec les prévisions.</p>
@@ -1695,6 +1694,8 @@ function renderWeather(){
    <div class="row"><button class="btn primary" data-wact="rain">Il a plu aujourd'hui</button><label class="field" style="width:120px"><span class="lbl">Quantité (mm)</span><input id="r-mm" type="number" min="0" step="0.5" placeholder="facultatif"></label></div>
    ${(S.rain||[]).length?`<div class="jlist">${S.rain.slice(0,6).map(r=>`<div class="jent"><span class="d">${fdate(parse(r.d))}</span><div>${r.mm!=null?`<span class="mono">${num(r.mm)} mm</span>`:'Pluie'}${r.src==='station'?' <span class="note">· station</span>':''}${r.mm!=null&&r.mm<RAIN_MIN?' <span class="note">· trop faible pour compter comme arrosage</span>':''}</div><button class="del" data-wact="rdel" data-id="${r.id}" aria-label="Supprimer">×</button></div>`).join('')}</div>`:'<p class="note">Aucune pluie notée.</p>'}
    <p class="note">Une pluie de ${RAIN_MIN} mm ou plus, ou sans quantité, compte comme un arrosage pour les planches en plein air. Avec la station reliée, la pluie se note toute seule.</p>
+   <h2>Arrosage automatique</h2>
+   ${autoCard(false)}
    <h2>Eau</h2>
    <div class="grid3"><label class="field"><span class="lbl">Toit raccordé (m²)</span><input id="w-roof" type="number" min="0" step="1" value="${w.roof}"></label>
    ${tc?`<div class="field"><span class="lbl">Capacité (L)</span><span class="mono" style="padding-top:9px">${num(tc.cap,0)} L</span><span class="note">calculée sur ${tc.n} cuve${tc.n>1?'s':''} du plan</span></div>`:`<label class="field"><span class="lbl">Capacité cuve (L)</span><input id="w-cap" type="number" min="0" step="100" value="${w.cap}"></label>`}
@@ -2142,13 +2143,13 @@ function renderAuto(){if(!auto)return;const c=GDN.get(),v=$('#autoView');
   else if(gLinked()&&!gdst)b+=`<p class="note">Lecture des appareils…</p>`;
   v.innerHTML=`<div class="bedhead">${AU_BACK}<div style="min-width:0;flex:1"><div class="brand" style="font-size:17px">Arrosage automatique</div><div class="note">${sub}</div></div>${gLinked()?`<button class="btn small" data-au="sync">${gdBusy?'…':'Actualiser'}</button>`:''}</div><div class="bedbody">${b}</div>`}
 /* petite carte réutilisée dans Eau & météo et Aujourd'hui */
-function autoCard(compact){if(!gLinked())return compact?'':`<button class="tcard aucta" data-wact="auto"><div class="row between"><h3>Arrosage automatique</h3><span class="chev">›</span></div><span class="note">Relie ton GARDENA smart system pour arroser à distance avec minuteur, ou selon tes sondes.</span></button>`;
+function autoCard(compact){if(!gLinked())return compact?'':`<button class="tcard aucta" data-wact="auto"><div class="row between"><h3>Relier GARDENA</h3><span class="chev">›</span></div><span class="note">Relie ton GARDENA smart system pour arroser à distance avec minuteur, ou selon tes sondes.</span></button>`;
   const vs=gValves(),run=vs.filter(isRun),autos=vs.filter(v=>zc(v.id).mode!=='off');
   if(compact&&!run.length)return'';
   const lines=run.map(v=>`<span class="aurow"><i class="on"></i><b>${esc(v.name)}</b> arrose${v.end?` · reste <b class="mono" data-end="${v.end}">${fmtLeft(v.end-Date.now())}</b>`:''}</span>`);
   if(!compact){const next=autos.map(v=>({v,d:decideNow(v.id)})).filter(x=>!isRun(x.v));lines.push(...next.slice(0,3).map(x=>`<span class="aurow"><i class="${x.d.go||x.d.due?'due':x.d.skip?'skip':'ok'}"></i><b>${esc(x.v.name)}</b> · ${esc(x.d.why)}</span>`));
     if(!lines.length)lines.push(`<span class="note">${vs.length} vanne${vs.length>1?'s':''} · aucune en automatique</span>`)}
-  return`<button class="tcard aucta" ${compact?'data-tgo="auto"':'data-wact="auto"'}><div class="row between"><h3>${run.length?'Arrosage en cours':'Arrosage automatique'}${gDemo()?' <span class="note">· démo</span>':''}</h3><span class="chev">›</span></div>${gdst&&gdst.err&&!compact?`<span class="note" style="color:var(--danger)">${esc(gdst.err)}</span>`:''}${lines.join('')}</button>`}
+  return`<button class="tcard aucta" ${compact?'data-tgo="auto"':'data-wact="auto"'}><div class="row between"><h3>${run.length?'Arrosage en cours':compact?'Arrosage automatique':'Vannes et règles'}${gDemo()?' <span class="note">· démo</span>':''}</h3><span class="chev">›</span></div>${gdst&&gdst.err&&!compact?`<span class="note" style="color:var(--danger)">${esc(gdst.err)}</span>`:''}${lines.join('')}</button>`}
 
 $('#autoView').addEventListener('click',async e=>{const b=e.target.closest('[data-au]');if(!b||!auto)return;const a=b.dataset.au,id=b.dataset.id;
   if(a==='back'){closeAuto();refresh();return}
