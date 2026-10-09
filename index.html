@@ -129,6 +129,7 @@ main{position:relative;min-height:0;overflow:hidden}
 @keyframes wxsnow{0%{transform:translate(0,0)}50%{transform:translate(14px,55vh)}100%{transform:translate(-6px,110vh)}}
 @keyframes wxfog{from{transform:translateX(-8%)}to{transform:translateX(8%)}}
 @keyframes wxflash{0%,93%,100%{opacity:0}94%{opacity:.35}95%{opacity:0}96%{opacity:.22}}
+.grpbox{fill:none;stroke:var(--sun);stroke-width:1.5;stroke-dasharray:2 4;pointer-events:none}
 .rotring{fill:none;stroke:var(--sun);stroke-width:2;stroke-dasharray:5 5;pointer-events:none}
 .rothit{fill:none;stroke:transparent;stroke-width:30px;pointer-events:stroke;cursor:grab}
 .rotline{stroke:var(--sun);stroke-width:1.5;opacity:.6;pointer-events:none}
@@ -178,6 +179,7 @@ main{position:relative;min-height:0;overflow:hidden}
 .wxbits span{font-size:12.5px;padding:3px 9px;border-radius:99px;background:var(--glass);font-family:var(--f-mono)}
 .wxbits .wfrost{background:var(--frost);color:#fff;font-weight:600}
 .glist{display:grid;margin-top:6px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.grpinfo{display:grid;gap:8px;padding:10px 12px;border:1px dashed var(--sun);border-radius:12px}
 .grow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;min-height:46px;background:var(--surface)}
 .grow+.grow{border-top:1px solid var(--line)}.grow.cur{background:var(--surface-2)}
 .rainform{max-width:360px}
@@ -800,7 +802,7 @@ let S=load()||sample();lastJSON=JSON.stringify(S);
 let view={cx:S.w/2,cy:S.h/2,z:.3};
 let selId=null,sheetMode=null,tab='plan',bed=null;
 let shade={on:false,doy:doyOf(TODAY),hour:15};
-let holdT=null,lifted=null,guides=null;
+let holdT=null,lifted=null,guides=null,liftGrp=null;
 let shapeEdit=null,editMode=false;
 /* forme du terrain : polygone libre ou rectangle G().w × G().h */
 const rectPts=()=>[{x:0,y:0},{x:G().w,y:0},{x:G().w,y:G().h},{x:0,y:G().h}];
@@ -819,6 +821,15 @@ const homeOf=o=>{const s=serreOf(o);return s?s.inner:S};
 const fullName=o=>{const s=serreOf(o);return s?s.name+' › '+o.name:o.name};
 const obj=id=>allObjs().find(o=>o.id===id);
 const plantables=()=>allObjs().filter(o=>TYPES[o.type]&&TYPES[o.type].plant);
+/* blocs : des objets qui bougent et tournent ensemble (série de planches et ses allées) */
+const grpOf=o=>o&&o.grp?G().objs.filter(q=>q.grp===o.grp):null;
+const grpMembers=o=>{const m=grpOf(o);return m&&m.length>1?m:null};
+function grpFrame(ms,rot){/* boîte du bloc dans son propre repère (tourné de rot) */
+  const pts=ms.flatMap(basePts),c0={x:pts.reduce((a,p)=>a+p.x,0)/pts.length,y:pts.reduce((a,p)=>a+p.y,0)/pts.length},a=-rot*Math.PI/180,co=Math.cos(a),si=Math.sin(a);
+  const loc=pts.map(p=>({x:(p.x-c0.x)*co-(p.y-c0.y)*si,y:(p.x-c0.x)*si+(p.y-c0.y)*co})),x0=Math.min(...loc.map(p=>p.x)),x1=Math.max(...loc.map(p=>p.x)),y0=Math.min(...loc.map(p=>p.y)),y1=Math.max(...loc.map(p=>p.y));
+  const mx=(x0+x1)/2,my=(y0+y1)/2,b=rot*Math.PI/180;return{cx:c0.x+mx*Math.cos(b)-my*Math.sin(b),cy:c0.y+mx*Math.sin(b)+my*Math.cos(b),w:x1-x0,h:y1-y0}}
+function rotateMembers(st,c,delta){const a=delta*Math.PI/180,co=Math.cos(a),si=Math.sin(a);
+  st.forEach(({o,x,y,rot})=>{const ox=x+o.w/2-c.x,oy=y+o.h/2-c.y;o.x=Math.round(c.x+ox*co-oy*si-o.w/2);o.y=Math.round(c.y+ox*si+oy*co-o.h/2);o.rot=(((rot+delta)%360)+360)%360})}
 
 /* ================= Synchronisation (compte Claude) ================= */
 let DOC=null,syncState='local',pushT=null,ASSETS=null,DL=null;
@@ -972,7 +983,7 @@ function objSVG(o){
   if(span>o.name.length*6.5&&thick>13&&o.type!=='prise')lab=`<text text-anchor="middle" dominant-baseline="central" font-size="${fs}" transform="${vert?'rotate(-90)':''}">${esc(o.name)}</text>`;
   let badge='';const st=planStatus(o);if(st){const r=10/view.z;badge=`<g class="badge ${st.c}" transform="translate(${o.w/2} ${-o.h/2})"><title>${st.l}</title><circle r="${r}" vector-effect="non-scaling-stroke"/><text text-anchor="middle" dominant-baseline="central" font-size="${(st.c==='blue'?9:11)/view.z}" transform="rotate(${-o.rot})">${st.t}</text></g>`}
   let selS='';if(sel){const p=6/view.z,bd=o.type==='haie'&&o.bend?o.bend:0;selS=`<rect class="selbox${o.locked?' locked':''}" x="${-o.w/2-p}" y="${-o.h/2-p-Math.max(0,bd)}" width="${o.w+2*p}" height="${o.h+2*p+Math.abs(bd)}" vector-effect="non-scaling-stroke"/>`+(o.locked||!editMode?'':`<circle class="handle" data-handle="1" cx="${o.w/2+p}" cy="${o.h/2+p}" r="${11/view.z}" vector-effect="non-scaling-stroke"/>`)}
-  return`<g data-id="${o.id}" class="obj${o.id===lifted?' lift':''}" transform="translate(${o.x+o.w/2} ${o.y+o.h/2}) rotate(${o.rot})">${shapeSVG(o)}${lab}${badge}${selS}</g>`;
+  return`<g data-id="${o.id}" class="obj${o.id===lifted||liftGrp&&o.grp===liftGrp?' lift':''}" transform="translate(${o.x+o.w/2} ${o.y+o.h/2}) rotate(${o.rot})">${shapeSVG(o)}${lab}${badge}${selS}</g>`;
 }
 function renderPlan(){
   const r=svg.getBoundingClientRect(),W=r.width||360,H=r.height||500;
@@ -987,7 +998,9 @@ function renderPlan(){
     tp.forEach((a,i)=>ed+=`<circle class="vtx${shapeEdit.sel===i?' sel':''}" data-vtx="${i}" cx="${a.x}" cy="${a.y}" r="${r}" vector-effect="non-scaling-stroke"/>`)}
   /* anneau de rotation autour de l'objet sélectionné (mode édition) */
   const ro=!shapeEdit&&editMode&&selId&&!lifted?G().objs.find(o=>o.id===selId):null;
-  if(ro&&!TYPES[ro.type].round&&!ro.locked){const cx=ro.x+ro.w/2,cy=ro.y+ro.h/2,Rr=Math.min(Math.max(Math.hypot(ro.w,ro.h)/2+40/view.z,70/view.z),Math.min(svg.clientWidth||360,svg.clientHeight||500)*.46/view.z),a=ro.rot*Math.PI/180,kx=cx+Rr*Math.sin(a),ky=cy-Rr*Math.cos(a);
+  const rms=ro&&grpMembers(ro),rf=rms?grpFrame(rms,ro.rot):null;
+  if(rf)ed+=`<rect class="grpbox" x="${rf.cx-rf.w/2-12/view.z}" y="${rf.cy-rf.h/2-12/view.z}" width="${rf.w+24/view.z}" height="${rf.h+24/view.z}" transform="rotate(${ro.rot} ${rf.cx} ${rf.cy})" rx="${8/view.z}" vector-effect="non-scaling-stroke"/>`;
+  if(ro&&!TYPES[ro.type].round&&!ro.locked){const cx=rf?rf.cx:ro.x+ro.w/2,cy=rf?rf.cy:ro.y+ro.h/2,Rr=Math.min(Math.max(Math.hypot(rf?rf.w:ro.w,rf?rf.h:ro.h)/2+40/view.z,70/view.z),Math.min(svg.clientWidth||360,svg.clientHeight||500)*.46/view.z),a=ro.rot*Math.PI/180,kx=cx+Rr*Math.sin(a),ky=cy-Rr*Math.cos(a);
     ed+=`<circle class="rotring" cx="${cx}" cy="${cy}" r="${Rr}" vector-effect="non-scaling-stroke"/><circle class="rothit" data-rot="1" cx="${cx}" cy="${cy}" r="${Rr}" vector-effect="non-scaling-stroke"/>
     <line class="rotline" x1="${cx}" y1="${cy}" x2="${kx}" y2="${ky}" vector-effect="non-scaling-stroke"/><g data-rot="1" transform="translate(${kx} ${ky})"><circle class="rotknob" r="${14/view.z}" vector-effect="non-scaling-stroke"/><text class="rotknobt" text-anchor="middle" dominant-baseline="central" font-size="${12/view.z}">${ro.rot}°</text></g>`}
   $('#editL').innerHTML=ed;
@@ -1024,11 +1037,11 @@ function world(x,y){const r=svg.getBoundingClientRect();return{x:view.cx+(x-r.le
 function showHint(t){const h=$('#hint');h.textContent=t;h.hidden=false;h.classList.toggle('low',(shade.on&&!ctx)||!!shapeEdit||!!ctx)}
 svg.addEventListener('pointerdown',e=>{
   svg.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
-  if(ptrs.size===2){const[a,b]=[...ptrs.values()];pinch={d0:Math.hypot(a.x-b.x,a.y-b.y),z0:view.z,m:world((a.x+b.x)/2,(a.y+b.y)/2)};clearTimeout(holdT);if(drag&&drag.mode==='move'){drag.o.x=drag.s.x;drag.o.y=drag.s.y}drag=null;lifted=null;guides=null;return}
+  if(ptrs.size===2){const[a,b]=[...ptrs.values()];pinch={d0:Math.hypot(a.x-b.x,a.y-b.y),z0:view.z,m:world((a.x+b.x)/2,(a.y+b.y)/2)};clearTimeout(holdT);if(drag&&drag.mode==='move'){drag.o.x=drag.s.x;drag.o.y=drag.s.y;(drag.grp||[]).forEach(m=>{m.o.x=m.x;m.o.y=m.y})}liftGrp=null;drag=null;lifted=null;guides=null;return}
   /* la poignée de taille passe avant l'anneau de rotation quand les deux se chevauchent */
   if(selId&&editMode&&!shapeEdit){const o=obj(selId);if(o&&!o.locked&&G().objs.includes(o)){const pd=6/view.z,ang=o.rot*Math.PI/180,lx=o.w/2+pd,ly=o.h/2+pd,hx=o.x+o.w/2+lx*Math.cos(ang)-ly*Math.sin(ang),hy=o.y+o.h/2+lx*Math.sin(ang)+ly*Math.cos(ang),pw=world(e.clientX,e.clientY);
     if(Math.hypot(pw.x-hx,pw.y-hy)*view.z<26){drag={mode:'resize',o,p0:pw,s:{...o},sx:e.clientX,sy:e.clientY};return}}}
-  const rh=e.target.closest('[data-rot]');if(rh&&selId&&editMode&&!shapeEdit){const o=obj(selId);drag={mode:'rot',o,s:{rot:o.rot},sx:e.clientX,sy:e.clientY,c:{x:o.x+o.w/2,y:o.y+o.h/2}};return}
+  const rh=e.target.closest('[data-rot]');if(rh&&selId&&editMode&&!shapeEdit){const o=obj(selId),ms=grpMembers(o),f=ms?grpFrame(ms,o.rot):null;drag={mode:'rot',o,s:{rot:o.rot},sx:e.clientX,sy:e.clientY,c:f?{x:f.cx,y:f.cy}:{x:o.x+o.w/2,y:o.y+o.h/2},grp:ms?ms.map(q=>({o:q,x:q.x,y:q.y,rot:q.rot})):null};return}
   if(shapeEdit){if(!G().shape)G().shape=rectPts();const v=e.target.closest('[data-vtx]'),m=e.target.closest('[data-mid]');
     if(v){shapeEdit.sel=+v.dataset.vtx;drag={mode:'vtx',i:shapeEdit.sel,sx:e.clientX,sy:e.clientY};renderPlan();renderShapebar();return}
     if(m){const i=+m.dataset.mid+1,a=G().shape[i-1],b=G().shape[i%G().shape.length];G().shape.splice(i,0,{x:snap((a.x+b.x)/2,10),y:snap((a.y+b.y)/2,10)});shapeEdit.sel=i;drag={mode:'vtx',i,sx:e.clientX,sy:e.clientY,inserted:true};renderPlan();renderShapebar();return}
@@ -1041,7 +1054,7 @@ svg.addEventListener('pointerdown',e=>{
     drag={mode:'hold',o,p0:p,s:{x:o.x,y:o.y},sx:e.clientX,sy:e.clientY,c0:{x:view.cx,y:view.cy}};renderPlan();
     holdT=setTimeout(()=>{if(!drag||drag.mode!=='hold')return;
       if(o.locked){drag.mode='done';toast('Objet verrouillé : déverrouille-le dans son menu');return}
-      drag.mode='move';drag.moved=true;lifted=o.id;sheetMode=null;renderSheet();try{navigator.vibrate&&navigator.vibrate(15)}catch(_){}showHint('Glisse pour déplacer');renderPlan()},380)}
+      drag.mode='move';drag.moved=true;lifted=o.id;{const ms=grpMembers(o);drag.grp=ms?ms.filter(q=>q!==o).map(q=>({o:q,x:q.x,y:q.y})):null;liftGrp=ms?o.grp:null}sheetMode=null;renderSheet();try{navigator.vibrate&&navigator.vibrate(15)}catch(_){}showHint('Glisse pour déplacer');renderPlan()},380)}
   else drag={mode:'pan',sx:e.clientX,sy:e.clientY,c0:{x:view.cx,y:view.cy}};
 });
 svg.addEventListener('pointermove',e=>{
@@ -1058,12 +1071,12 @@ svg.addEventListener('pointermove',e=>{
     for(const a of[pv,nx]){if(Math.abs(q.x-a.x)<thr)q.x=a.x;if(Math.abs(q.y-a.y)<thr)q.y=a.y}
     sh[drag.i]=q;showHint(`${m2(Math.hypot(q.x-pv.x,q.y-pv.y))} m · ${m2(Math.hypot(q.x-nx.x,q.y-nx.y))} m`)}
   else if(drag.mode==='rot'){let ang=Math.atan2(p.y-drag.c.y,p.x-drag.c.x)*180/Math.PI+90;ang=(ang%360+360)%360;
-    let r=Math.round(ang/5)*5;for(let k=0;k<=360;k+=45)if(Math.abs(ang-k)<4)r=k;o.rot=r%360;showHint(`Orientation ${o.rot}°`)}
+    let r=Math.round(ang/5)*5;for(let k=0;k<=360;k+=45)if(Math.abs(ang-k)<4)r=k;if(drag.grp){rotateMembers(drag.grp,drag.c,r%360-drag.s.rot)}else o.rot=r%360;showHint(`Orientation ${o.rot}°${drag.grp?' · bloc':''}`)}
   else if(drag.mode==='edge'){const[a,b]=drag.s,L=Math.hypot(b.x-a.x,b.y-a.y)||1,sg=Math.sign(polyArea(G().shape))||1,nx=(b.y-a.y)/L*sg,ny=-(b.x-a.x)/L*sg;
     const t=snap((p.x-drag.p0.x)*nx+(p.y-drag.p0.y)*ny,10),n=G().shape.length;
     G().shape[drag.i]={x:Math.round(a.x+nx*t),y:Math.round(a.y+ny*t)};G().shape[(drag.i+1)%n]={x:Math.round(b.x+nx*t),y:Math.round(b.y+ny*t)};
     showHint(`${t>=0?'Agrandi':'Réduit'} de ${m2(Math.abs(t))} m`)}
-  else if(drag.mode==='move'){o.x=snap(drag.s.x+p.x-drag.p0.x);o.y=snap(drag.s.y+p.y-drag.p0.y);guides=alignSnap(o);
+  else if(drag.mode==='move'){o.x=snap(drag.s.x+p.x-drag.p0.x);o.y=snap(drag.s.y+p.y-drag.p0.y);guides=drag.grp?null:alignSnap(o);if(drag.grp){const dx=o.x-drag.s.x,dy=o.y-drag.s.y;drag.grp.forEach(m=>{m.o.x=m.x+dx;m.o.y=m.y+dy})}
     const n=nearest(o);showHint(n?`${n.d<1?'Contact':'Écart '+Math.round(n.d)+' cm'} · ${n.q.name}`:'Glisse pour déplacer')}
   else if(drag.mode==='resize'){const a=o.rot*Math.PI/180,dx=p.x-drag.p0.x,dy=p.y-drag.p0.y,lx=dx*Math.cos(a)+dy*Math.sin(a),ly=-dx*Math.sin(a)+dy*Math.cos(a),s=drag.s;
     let w=Math.max(10,snap(s.w+lx)),h=Math.max(10,snap(s.h+ly));if(TYPES[o.type].round)w=h=Math.max(w,h);
@@ -1080,7 +1093,7 @@ function endPtr(e){ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;clearTimeo
     else if(drag.mode==='rot'&&drag.moved){save();if(sheetMode)renderSheet()}
     else if((drag.mode==='vtx'&&(drag.moved||drag.inserted))||(drag.mode==='edge'&&drag.moved)){normalizeShape();updateBox();save();renderShapebar()}
     else if(drag.moved&&(drag.mode==='move'||drag.mode==='resize')){fitZones(drag.o);save();if(sheetMode)renderSheet()}
-    drag=null;guides=null;$('#hint').hidden=true;lifted=null;renderPlan()}}
+    drag=null;guides=null;$('#hint').hidden=true;lifted=null;liftGrp=null;renderPlan()}}
 svg.addEventListener('pointerup',endPtr);svg.addEventListener('pointercancel',endPtr);
 svg.addEventListener('wheel',e=>{e.preventDefault();const p=world(e.clientX,e.clientY),r=svg.getBoundingClientRect();view.z=clamp(view.z*Math.exp(-e.deltaY*.0015),.04,6);
   view.cx=p.x-(e.clientX-r.left-r.width/2)/view.z;view.cy=p.y-(e.clientY-r.top-r.height/2)/view.z;renderPlan()},{passive:false});
@@ -1213,6 +1226,8 @@ function renderSheet(){
     <label class="field"><span class="lbl">Largeur (cm)</span><input id="sr-w" type="number" min="30" step="5" value="120"></label>
     <label class="field"><span class="lbl">Allée entre (cm)</span><input id="sr-g" type="number" min="0" step="5" value="50"></label>
     <label class="field"><span class="lbl">Inclinaison (°)</span><input id="sr-a" type="number" min="-180" max="180" step="5" value="0"></label></div>
+    <label class="row" style="gap:8px"><input type="checkbox" id="sr-al" checked> Dessiner les allées entre les planches</label>
+    <p class="note">La série forme un bloc : il se déplace et tourne d'un seul tenant. Chaque planche garde son propre menu, avec un bouton pour la détacher du bloc.</p>
     ${G().shape?'<button class="btn small" data-act="series-align" style="justify-self:start">Aligner sur le plus long côté du terrain</button>':''}
     <p class="note">Repère courant : planche de 75 à 120 cm, allée de 40 à 60 cm pour passer à genoux ou avec une brouette.</p>
     <button class="btn primary" data-act="series-go">Placer la série</button></div>`;
@@ -1274,6 +1289,7 @@ function renderSheet(){
     else h+=t.round?`<div class="grid2"><label class="field"><span class="lbl">Diamètre (cm)</span><input id="o-w" type="number" min="10" step="5" value="${Math.round(o.w)}" ${L}></label>`:
       `<div class="grid2"><label class="field"><span class="lbl">Largeur (cm)</span><input id="o-w" type="number" min="10" step="5" value="${Math.round(o.w)}" ${L}></label><label class="field"><span class="lbl">Longueur (cm)</span><input id="o-h" type="number" min="10" step="5" value="${Math.round(o.h)}" ${L}></label>`;
     if(o.type!=='citerne')h+=(!['planche','allee','eau','prise','etang','ruisseau'].includes(o.type))?`<label class="field"><span class="lbl">Hauteur (cm)</span><input id="o-ht" type="number" min="0" step="10" value="${Math.round(o.height||0)}"></label></div><p class="note">${o.type==='cuve'?`Contenance ≈ <b class="mono">${num(cuveL(o),0)} L</b>. `:''}La hauteur sert aussi à calculer l'ombre portée.</p>`:`</div>`;
+    {const ms=grpMembers(o);if(ms){const np=ms.filter(q=>q.type==='planche').length,na=ms.length-np;h+=`<div class="grpinfo"><span><b>Dans un bloc</b> · ${np} planche${np>1?'s':''}${na?` et ${na} allée${na>1?'s':''}`:''}<span class="note" style="display:block">Maintenir pour déplacer tout le bloc, l'anneau le fait tourner d'un coup. La poignée ne change que cet objet.</span></span><div class="row"><button class="btn small" data-act="ungroup">Détacher du bloc</button><button class="btn small" data-act="ungroupall">Dissoudre le bloc</button></div></div>`}}
     if(o.type==='ruisseau')h+=`<div class="grid2"><label class="field"><span class="lbl">Courbure (cm)</span><input id="o-bend" type="number" step="10" value="${Math.round(o.bend||0)}" ${L}></label><label class="field"><span class="lbl">Méandre (cm)</span><input id="o-wave" type="number" step="10" value="${Math.round(o.wave||0)}" ${L}></label></div><p class="note">Largeur = longueur du cours d'eau, longueur = largeur du lit. Courbure : il bombe d'un côté ; méandre : il ondule en S. L'eau s'écoule dans le sens des tirets ; « Inverser le sens » le retourne.</p><button class="btn small" data-act="flipflow" style="justify-self:start" ${L}>Inverser le sens</button>`;
     if(o.type==='haie')h+=`<label class="field" style="max-width:260px"><span class="lbl">Courbure (cm)</span><input id="o-bend" type="number" step="10" value="${Math.round(o.bend||0)}" ${L}></label><p class="note">0 = haie droite. La valeur est la flèche au milieu de la haie ; négative pour bomber de l'autre côté.</p>`;
     if(!t.round&&!o.locked)h+=`<div class="row"><span class="lbl">Orientation</span><span class="mono">${o.rot}°</span><button class="btn small" data-act="rot" data-d="90">+90°</button><button class="btn small" data-act="rot0">0°</button></div><p class="note">Fais glisser le rond jaune le long du cercle autour de l'objet pour le tourner (crans de 5°, aimanté tous les 45°).</p>`;
@@ -1297,16 +1313,20 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
   if(a==='series-go'){const n=clamp(+$('#sr-n').value||1,1,40),L=+$('#sr-l').value||500,W=+$('#sr-w').value||120,gap=Math.max(0,+$('#sr-g').value||0),v=$('#sr-o').value==='v';
     /* la série est centrée sur le milieu de l'écran */
     const r=svg.getBoundingClientRect(),c=world(r.left+r.width/2,r.top+r.height*.4),tw=v?n*W+(n-1)*gap:L,th=v?L:n*W+(n-1)*gap;
+    const grp=uid(),withA=$('#sr-al').checked&&gap>0,ka=G().objs.filter(o=>o.type==='allee').length;
     const x0=c.x-tw/2,y0=c.y-th/2,k=G().objs.filter(o=>o.type==='planche').length,ids=[],ang=((Math.round(+$('#sr-a').value||0)%360)+360)%360,ar=ang*Math.PI/180;
     for(let i=0;i<n;i++){const w=v?W:L,h=v?L:W,id=uid();ids.push(id);
       /* chaque planche tourne autour du centre de la série, pour garder les allées */
       const px=(v?x0+i*(W+gap):x0)+w/2-c.x,py=(v?y0:y0+i*(W+gap))+h/2-c.y,qx=c.x+px*Math.cos(ar)-py*Math.sin(ar),qy=c.y+px*Math.sin(ar)+py*Math.cos(ar);
-      G().objs.push({id,type:'planche',x:snap(qx-w/2),y:snap(qy-h/2),w,h,rot:ang,name:'Planche '+(k+i+1),height:0,locked:false,grown:[],journal:[],zones:[{id:uid(),crop:null,len:L,date:iso(TODAY),cells:{}}]})}
+      if(withA&&i<n-1){const aw=v?gap:L,ah=v?L:gap,ax=(v?x0+i*(W+gap)+W:x0)+aw/2-c.x,ay=(v?y0:y0+i*(W+gap)+W)+ah/2-c.y,bx=c.x+ax*Math.cos(ar)-ay*Math.sin(ar),by=c.y+ax*Math.sin(ar)+ay*Math.cos(ar);
+        G().objs.push({id:uid(),type:'allee',x:Math.round(bx-aw/2),y:Math.round(by-ah/2),w:aw,h:ah,rot:ang,name:'Allée '+(ka+i+1),height:0,locked:false,grp})}
+      G().objs.push({id,grp,type:'planche',x:Math.round(qx-w/2),y:Math.round(qy-h/2),w,h,rot:ang,name:'Planche '+(k+i+1),height:0,locked:false,grown:[],journal:[],zones:[{id:uid(),crop:null,len:L,date:iso(TODAY),cells:{}}]})}
     sheetMode=null;save();renderSheet();renderPlan();toast(`${n} planche${n>1?'s':''} placée${n>1?'s':''}, allées de ${gap} cm`,true)}
-  if(a==='rot'&&o){o.rot=((o.rot+ +b.dataset.d)%360+360)%360;save();renderSheet();renderPlan()}
-  if(a==='rot0'&&o){o.rot=0;save();renderSheet();renderPlan()}
+  if((a==='rot'||a==='rot0')&&o){const d=a==='rot'?+b.dataset.d:-o.rot,ms=grpMembers(o);if(ms){const f=grpFrame(ms,o.rot);rotateMembers(ms.map(q=>({o:q,x:q.x,y:q.y,rot:q.rot})),{x:f.cx,y:f.cy},d)}else o.rot=((o.rot+d)%360+360)%360;save();renderSheet();renderPlan()}
+  if(a==='ungroup'&&o){delete o.grp;const rest=G().objs.filter(q=>q.grp&&!grpMembers(q));rest.forEach(q=>delete q.grp);save();renderSheet();renderPlan();return toast(o.name+' détaché du bloc',true)}
+  if(a==='ungroupall'&&o){const ms=grpOf(o)||[];ms.forEach(q=>delete q.grp);save();renderSheet();renderPlan();return toast('Bloc dissous : '+ms.length+' objets indépendants',true)}
   if(a==='lock'&&o){o.locked=!o.locked;save();renderSheet();renderPlan()}
-  if(a==='dup'&&o){const n=JSON.parse(JSON.stringify(o));n.id=uid();n.x+=30;n.y+=30;n.name=o.name+' (copie)';n.locked=false;if(n.zones)n.zones.forEach(z=>z.id=uid());if(n.journal)n.journal=[];G().objs.push(n);selId=n.id;save();renderSheet();renderPlan()}
+  if(a==='dup'&&o){const n=JSON.parse(JSON.stringify(o));n.id=uid();n.x+=30;n.y+=30;n.name=o.name+' (copie)';n.locked=false;delete n.grp;if(n.zones)n.zones.forEach(z=>z.id=uid());if(n.journal)n.journal=[];G().objs.push(n);selId=n.id;save();renderSheet();renderPlan()}
   if(a==='del'&&o){if(!b.classList.contains('armed')){b.classList.add('armed');b.textContent='Confirmer la suppression';return}
     {const H=homeOf(o);H.objs=H.objs.filter(x=>x!==o);if(o.id===ctx){ctx=null;renderCtxbar();fit()}};selId=null;sheetMode=null;save();renderSheet();renderPlan();toast(`« ${o.name} » supprimé`,true)}
   if(a==='openbed'&&o)openBed(o.id);
@@ -2417,7 +2437,7 @@ setTimeout(()=>syncStation(false),600);
 
 <script>
 setTimeout(()=>{const s=document.getElementById('splash');if(s){s.classList.add('out');setTimeout(()=>s.remove(),600)}},matchMedia('(display-mode: standalone)').matches||navigator.standalone?650:120);
-/* version 5f89a6fdf5 : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
+/* version 0acb1f07e9 : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
 if('serviceWorker' in navigator&&location.protocol==='https:'){
   navigator.serviceWorker.register('sw.js').then(r=>r.update()).catch(()=>{});
   let reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!reloaded){reloaded=true;location.reload()}});
