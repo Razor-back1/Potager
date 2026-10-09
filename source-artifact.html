@@ -1,4 +1,5 @@
 <title>Atelier Potager</title>
+<script>try{if((localStorage.getItem('potager-ui')||'glass')==='glass'){document.documentElement.dataset.ui='glass';document.documentElement.dataset.theme='dark'}}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
@@ -476,6 +477,57 @@ table.cmp tr:last-child td{border-bottom:0}
 .toast button{border:0;background:none;color:var(--sun);font-weight:700}
 @media (min-width:760px){ .sheet{left:auto;right:16px;bottom:16px;width:380px;border-radius:18px;border:1px solid var(--line);max-height:calc(100% - 32px)} .sunbar{right:auto;width:420px}}
 @media (prefers-reduced-motion:no-preference){ .sheet{animation:up .18s ease-out} @keyframes up{from{transform:translateY(16px);opacity:.6}} }
+/* ===== Style « Verre sombre » — Menu › Style ; « Classique » rend l'ancien look ===== */
+:root[data-ui="glass"]{
+  --bg:#0d1411; --surface:#18211d; --surface-2:#222c27; --ink:#f2f6f3; --muted:#a3b0a8; --line:rgba(255,255,255,.13);
+  --accent:#9be7a8; --accent-ink:#0d1411; --halo:#0d1411; --glass:rgba(255,255,255,.08);
+  --card:rgba(255,255,255,.065); --card-line:rgba(255,255,255,.11); --bar:rgba(30,40,35,.78); --blur:saturate(160%) blur(22px);
+  --wall:radial-gradient(520px 420px at -12% -6%,rgba(38,104,66,.5),transparent 70%),radial-gradient(420px 380px at 112% 42%,rgba(30,70,110,.42),transparent 70%),#0d1411;
+  --f-display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",system-ui,sans-serif;
+  --f-body:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif;
+  --f-mono:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif;
+  color-scheme:dark;
+}
+:root[data-ui="glass"] body{background:var(--wall);font-variant-numeric:tabular-nums}
+:root[data-ui="glass"] header.top{background:transparent;border-bottom:0;padding-block:12px 6px;gap:6px}
+:root[data-ui="glass"] .brand{font-size:17px;letter-spacing:-.02em}
+:root[data-ui="glass"] .brand small{font-size:12px;letter-spacing:0}
+:root[data-ui="glass"] .iconbtn{width:40px;height:40px;border-radius:50%;background:var(--card);border-color:var(--card-line)}
+:root[data-ui="glass"] .iconbtn.on{background:var(--sun);border-color:var(--sun)}
+:root[data-ui="glass"] .tabs{margin:6px 10px max(env(safe-area-inset-bottom,0px),12px);padding:5px;gap:0;border:1px solid var(--card-line);border-radius:32px;background:var(--bar);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:0 10px 30px rgba(0,0,0,.35)}
+:root[data-ui="glass"] .tabs button{border-radius:26px;padding:8px 0 6px;font-size:10px;font-weight:600;letter-spacing:-.01em;color:#b9c4bd}
+:root[data-ui="glass"] .tabs button[aria-current="page"]{background:rgba(255,255,255,.14);color:var(--accent)}
+:root[data-ui="glass"] .notefab{border-radius:30px;box-shadow:0 10px 26px rgba(0,0,0,.45)}
+:root[data-ui="glass"] .page h2{letter-spacing:-.02em}
+:root[data-ui="glass"] .page>h2:first-child,:root[data-ui="glass"] .page>div:first-child>h2:first-child{font-size:34px;line-height:1.1}
+:root[data-ui="glass"] .tsec-h{border-top:0;padding-top:10px}
+:root[data-ui="glass"] :is(.tcard,.panel,.crop,.stat,.aucard,.wxadv,.abcard,.sg,.glist,.nlist,.jlist,.hvlist,.qbtn,.info){background:var(--card);border-color:var(--card-line);border-radius:22px}
+:root[data-ui="glass"] :is(.hv,.prod,.nrow){background:transparent;border-color:var(--card-line)}
+:root[data-ui="glass"] .trow{border-top:1px solid var(--card-line)}
+:root[data-ui="glass"] .plrow{border-color:var(--card-line)}
+:root[data-ui="glass"] .tcard.frost,:root[data-ui="glass"] .alert.frost{background:rgba(120,190,255,.11);border-color:rgba(140,200,255,.32)}
+:root[data-ui="glass"] .tcard.urgent{border-color:rgba(240,180,69,.55)}
+:root[data-ui="glass"] .alert{border-radius:18px;background:var(--card)}
+:root[data-ui="glass"] .wxhero{border-color:var(--card-line);border-radius:26px}
+:root[data-ui="glass"] .btn{border-radius:99px;background:var(--card);border-color:var(--card-line)}
+:root[data-ui="glass"] .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+:root[data-ui="glass"] .btn.on{background:var(--sun);border-color:var(--sun);color:#1d1404}
+:root[data-ui="glass"] .btn.danger.armed{background:var(--danger);border-color:var(--danger);color:#fff}
+:root[data-ui="glass"] .fab .btn:not(.primary){background:var(--bar);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur)}
+:root[data-ui="glass"] .fab .btn.on{background:var(--sun)}
+:root[data-ui="glass"] :is(.ctxbar,.sunbar,.compass){background:var(--bar);border-color:var(--card-line);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur)}
+:root[data-ui="glass"] :is(.ctxbar,.sunbar){border-radius:20px}
+:root[data-ui="glass"] .sheet{background:rgba(22,30,26,.88);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border-color:var(--card-line);border-radius:26px 26px 0 0;box-shadow:0 -14px 40px rgba(0,0,0,.45)}
+:root[data-ui="glass"] .bed{background:var(--wall)}
+:root[data-ui="glass"] .bedhead{background:rgba(13,20,17,.78);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border-color:var(--card-line)}
+:root[data-ui="glass"] .bednav button{background:var(--card);border-color:var(--card-line)}
+:root[data-ui="glass"] :is(.field input,.field select,.field textarea,.search){border-radius:14px;border-color:var(--card-line);background:rgba(255,255,255,.07)}
+:root[data-ui="glass"] .seg button,:root[data-ui="glass"] .chip{border-color:var(--card-line);background:rgba(255,255,255,.07)}
+:root[data-ui="glass"] .seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+:root[data-ui="glass"] .invcard{border-radius:26px;border:1px solid var(--card-line)}
+:root[data-ui="glass"] .toast{background:rgba(40,52,46,.94);color:var(--ink);border:1px solid var(--card-line);border-radius:18px;-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur)}
+:root[data-ui="glass"] .hint{background:rgba(40,52,46,.94);color:var(--ink);border-radius:12px}
+@media (min-width:760px){:root[data-ui="glass"] .sheet{border-radius:26px}}
 </style>
 
 <div class="app">
@@ -1421,7 +1473,8 @@ function renderSheet(){
     `<div class="grid2"><label class="field"><span class="lbl">Largeur du terrain (m)</span><input id="g-w" type="number" min="2" step="0.5" value="${S.w/100}"></label>
     <label class="field"><span class="lbl">Longueur du terrain (m)</span><input id="g-h" type="number" min="2" step="0.5" value="${S.h/100}"></label></div>`}
     <div class="row between"><span><span class="lbl">Station météo</span><br><span class="note">${WU.get().key?'Station '+esc(WU.get().id)+' reliée':'Pas de station reliée'}</span></span><button class="btn small" data-act="wu">${WU.get().key?'Modifier':'Relier ma station'}</button></div>
-    <div><span class="lbl">Apparence</span><div class="seg" style="margin-top:6px">${[['auto','Automatique'],['light','Clair'],['dark','Sombre']].map(([k,l])=>`<button data-act="theme" data-k="${k}" aria-pressed="${themePref()===k}">${l}</button>`).join('')}</div>
+    <div><span class="lbl">Style</span><div class="seg" style="margin-top:6px">${[['glass','Verre sombre'],['classic','Classique']].map(([k,l])=>`<button data-act="ui" data-k="${k}" aria-pressed="${uiPref()===k}">${l}</button>`).join('')}</div></div>
+    <div>${uiPref()==='glass'?'':`<span class="lbl">Apparence</span><div class="seg" style="margin-top:6px">${[['auto','Automatique'],['light','Clair'],['dark','Sombre']].map(([k,l])=>`<button data-act="theme" data-k="${k}" aria-pressed="${themePref()===k}">${l}</button>`).join('')}</div>`}
     <div class="row between" style="margin-top:8px"><span class="note" style="color:var(--ink)">Météo vivante sur le plan<br><span class="note">pluie, givre, nuit et ombres à l'heure réelle, coupée en mode édition</span></span><button class="btn small ${wxPlanOn()?'on':''}" data-act="wxplan">${wxPlanOn()?'Activée':'Désactivée'}</button></div></div>
     <div class="row between"><span><span class="lbl">Synchronisation</span><br><span class="note">${relayOn()?'Relais relié : iPhone, iPad… à jour':'Ce potager reste sur cet appareil'}</span></span><button class="btn small" data-act="relay">${relayOn()?'Gérer':'Relier'}</button></div>
     ${relayOn()?`<div class="row between"><span><span class="lbl">Notifications</span><br><span class="note">${pushState().txt}</span></span><button class="btn small" data-act="notif">${pushState().on?'Régler':'Activer'}</button></div>`:''}
@@ -1541,6 +1594,7 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
     b.disabled=true;b.textContent='Connexion…';try{const w=await syncStation(false,c);if(!w||!w.now)throw new Error('Aucune donnée reçue de la station.');WU.set(c);sheetMode=null;renderSheet();toast(`Station reliée : ${num(w.now.t,1)} °C, ${num(w.now.rain||0,1)} mm aujourd'hui`);syncStation(false)}catch(err){b.disabled=false;b.textContent='Relier et tester';const el=$('#wu-err');if(el){el.hidden=false;el.textContent=err.message}}return}
   if(a==='wu-del'){WU.set({off:true});wx=null;sheetMode='menu';renderSheet();return toast('Station déliée de cet appareil')}
   if(a==='theme'){setTheme(b.dataset.k);renderSheet();renderPlan()}
+  if(a==='ui'){setUI(b.dataset.k);renderSheet();renderPlan()}
   if(a==='wxplan'){try{localStorage.setItem('potager-wxplan',wxPlanOn()?'off':'on')}catch(e){}renderSheet();renderPlan()}
   if(a==='shape-edit')startShapeEdit();
   if(a==='shape-rect'){S.shape=null;save();renderSheet();renderPlan();toast('Terrain redevenu rectangulaire',true)}
@@ -2758,8 +2812,10 @@ $('#noteBtnPlan').onclick=()=>openQ();
 /* ================= Démarrage ================= */
 function themePref(){try{return localStorage.getItem('potager-theme')||'auto'}catch(e){return'auto'}}
 function setTheme(k){try{localStorage.setItem('potager-theme',k)}catch(e){}applyTheme()}
-function applyTheme(){const k=themePref(),r=document.documentElement;if(k==='auto')delete r.dataset.theme;else r.dataset.theme=k;
-  const dark=k==='dark'||(k==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);document.querySelectorAll('meta[name="theme-color"]').forEach(m=>m.setAttribute('content',dark?'#1d1e20':'#fafbf6'))}
+function uiPref(){try{return localStorage.getItem('potager-ui')||'glass'}catch(e){return'glass'}}
+function setUI(k){try{localStorage.setItem('potager-ui',k)}catch(e){}applyTheme()}
+function applyTheme(){const g=uiPref()==='glass',k=g?'dark':themePref(),r=document.documentElement;r.dataset.ui=g?'glass':'classic';if(k==='auto')delete r.dataset.theme;else r.dataset.theme=k;
+  const dark=k==='dark'||(k==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);document.querySelectorAll('meta[name="theme-color"]').forEach(m=>m.setAttribute('content',g?'#0d1411':dark?'#1d1e20':'#fafbf6'))}
 applyTheme();
 let seenHelp=false;try{seenHelp=!!localStorage.getItem('potager-aide-vue');localStorage.setItem('potager-aide-vue','1')}catch(e){}
 if(!seenHelp)sheetMode='help';
