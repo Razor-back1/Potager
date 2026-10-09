@@ -89,7 +89,7 @@ main{position:relative;min-height:0;overflow:hidden}
 .surround{fill:var(--leaf);fill-opacity:.10;stroke:var(--line);stroke-width:1;stroke-dasharray:6 4}
 .ground{fill:var(--ground)} .bound{fill:none;stroke:var(--accent);stroke-width:1.5}
 .dimtxt{fill:var(--muted);font-family:var(--f-mono)}
-.obj{cursor:grab}
+.obj{cursor:grab}.obj.nopick{cursor:inherit}
 .obj text{font-family:var(--f-body);font-weight:700;fill:var(--ink);paint-order:stroke;stroke:var(--halo);stroke-width:3px;stroke-linejoin:round;pointer-events:none}
 .s-soil{fill:var(--soil);stroke:var(--soil-edge)} .s-wood{fill:var(--soil);stroke:var(--wood)}
 .s-water{fill:var(--water);fill-opacity:.85;stroke:var(--water)} .s-water-l{fill:var(--water);fill-opacity:.25;stroke:var(--water)}
@@ -821,6 +821,8 @@ const serreOf=o=>S.objs.find(q=>q.inner&&q.inner.objs&&q.inner.objs.includes(o))
 const homeOf=o=>{const s=serreOf(o);return s?s.inner:S};
 const fullName=o=>{const s=serreOf(o);return s?s.name+' › '+o.name:o.name};
 const obj=id=>allObjs().find(o=>o.id===id);
+/* hors mode édition, seuls ces objets se sélectionnent ; le reste laisse glisser la carte */
+const PICKABLE=new Set(['planche','bac','serre','abri']);
 const plantables=()=>allObjs().filter(o=>TYPES[o.type]&&TYPES[o.type].plant);
 /* blocs : des objets qui bougent et tournent ensemble (série de planches et ses allées) */
 const grpOf=o=>o&&o.grp?G().objs.filter(q=>q.grp===o.grp):null;
@@ -987,7 +989,7 @@ function objSVG(o){
   if(span>o.name.length*6.5&&thick>13&&o.type!=='prise')lab=`<text text-anchor="middle" dominant-baseline="central" font-size="${fs}" transform="${vert?'rotate(-90)':''}">${esc(o.name)}</text>`;
   let badge='';const st=planStatus(o);if(st){const r=10/view.z;badge=`<g class="badge ${st.c}" transform="translate(${o.w/2} ${-o.h/2})"><title>${st.l}</title><circle r="${r}" vector-effect="non-scaling-stroke"/><text text-anchor="middle" dominant-baseline="central" font-size="${(st.c==='blue'?9:11)/view.z}" transform="rotate(${-o.rot})">${st.t}</text></g>`}
   let selS='';if(sel){const p=6/view.z,bd=o.type==='haie'&&o.bend?o.bend:0;selS=`<rect class="selbox${o.locked?' locked':''}" x="${-o.w/2-p}" y="${-o.h/2-p-Math.max(0,bd)}" width="${o.w+2*p}" height="${o.h+2*p+Math.abs(bd)}" vector-effect="non-scaling-stroke"/>`+(o.locked||!editMode?'':`<circle class="handle" data-handle="1" cx="${o.w/2+p}" cy="${o.h/2+p}" r="${11/view.z}" vector-effect="non-scaling-stroke"/>`)}
-  return`<g data-id="${o.id}" class="obj${o.id===lifted||liftGrp&&o.grp===liftGrp?' lift':''}" transform="translate(${o.x+o.w/2} ${o.y+o.h/2}) rotate(${o.rot})">${shapeSVG(o)}${lab}${badge}${selS}</g>`;
+  return`<g data-id="${o.id}" class="obj${o.id===lifted||liftGrp&&o.grp===liftGrp?' lift':''}${!editMode&&!PICKABLE.has(o.type)?' nopick':''}" transform="translate(${o.x+o.w/2} ${o.y+o.h/2}) rotate(${o.rot})">${shapeSVG(o)}${lab}${badge}${selS}</g>`;
 }
 function renderPlan(){
   const r=svg.getBoundingClientRect(),W=r.width||360,H=r.height||500;
@@ -1051,7 +1053,7 @@ svg.addEventListener('pointerdown',e=>{
     if(m){const i=+m.dataset.mid+1,a=G().shape[i-1],b=G().shape[i%G().shape.length];G().shape.splice(i,0,{x:snap((a.x+b.x)/2,10),y:snap((a.y+b.y)/2,10)});shapeEdit.sel=i;drag={mode:'vtx',i,sx:e.clientX,sy:e.clientY,inserted:true};renderPlan();renderShapebar();return}
     const ed=e.target.closest('[data-edge]');if(ed){const i=+ed.dataset.edge,n=G().shape.length;shapeEdit.sel=null;drag={mode:'edge',i,p0:world(e.clientX,e.clientY),s:[{...G().shape[i]},{...G().shape[(i+1)%n]}],sx:e.clientX,sy:e.clientY};renderShapebar();return}
     drag={mode:'pan',sx:e.clientX,sy:e.clientY,c0:{x:view.cx,y:view.cy}};return}
-  const h=e.target.closest('[data-handle]'),g=e.target.closest('[data-id]'),p=world(e.clientX,e.clientY);
+  const h=e.target.closest('[data-handle]'),g0=e.target.closest('[data-id]'),g=g0&&(editMode||PICKABLE.has((obj(g0.dataset.id)||{}).type))?g0:null,p=world(e.clientX,e.clientY);
   if(h&&selId){const o=obj(selId);drag={mode:'resize',o,p0:p,s:{...o},sx:e.clientX,sy:e.clientY}}
   else if(g&&!editMode){const o=obj(g.dataset.id);selId=o.id;drag={mode:'hold',o,p0:p,s:{x:o.x,y:o.y},sx:e.clientX,sy:e.clientY,c0:{x:view.cx,y:view.cy}};renderPlan()}
   else if(g){const o=obj(g.dataset.id);selId=o.id;
@@ -2444,7 +2446,7 @@ setTimeout(()=>syncStation(false),600);
 
 <script>
 setTimeout(()=>{const s=document.getElementById('splash');if(s){s.classList.add('out');setTimeout(()=>s.remove(),600)}},matchMedia('(display-mode: standalone)').matches||navigator.standalone?650:120);
-/* version f42cb67da0 : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
+/* version d165226f1f : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
 if('serviceWorker' in navigator&&location.protocol==='https:'){
   navigator.serviceWorker.register('sw.js').then(r=>r.update()).catch(()=>{});
   let reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!reloaded){reloaded=true;location.reload()}});
