@@ -908,10 +908,15 @@ const keyOf=id=>id==='main'?KEY:KEY+':'+id,keyAtOf=id=>id==='main'?KEYAT:KEYAT+'
 let localAt=0;try{localAt=+localStorage.getItem(keyAtOf(GID))||0}catch(e){}
 function load(){try{return migrate(JSON.parse(localStorage.getItem(keyOf(GID))))}catch(e){return null}}
 let past=[],future=[],lastJSON='',lastPush=0;
+/* l'historique d'annulation survit à la fermeture de l'app (iOS recharge souvent les apps en arrière-plan) */
+const undoKey=()=>'atelier-potager-undo:'+GID;
+let undoT=null;function saveUndo(){clearTimeout(undoT);undoT=setTimeout(()=>{try{let p=past.slice(-15),f=future.slice(-15);while(p.length&&JSON.stringify({p,f}).length>2e6)p=p.slice(1);localStorage.setItem(undoKey(),JSON.stringify({p,f,cur:lastJSON.length}))}catch(e){}},150)}
+addEventListener('pagehide',()=>{if(undoT){clearTimeout(undoT);try{localStorage.setItem(undoKey(),JSON.stringify({p:past.slice(-15),f:future.slice(-15),cur:lastJSON.length}))}catch(e){}}});
+function loadUndo(){try{const u=JSON.parse(localStorage.getItem(undoKey())),raw=localStorage.getItem(keyOf(GID))||'';if(u&&Array.isArray(u.p)&&u.cur===raw.length){past=u.p;future=u.f||[]}else{past=[];future=[]}}catch(e){past=[];future=[]}}
 function persist(){try{localStorage.setItem(keyOf(GID),lastJSON);localStorage.setItem(keyAtOf(GID),String(localAt))}catch(e){}
   const g=GL.get(),it=g.list.find(x=>x.id===GID);if(it&&(it.name!==S.name||it.ex!==!!S.example)){it.name=S.name;it.ex=!!S.example;GL.set(g)}}
 function switchGarden(id){if(id===GID)return;if(GID)persist();GID=id;const g=GL.get();g.cur=id;GL.set(g);
-  try{localAt=+localStorage.getItem(keyAtOf(id))||0}catch(e){localAt=0}S=load()||sample();lastJSON=JSON.stringify(S);past=[];future=[];
+  try{localAt=+localStorage.getItem(keyAtOf(id))||0}catch(e){localAt=0}S=load()||sample();lastJSON=JSON.stringify(S);loadUndo();
   ctx=null;selId=null;sheetMode=null;editMode=false;shapeEdit=null;closeBed();closeInv();if(typeof closeAuto==='function')closeAuto();persist();
   if(typeof subscribeDoc==='function')subscribeDoc();fit();renderSheet();renderHeader();refresh();if(typeof updateModeUI==='function')updateModeUI()}
 function addGarden(state,open=true){const id=uid(),g=GL.get();try{localStorage.setItem(keyOf(id),JSON.stringify(state));localStorage.setItem(keyAtOf(id),String(Date.now()))}catch(e){toast('Mémoire de l\'appareil pleine');return null}
@@ -921,11 +926,11 @@ function deleteGarden(id){const g=GL.get();if(g.list.length<2)return;g.list=g.li
 const emptyGarden=(name='Mon potager',kind)=>({v:8,kind:kind||undefined,shape:null,rain:[],stock:[],nursery:[],name,w:1200,h:800,north:0,water:{roof:40,cap:1000,level:500},frost:null,objs:[],example:false});
 function save(coalesce){const j=JSON.stringify(S);if(j!==lastJSON){const now=Date.now();
   if(!(coalesce&&now-lastPush<1500&&past.length)){past.push(lastJSON);if(past.length>80)past.shift()}
-  lastPush=coalesce?now:0;future=[];lastJSON=j;localAt=now;persist();schedulePush();syncPushSoon()}renderHeader()}
+  lastPush=coalesce?now:0;future=[];lastJSON=j;localAt=now;persist();schedulePush();syncPushSoon();saveUndo()}renderHeader()}
 function restore(j){lastJSON=j;S=migrate(JSON.parse(j));localAt=Date.now();persist();schedulePush();syncPushSoon();if(selId&&!obj(selId)){selId=null;if(sheetMode==='obj')sheetMode=null}renderHeader();refresh()}
-function undo(){if(!past.length)return;future.push(lastJSON);restore(past.pop());toast('Action annulée')}
-function redo(){if(!future.length)return;past.push(lastJSON);restore(future.pop());toast('Action rétablie')}
-let S=load()||sample();lastJSON=JSON.stringify(S);
+function undo(){if(!past.length)return;future.push(lastJSON);restore(past.pop());saveUndo();toast('Action annulée')}
+function redo(){if(!future.length)return;past.push(lastJSON);restore(future.pop());saveUndo();toast('Action rétablie')}
+let S=load()||sample();lastJSON=JSON.stringify(S);loadUndo();
 let view={cx:S.w/2,cy:S.h/2,z:.3};
 let selId=null,sheetMode=null,tab='plan',bed=null;
 let shade={on:false,doy:doyOf(TODAY),hour:15};
@@ -2796,7 +2801,7 @@ setTimeout(()=>syncStation(false),600);
 
 <script>
 setTimeout(()=>{const s=document.getElementById('splash');if(s){s.classList.add('out');setTimeout(()=>s.remove(),600)}},matchMedia('(display-mode: standalone)').matches||navigator.standalone?650:120);
-/* version 1e0de2b909 : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
+/* version ecc1b5cd5a : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
 if('serviceWorker' in navigator&&location.protocol==='https:'){
   navigator.serviceWorker.register('sw.js').then(r=>r.update()).catch(()=>{});
   let reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!reloaded){reloaded=true;location.reload()}});
