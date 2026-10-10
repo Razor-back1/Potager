@@ -1,0 +1,12 @@
+{
+  "name": "atelier-potager-tests",
+  "private": true,
+  "type": "module",
+  "description": "Tests automatiques de l'Atelier Potager : l'app dans un iPhone simulé et le relais Cloudflare avec une base D1 simulée.",
+  "scripts": {
+    "test": "node --test --test-concurrency=1 --no-warnings"
+  },
+  "devDependencies": {
+    "playwright": "1.56.0"
+  }
+}

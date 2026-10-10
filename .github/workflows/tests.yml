@@ -1,0 +1,28 @@
+name: Tests
+
+on:
+  push:
+    paths-ignore: ['meteo/**', '.github/scripts/meteo-*', '.github/workflows/meteo-*']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pillow
+      - name: Les fichiers publiés correspondent aux sources (src/)
+        run: python3 tools/build.py && git diff --exit-code -- . ':!*.png'
+      - name: Installer Playwright et Chromium
+        working-directory: tests
+        run: npm install && npx playwright install --with-deps chromium
+      - name: Tests de l'app (iPhone simulé) et du relais (base D1 simulée)
+        working-directory: tests
+        run: npm test

@@ -1,0 +1,12 @@
+/* ================= Planning de l'année ================= */
+function zoneEnd(z){let end=null;if(z.crop&&P[z.crop])end=addD(z.date||iso(TODAY),P[z.crop].j);(z.next||[]).forEach(n=>{const e=addD(n.date,P[n.crop].j);if(!end||e>end)end=e});return end}
+function timelineHTML(o){const y0=new Date(YEAR,0,1,12),span=365,pc=d=>clamp(days(y0,d)/span*100,0,100);
+  const bar=(crop,from,cls)=>{const p=P[crop];const a=parse(from),b=addD(from,p.j),l=pc(a),r=pc(b);if(r<=0||l>=100)return'';return`<span class="b ${cls}" style="left:${l}%;width:${Math.max(r-l,2)}%;background:${p.c};border-color:${p.c}" title="${p.n}">${p.n}</span>`};
+  let h=`<div class="tl"><div class="tlhead"><span></span><div class="mths">${MSHORT.map(m=>`<span>${m}</span>`).join('')}</div></div>`;
+  o.zones.forEach((z,i)=>{
+    h+=`<div class="tlrow"><span class="zl">Zone ${i+1}<br><span class="note" style="font-weight:400">${z.crop?P[z.crop].n:'libre'}</span></span><div class="track">${z.crop?bar(z.crop,z.date||iso(TODAY),''):''}${(z.next||[]).map(n=>bar(n.crop,n.date,'pl')).join('')}<span class="now" style="left:${pc(TODAY)}%"></span></div>
+    <div class="nexts">${z.crop?`<div class="plrow cur">${ci((P[z.crop]).id)}<span><b>${P[z.crop].n}</b> <span class="note">· en place, récolte ${fdate(addD(z.date||iso(TODAY),P[z.crop].j))}</span></span><span></span><button class="btn small" data-act="endcrop" data-zi="${i}">Libérer</button></div>`:''}
+    ${(z.next||[]).map(n=>`<div class="plrow">${ci((P[n.crop]).id)}<span><b>${P[n.crop].n}</b> <span class="note">· prévue le ${fdate(parse(n.date))}</span></span><button class="btn small" data-act="startnext" data-zi="${i}" data-id="${n.id}">Lancer</button><button class="btn small danger" data-act="delnext" data-zi="${i}" data-id="${n.id}">Retirer</button></div>`).join('')}
+    <button class="btn small" data-act="planfor" data-zi="${i}" style="justify-self:start">${bed.plan===i?'Fermer les suggestions':'+ Prévoir la suite'}</button></div></div>`;
+    if(bed.plan===i){const e=zoneEnd(z),d=e&&e>TODAY?e:TODAY;h+=`<div style="grid-column:1/-1"><p class="note">Suggestions à partir du ${fdate(d)}${z.crop?`, après ${P[z.crop].n.toLowerCase()}`:''} :</p>${suggestHTML(o,i,iso(d),'plannext')}</div>`}});
+  return h+`</div><p class="note">Barres pleines : en place. Pointillés : prévu. Le trait jaune marque aujourd'hui. « Libérer » vide la zone après la récolte (l'historique de rotation est conservé).</p>`}
