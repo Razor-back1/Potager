@@ -36,7 +36,7 @@ function cropSprite(){const G='#4f9a3a',D='#2f6a2a',soil='<path d="M5 22.2h14" s
   return`<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>${s}</defs></svg>`}
 document.body.insertAdjacentHTML('afterbegin',cropSprite());
 const stageOf=pr=>pr<.3?0:pr<.85?1:2;
-const symOf=(id,pr=1)=>{const st=stageOf(pr);return st===0?'ci-sprout':st===1?'ci-young':'ci-'+id};
+const symOf=(id,pr=1)=>{const st=stageOf(pr);return st===0?'ci-sprout':st===1?'ci-young':'ci-'+bid(id)};
 const ci=(id,pr=1,cls='')=>P[id]?`<svg class="ci ${cls}" viewBox="0 0 24 24" aria-hidden="true"><use href="#${symOf(id,pr)}"/></svg>`:'';
 function ring(pr,id,ready){const p=clamp(pr,0,1),L=106.8,col=ready?'var(--ok)':(P[id]?P[id].c:'var(--accent)');
   return`<svg class="ring" viewBox="0 0 40 40" aria-hidden="true"><circle class="rt" cx="20" cy="20" r="17"/><circle class="rp" cx="20" cy="20" r="17" stroke="${col}" stroke-dasharray="${(p*L).toFixed(1)} ${L}" transform="rotate(-90 20 20)"/><use href="#${symOf(id,p)}" x="9" y="9" width="22" height="22"/></svg>`}

@@ -81,10 +81,19 @@ const FL_PESTS=[
 
 let PLANTS=VEG_PLANTS;
 const ALL_PLANTS=[...VEG_PLANTS,...FLOWERS];
-const P=Object.fromEntries(ALL_PLANTS.map(p=>[p.id,p]));
+/* BASE : les fiches d'origine. P : les fiches du jardin ouvert (valeurs modifiées + variétés).
+   Une variété (id « v_… ») hérite de sa culture de base (champ base) : icône, famille, voisins, ravageurs. */
+const BASE=Object.fromEntries(ALL_PLANTS.map(p=>[p.id,p]));
+const P={...BASE};
+const bid=id=>(P[id]&&P[id].base)||id;
 const FLW=()=>{try{return!!S&&S.kind==='fleurs'}catch(e){return false}};
 /* le catalogue suit le type du jardin ouvert : potager ou fleurs */
-function setCatalog(){const f=FLW();PLANTS=f?FLOWERS:VEG_PLANTS;JT.recolte=f?'Coupe':'Récolte';
+function setCatalog(){const f=FLW();let ed={},vs=[];try{ed=S.cropEdits||{};vs=S.varieties||[]}catch(e){}
+  for(const k in P)if(!BASE[k])delete P[k];
+  for(const k in BASE)P[k]=ed[k]&&Object.keys(ed[k]).length?{...BASE[k],...ed[k],edited:true}:BASE[k];
+  const mine=vs.filter(v=>BASE[v.base]&&!!BASE[v.base].fl===f);
+  mine.forEach(v=>{P[v.id]={...P[v.base],edited:false,...v,variety:true}});
+  PLANTS=(f?FLOWERS:VEG_PLANTS).flatMap(p=>[P[p.id],...mine.filter(v=>v.base===p.id).map(v=>P[v.id])]);JT.recolte=f?'Coupe':'Récolte';
   try{const h=document.querySelector('.tabs [data-tab="harvest"]'),c=document.querySelector('.tabs [data-tab="crops"]');if(h)h.lastChild.textContent=f?'Floraisons':'Récoltes';if(c)c.lastChild.textContent=f?'Fleurs':'Cultures'}catch(e){}}
 /* date de la première floraison : après le délai j, au premier mois de floraison */
 function bloomStart(d,p){let t=addD(d,p.j||60);for(let i=0;i<14;i++){if(p.fl.includes(t.getMonth()+1))return t;t=new Date(t.getFullYear(),t.getMonth()+1,1,12)}return addD(d,p.j||60)}
@@ -109,8 +118,9 @@ const BAD=[['tomate','pdt'],['tomate','fenouil'],['tomate','chou'],['haricot','o
 [GOOD,BAD].forEach(L=>L.slice().forEach(([a,b])=>{if(a==='laitue')L.push(['laitue_h',b]);if(b==='laitue')L.push([a,'laitue_h'])}));
 const REL={};const rk=(a,b)=>a<b?a+'|'+b:b+'|'+a;
 GOOD.forEach(([a,b])=>REL[rk(a,b)]=1);BAD.forEach(([a,b])=>REL[rk(a,b)]=-1);
-const compat=(a,b)=>a===b?0:(REL[rk(a,b)]||0);
-const FROST_SENSITIVE=new Set(['tomate','poivron','aubergine','courgette','concombre','potiron','mais','haricot','basilic',...FLOWERS.filter(p=>p.hardy>=-1).map(p=>p.id)]);
+const compat=(a,b)=>(a=bid(a),b=bid(b),a===b?0:(REL[rk(a,b)]||0));
+const FROST_BASE=new Set(['tomate','poivron','aubergine','courgette','concombre','potiron','mais','haricot','basilic',...FLOWERS.filter(p=>p.hardy>=-1).map(p=>p.id)]);
+const FROST_SENSITIVE={has:id=>FROST_BASE.has(bid(id))};
 const ROT_YEARS=3; /* même famille interdite sur les 3 saisons précédentes (rotation de 4 ans) */
 /* Pluie mensuelle moyenne (mm), ordre de grandeur pour la Hesbaye */
 const RAIN=[69,58,63,47,63,72,75,78,62,66,70,80];

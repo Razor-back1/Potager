@@ -13,7 +13,7 @@ const PESTS=[
  {n:'Botrytis',c:['fraise','laitue','laitue_h','tomate'],m:[5,6,9,10],t:'Aère, retire les parties pourries, évite les arrosages tardifs.'}];
 PESTS.push(...FL_PESTS);
 function pestsNow(){const mo=TODAY.getMonth()+1,inPlace=[];plantables().forEach(o=>o.zones.forEach(z=>{if(z.crop&&Object.keys(z.cells).length)inPlace.push({o,crop:z.crop})}));
-  return PESTS.filter(p=>p.m.includes(mo)).map(p=>({...p,where:inPlace.filter(x=>p.c.includes(x.crop))})).filter(p=>p.where.length)}
+  return PESTS.filter(p=>p.m.includes(mo)).map(p=>({...p,where:inPlace.filter(x=>p.c.includes(bid(x.crop)))})).filter(p=>p.where.length)}
 const MABR=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
 const mRange=ms=>{const a=Math.min(...ms),b=Math.max(...ms);return MABR[a-1]+(a!==b?'–'+MABR[b-1]:'')};
 

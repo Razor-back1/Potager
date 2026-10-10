@@ -1,6 +1,6 @@
 /* ================= Bouton « + Noter » ================= */
 let q=null;
-function updateNoteBtn(){const b=$('#noteBtn');if(b)b.hidden=tab==='plan'||!!bed||!!inv||!!q||!!auto}
+function updateNoteBtn(){const b=$('#noteBtn');if(b)b.hidden=tab==='plan'||!!bed||!!inv||!!q||!!auto||!!cs}
 function openQ(step='menu'){q={step,photo:null};$('#qback').hidden=false;$('#qsheet').hidden=false;renderQ();updateNoteBtn()}
 function closeQ(){q=null;$('#qback').hidden=true;$('#qsheet').hidden=true;$('#qsheet').innerHTML='';updateNoteBtn()}
 const qPlanches=()=>plantables().filter(o=>o.zones.some(z=>z.crop));

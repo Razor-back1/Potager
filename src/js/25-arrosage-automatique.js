@@ -206,7 +206,8 @@ function notifPlan(){const ev=[],seen=new Set(),add=(k,d,txt)=>{const id=k+':'+d
   plantables().forEach(o=>{const bu=blockUntil(o);if(bu)add('dar',iso(bu),`Fin du délai après traitement : ${fullName(o)}`);
     o.zones.forEach(z=>(z.next||[]).forEach(n=>{if(n.date&&P[n.crop])add('plan',n.date,`À planter : ${P[n.crop].n} (${fullName(o)})`)}))});
   nurseryActive().forEach(n=>{if(P[n.crop])add('nursery',iso(readyOf(n)),`Semis de ${P[n.crop].n.toLowerCase()} prêts à repiquer`)});
-  succession().forEach(x=>add('resow',iso(x.next),`Ressemer : ${x.p.n.toLowerCase()} (tous les ${x.int} j)`));
+  succession().forEach(x=>{if(!x.goal)return add('resow',iso(x.next),`Ressemer : ${x.p.n.toLowerCase()} (tous les ${x.int} j)`);
+    x.plan.list.filter(s=>days(TODAY,s.d)<=120).forEach(s=>add('resow',iso(s.d),`Semer ${x.p.n.toLowerCase()} : ${s.qty} plants ${s.how} (objectif ${uTxt(x.goal.w,x.u)} par semaine)`))});
   const water=plantables().filter(isPlanted).map(o=>{const m=(o.journal||[]).filter(x=>x.k==='arrosage').map(x=>x.d).sort().pop()||null,r=serreOf(o)?null:(S.rain||[]).filter(x=>x.mm==null||x.mm>=RAIN_MIN).map(x=>x.d).sort().pop()||null;return{name:fullName(o),serre:!!serreOf(o),last:[m,r].filter(Boolean).sort().pop()||null}});
   const frost=[];plantables().forEach(o=>o.zones.forEach(z=>{if(z.crop&&FROST_SENSITIVE.has(z.crop)&&Object.keys(z.cells).length)frost.push({crop:P[z.crop].n.toLowerCase(),name:fullName(o),serre:!!serreOf(o)})}));
   return{ev,water,frost,geo:geoOr(),at:Date.now()}}

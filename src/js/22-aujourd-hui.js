@@ -38,9 +38,9 @@ function renderToday(){
   const gen=[];
   const sc=succession().filter(x=>x.left<=7);
   if(sc.length){const fz=freeZone(),due=sc.filter(x=>x.left<=0).length;nAct+=due;
-    gen.push(`<div class="tcard"><h3>Semis échelonnés${due?` <span class="n">${due}</span>`:''}</h3>${sc.map(x=>row(ci(x.p.id,.5,'mid'),x.p.n,'semé il y a '+x.ago+' j · tous les '+x.int+' j',x.left<=0?'<span class="due ready">à ressemer</span>':'<span class="due">dans<br>'+x.left+' j</span>',fz?`data-open="${fz.o.id}" data-zi="${fz.i}"`:'data-tgo="crops"')).join('')}
+    gen.push(`<div class="tcard"><h3>Semis échelonnés${due?` <span class="n">${due}</span>`:''}</h3>${sc.map(x=>row(ci(x.p.id,.5,'mid'),esc(x.p.n),x.goal?`${x.qty} plants ${x.how} · objectif ${uTxt(x.goal.w,x.u)} par semaine`:'semé il y a '+x.ago+' j · tous les '+x.int+' j',x.left<=0?`<span class="due ready">${x.goal&&x.ago==null?'à semer':'à ressemer'}</span>`:'<span class="due">dans<br>'+x.left+' j</span>',fz?`data-open="${fz.o.id}" data-zi="${fz.i}"`:'data-tgo="crops"')).join('')}
     <span class="note">${fz?'Place libre : '+esc(fullName(fz.o))+', zone '+(fz.i+1)+'. Touche une ligne pour y semer.':'Aucune place libre en plein air : libère une zone ou ajoute une planche.'}</span>
-    <div class="row">${sc.map(x=>`<button class="btn small" data-succoff="${x.p.id}">Assez ${/^[aeiouyéèêâîh]/i.test(x.p.n)?'d\'':'de '}${esc(x.p.n.toLowerCase())}</button>`).join('')}</div></div>`)}
+    <div class="row">${sc.map(x=>`<button class="btn small" data-tgoal="${x.p.id}">${esc(x.p.n)} : objectif</button>`).join('')}${sc.map(x=>`<button class="btn small" data-succoff="${x.p.id}">Assez ${/^[aeiouyéèêâîh]/i.test(x.p.n)?'d\'':'de '}${esc(x.p.n.toLowerCase())}</button>`).join('')}</div></div>`)}
   if(lows.length)gen.push(`<div class="tcard"><h3>À racheter <span class="n">${lows.length}</span></h3><div class="chips">${lows.map(p=>`<span class="chip">${seedLabel(p)} · ${fq(stockOf(p),p.unit)}</span>`).join('')}</div><div class="row">${lows.some(p=>p.cat==='graine')?'<button class="btn small" data-tinv="graines">Graines</button>':''}${lows.some(p=>p.cat!=='graine')?'<button class="btn small" data-tinv="produits">Produits</button>':''}</div></div>`);
   const sow=PLANTS.filter(p=>p.m.includes(mo));
   gen.push(`<div class="tcard"><h3>À semer ou planter en place ce mois-ci</h3><div class="chips">${sow.map(p=>`<span class="chip">${ci((p).id)}${p.n}${hasSeeds(p.id)?' <span class="mono note">· graines ✓</span>':''}</span>`).join('')||'<span class="note">Rien ce mois-ci.</span>'}</div><button class="btn small" data-tgo="crops" style="justify-self:start">Voir les cultures</button></div>`);
@@ -67,6 +67,7 @@ function renderToday(){
   ${sec('Stock et saison','<path d="M4 8l8-4 8 4v10l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v10"/>',gen,0,'gen')}
   ${!secs.length?'<p class="note">Rien à faire sur les planches ni dans la serre.</p>':''}</div>`}
 $('#v-today').addEventListener('click',async e=>{if(swipedAt&&Date.now()-swipedAt<400){e.preventDefault();return}
+  const tg=e.target.closest('[data-tgoal]');if(tg)return openC('goal',tg.dataset.tgoal);
   const so=e.target.closest('[data-succoff]');if(so){S.succOff=S.succOff||{};S.succOff[so.dataset.succoff]=YEAR;save();renderToday();return toast('Plus de rappel pour cette saison')}
   const iv=e.target.closest('[data-tinv2]');if(iv){if(iv.dataset.tinv2==='later'){try{localStorage.setItem('potager-noinv','1')}catch(_){}return renderToday()}
     let txt='';try{txt=await navigator.clipboard.readText()}catch(_){}let inv=readInvite(txt);if(!inv){txt=prompt('Colle ici l\'invitation reçue');inv=readInvite(txt)}if(!inv)return toast('Invitation illisible');return applyInvite(inv)}const tj=e.target.closest('[data-tj]');if(tj){const el=document.getElementById('ts-'+tj.dataset.tj);if(el)el.scrollIntoView({block:'start',behavior:'smooth'});return}const t=e.target.closest('[data-tw],[data-train],[data-tinv],[data-tgo],[data-open]');if(!t)return;

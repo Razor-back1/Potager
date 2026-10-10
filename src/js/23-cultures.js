@@ -19,22 +19,24 @@ function cropGroups(){const mo=TODAY.getMonth()+1,act=nurseryActive();
 function renderCrops(){
   const mo=TODAY.getMonth()+1,q=cq.toLowerCase().trim();
   const v=$('#v-crops'),had=document.activeElement&&document.activeElement.id==='cq';
-  const card=x=>{const p=x.p,g=PLANTS.filter(q=>compat(p.id,q.id)>0),b=PLANTS.filter(q=>compat(p.id,q.id)<0),ps=PESTS.filter(y=>y.c.includes(p.id));
+  const card=x=>{const p=x.p,g=PLANTS.filter(q=>compat(p.id,q.id)>0),b=PLANTS.filter(q=>compat(p.id,q.id)<0),ps=PESTS.filter(y=>y.c.includes(bid(p.id)));
     const rd=x.pl.filter(n=>readyOf(n)<=TODAY);
     const st=[x.pl.length?`<span class="ok">${x.pl.reduce((s,n)=>s+n.n,0)} plants en godets${rd.length?' · prêts':' · prêts le '+fdate(readyOf(x.pl[0]))}</span>`:'',x.seeds?'<span class="ok">graines en stock</span>':'',x.now?'<span class="warn">en place ce mois-ci</span>':'',x.sgNow?'<span class="warn">en godets ce mois-ci</span>':''].filter(Boolean).join('');
     const acts=x.pl.length?`<button class="btn small primary" data-cact="semis">Voir les semis</button>`:'';
     const acts2=(x.sgNow&&x.seeds&&!x.pl.length)?`<button class="btn small primary" data-cact="sow" data-crop="${p.id}">Semer en godets</button>`:'';
     const acts3=(!x.seeds&&!x.pl.length&&(x.now||x.sgNow))?`<button class="btn small" data-cact="buy" data-crop="${p.id}">Ajouter aux graines à acheter</button>`:'';
     return`<div class="crop">
-   <div class="row between"><div class="row">${ci(p.id,1,'big')}<h3>${p.n}</h3><span class="note">${p.f}</span></div><span class="mono note">${p.fl?FL_TYPE[p.t]:'≈ '+p.j+' j'}${FROST_SENSITIVE.has(p.id)?' · gélive':''}</span></div>
+   <div class="row between"><div class="row">${ci(p.id,1,'big')}<h3>${esc(p.n)}</h3><span class="note">${p.variety?'variété de '+esc(P[p.base].n.toLowerCase()):p.f}${p.edited?' · <span class="low">modifiée</span>':''}</span></div><span class="mono note">${p.fl?FL_TYPE[p.t]:'≈ '+p.j+' j'}${FROST_SENSITIVE.has(p.id)?' · gélive':''}</span></div>
    ${st?`<div class="rs">${st}</div>`:''}
-   <div class="mono note">${p.fl?`Hauteur ${m2(p.ht)} m · espacement ${p.pl} cm · rustique jusqu'à ${p.hardy} °C`:`Rangs ${p.rang} cm · plants ${p.pl} cm`} · ☀ ${SUN_NEED[p.id]} h+ (${sunLabel(SUN_NEED[p.id])})</div>
+   <div class="mono note">${p.fl?`Hauteur ${m2(p.ht)} m · espacement ${p.pl} cm · rustique jusqu'à ${p.hardy} °C`:`Rangs ${p.rang} cm · plants ${p.pl} cm`} · ☀ ${SUN_NEED[bid(p.id)]} h+ (${sunLabel(SUN_NEED[bid(p.id)])})</div>
    ${p.fl?`<div class="note" style="color:var(--ink)">${esc(p.cols||'')}${p.cut?' · fleur à couper':''}${p.lift?' · à rentrer ou arracher avant l\'hiver':''}</div>`:''}
    <div class="stack" style="gap:6px">${(p.sg||[]).length?`<div class="row" style="flex-wrap:nowrap"><span class="mlbl">Semis en godets</span><div class="months" style="flex:1">${MSHORT.map((l,i)=>`<span class="${p.sg.includes(i+1)?'on':''} ${i+1===mo?'now':''}" title="${MONTHS[i]}">${l}</span>`).join('')}</div></div>`:''}
    <div class="row" style="flex-wrap:nowrap"><span class="mlbl">${p.t==='bulbe'||p.t==='tubercule'?'Plantation des bulbes':'Plantation / semis direct'}</span><div class="months" style="flex:1">${MSHORT.map((l,i)=>`<span class="${p.m.includes(i+1)?'on':''} ${i+1===mo?'now':''}" title="${MONTHS[i]}">${l}</span>`).join('')}</div></div>
    ${p.fl?`<div class="row" style="flex-wrap:nowrap"><span class="mlbl">Floraison</span><div class="months" style="flex:1">${MSHORT.map((l,i)=>`<span class="${i+1===mo?'now':''}" ${p.fl.includes(i+1)?`style="background:${p.c};color:#fff;border-color:${p.c}"`:''} title="${MONTHS[i]}">${l}</span>`).join('')}</div></div>`:''}</div>
    ${p.fl&&(p.care||[]).length?`<div class="note"><b style="color:var(--ink)">Entretien</b> · ${p.care.map(cr=>`${mRange(cr.m)} : ${esc(cr.t.charAt(0).toLowerCase()+cr.t.slice(1))}`).join(' · ')}</div>`:''}
    ${acts||acts2||acts3?`<div class="row">${acts}${acts2}${acts3}</div>`:''}
+   ${(S.goals||{})[p.id]?`<div class="note" style="color:var(--ink)"><b>Objectif</b> · ${uTxt(S.goals[p.id].w,succOf(p.id).u)} par semaine</div>`:''}
+   <div class="row"><button class="btn small" data-cact="edit" data-crop="${p.id}">Modifier</button>${p.variety?'':`<button class="btn small" data-cact="variety" data-crop="${p.id}">+ Variété</button>`}${succOf(p.id)?`<button class="btn small" data-cact="goal" data-crop="${p.id}">Objectif de récolte</button>`:''}</div>
    ${g.length?`<div><span class="lbl">Bons voisins</span><div class="chips" style="margin-top:4px">${g.map(q=>chip(q.id,'good')).join('')}</div></div>`:''}
    ${b.length?`<div><span class="lbl">À éviter à côté</span><div class="chips" style="margin-top:4px">${b.map(q=>chip(q.id,'bad')).join('')}</div></div>`:''}
    ${ps.length?`<div class="note">À surveiller : ${ps.map(y=>`${y.n} (${mRange(y.m)})`).join(', ')}</div>`:''}
@@ -47,6 +49,7 @@ function renderCrops(){
 }
 $('#v-crops').addEventListener('click',e=>{const b=e.target.closest('[data-cact]');if(!b)return;const a=b.dataset.cact,c=b.dataset.crop;
   if(a==='semis')return openInv('semis');
+  if(a==='edit'||a==='variety'||a==='goal')return openC(a,c);
   if(a==='sow'){openInv('semis');inv.add=true;inv.ns={crop:c,n:12,qty:'',d:iso(TODAY),pid:((S.stock||[]).find(q=>q.cat==='graine'&&q.crop===c&&stockOf(q)>0&&!expired(q))||{}).id||''};renderInv();return}
   if(a==='buy'){S.stock=S.stock||[];if(!S.stock.some(q=>q.cat==='graine'&&q.crop===c&&!expired(q)))S.stock.push({id:uid(),name:P[c].n,crop:c,cat:'graine',unit:'graines',min:0,moves:[]});save();renderCrops();return toast(P[c].n+' : graines ajoutées à la liste d\'achat',true)}});
 $('#v-crops').addEventListener('input',e=>{if(e.target.id==='cq'){cq=e.target.value;renderCrops()}});

@@ -32,8 +32,8 @@ function zoneCenter(o,zi){let off=0;for(let i=0;i<zi;i++)off+=o.zones[i].len;con
 function growDoy(crop,date){const p=P[crop];let d=doyOf(parse(date||iso(TODAY)))+Math.round((p?p.j:60)/2);d=((d-1)%365)+1;
   if(d>=91&&d<=258)return d;return d>258&&d<=330?258:91}
 let sunCache=new Map(),sunCacheFor=null;
-function sunCheck(o,zi,crop,date){if(serreOf(o)||!crop||!SUN_NEED[crop])return null;if(sunCacheFor!==lastJSON){sunCache=new Map();sunCacheFor=lastJSON}
-  const doy=growDoy(crop,date),key=o.id+'|'+zi+'|'+doy;let h=sunCache.get(key);if(h==null){h=sunHoursAt(zoneCenter(o,zi),homeOf(o),o,doy);sunCache.set(key,h)}const need=SUN_NEED[crop];
+function sunCheck(o,zi,crop,date){if(serreOf(o)||!crop||!SUN_NEED[bid(crop)])return null;if(sunCacheFor!==lastJSON){sunCache=new Map();sunCacheFor=lastJSON}
+  const doy=growDoy(crop,date),key=o.id+'|'+zi+'|'+doy;let h=sunCache.get(key);if(h==null){h=sunHoursAt(zoneCenter(o,zi),homeOf(o),o,doy);sunCache.set(key,h)}const need=SUN_NEED[bid(crop)];
   return{h,need,doy,lvl:h>=need?'ok':h>=need-1.5?'juste':'insuffisant'}}
 function sunIssues(o){const out=[];o.zones.forEach((z,i)=>{const c=sunCheck(o,i,z.crop,z.date);if(c&&c.lvl!=='ok')out.push({crop:z.crop,...c})});return out}
 function sunMax(doy){let n=0;for(let h=3.25;h<=20.75;h+=.5)if(sunPos(doy,h).alt>=.04)n+=.5;return n}

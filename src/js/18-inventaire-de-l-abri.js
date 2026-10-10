@@ -38,19 +38,8 @@ function renderStockTab(seedsTab){const st=(S.stock||[]).filter(p=>seedsTab?p.ca
 }
 const TRANSPLANT0={laitue_h:35,tomate:50,poivron:60,aubergine:60,courgette:25,concombre:25,potiron:25,mais:21,chou:35,poireau:70,celeri:60,laitue:30,basilic:40,oignon:50,fenouil:30,blette:30,persil:40,fraise:60,betterave:30,epinard:30,mache:30,feve:25,pois:21,haricot:18};
 const TRANSPLANT={...TRANSPLANT0,...Object.fromEntries(FLOWERS.filter(p=>(p.sg||[]).length).map(p=>[p.id,p.t==='bisannuelle'?70:p.t==='tubercule'?35:45]))};
-const readyOf=n=>addD(n.d,TRANSPLANT[n.crop]||30);
+const readyOf=n=>addD(n.d,TRANSPLANT[bid(n.crop)]||30);
 const nurseryActive=()=>(S.nursery||[]).filter(n=>n.st==='cours');
-/* ---- semis échelonnés : ressemer à intervalle régulier pour récolter (ou couper) en continu ---- */
-const SUCC={radis:14,laitue:21,epinard:21,mache:21,haricot:21,pois:21,carotte:30,betterave:30,f_glaieul:15,f_tournesol:15};
-function succession(){const mo=TODAY.getMonth()+1,off=S.succOff||{},last={};
-  plantings().forEach(x=>{if(SUCC[x.p.id]&&(!last[x.p.id]||x.d>last[x.p.id]))last[x.p.id]=x.d});
-  (S.nursery||[]).forEach(n=>{if(SUCC[n.crop]&&n.d&&(!last[n.crop]||n.d>last[n.crop]))last[n.crop]=n.d});
-  const out=[];for(const id in last){const p=P[id];if(!p||!PLANTS.includes(p)||off[id]===YEAR)continue;
-    const ago=days(parse(last[id]),TODAY),int=SUCC[id];if(ago>90||ago<0)continue;
-    const next=addD(last[id],int),nm=next.getMonth()+1,season=[...(p.m||[]),...(p.sg||[])];
-    if(!season.includes(nm)&&!(next<=TODAY&&season.includes(mo)))continue;
-    out.push({p,int,ago,next,left:days(TODAY,next)})}
-  return out.sort((a,b)=>a.left-b.left)}
 function freeZone(){for(const o of plantables())if(!serreOf(o))for(let i=0;i<o.zones.length;i++)if(!o.zones[i].crop)return{o,i};return null}
 const nurseryReady=()=>nurseryActive().filter(n=>readyOf(n)<=TODAY);
 function renderInvHome(){const act=nurseryActive(),rd=nurseryReady(),st=S.stock||[];
@@ -64,7 +53,7 @@ function renderInvHome(){const act=nurseryActive(),rd=nurseryReady(),st=S.stock|
 function renderNursery(){const all=S.nursery||[],act=nurseryActive().sort((a,b)=>readyOf(a)-readyOf(b)),rd=act.filter(n=>readyOf(n)<=TODAY),wait=act.filter(n=>readyOf(n)>TODAY),done=all.filter(n=>n.st!=='cours').slice(-5).reverse();
   const ns=inv.ns||(inv.ns={crop:'laitue',n:12,qty:'',d:iso(TODAY),pid:''});
   const seeds=(S.stock||[]).filter(q=>q.cat==='graine'&&q.crop===ns.crop&&stockOf(q)>0&&!expired(q));
-  const item=n=>{const p=P[n.crop],r=readyOf(n),left=days(TODAY,r),tot=TRANSPLANT[n.crop]||30,prog=clamp(days(parse(n.d),TODAY)/tot,0,1),open=inv.sel===n.id;
+  const item=n=>{const p=P[n.crop],r=readyOf(n),left=days(TODAY,r),tot=TRANSPLANT[bid(n.crop)]||30,prog=clamp(days(parse(n.d),TODAY)/tot,0,1),open=inv.sel===n.id;
     let h=`<div class="prod"><button class="top" data-iv="nsel" data-id="${n.id}"><span><b>${p?p.n:n.crop}</b> <span class="note">· ${n.n} godet${n.n>1?'s':''}</span><span class="note" style="display:block">Semé le ${fdate(parse(n.d))} · repiquage ${left<=0?'possible':'vers le '+fdate(r)}</span></span><span class="${left<=0?'due ready':'due'}">${left<=0?'prêt':'dans '+left+' j'}</span></button><div class="bar"><span style="width:${prog*100}%"></span></div>`;
     if(open&&n.st==='cours'){const targets=plantables();const tg=inv.tgt||(inv.tgt={o:(targets.find(o=>o.zones.some(z=>!z.crop))||targets[0]||{}).id,zi:0});const to=obj(tg.o);
       h+=`<div class="grid2"><label class="field"><span class="lbl">Planche</span><select id="ns-o">${targets.map(o=>`<option value="${o.id}" ${o.id===tg.o?'selected':''}>${esc(fullName(o))}</option>`).join('')}</select></label>
@@ -78,7 +67,7 @@ function renderNursery(){const all=S.nursery||[],act=nurseryActive().sort((a,b)=
     <label class="field span2"><span class="lbl">Graines du stock</span><select id="ns-pid"><option value="">Sans graines du stock</option>${seeds.map(q=>`<option value="${q.id}" ${q.id===ns.pid?'selected':''}>${seedLabel(q)} · ${fq(stockOf(q),q.unit)}</option>`).join('')}</select></label>
     <label class="field"><span class="lbl">Godets</span><input id="ns-n" type="number" min="1" step="1" value="${ns.n}"></label>
     <label class="field"><span class="lbl">Graines utilisées</span><input id="ns-q" type="number" min="0" step="1" value="${ns.qty}" placeholder="${seeds.length?'quantité':'—'}" ${seeds.length?'':'disabled'}></label></div>
-    <p class="note">${P[ns.crop].n} : repiquage environ ${TRANSPLANT[ns.crop]||30} jours après le semis.${seeds.length?'':' Aucune graine de cette culture en stock.'}</p>
+    <p class="note">${P[ns.crop].n} : repiquage environ ${TRANSPLANT[bid(ns.crop)]||30} jours après le semis.${seeds.length?'':' Aucune graine de cette culture en stock.'}</p>
     <div class="row"><button class="btn primary" data-iv="ncreate">Ajouter le semis</button><button class="btn" data-iv="cancel">Annuler</button></div></div>`:'';
   const sec=(t,l)=>l.length?`<div class="stack"><div class="section-t"><span class="lbl">${t}</span><span class="mono note">${l.length}</span></div><div class="hvlist">${l.map(item).join('')}</div></div>`:'';
   $('#invView').innerHTML=`<div class="bedhead"><button class="iconbtn" data-iv="home" aria-label="Retour"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><div style="min-width:0;flex:1"><div class="brand" style="font-size:17px">Semis</div><div class="mono note">${act.length} en cours${rd.length?' · '+rd.length+' à repiquer':''}</div></div>${inv.add?'':'<button class="btn small primary" data-iv="new">+ Semis</button>'}</div>

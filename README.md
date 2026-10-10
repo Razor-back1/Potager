@@ -38,7 +38,8 @@ correspondent aux sources), puis lance :
 
 - `tests/app.test.mjs` : l'app dans un iPhone simulé — les 4 styles et tous les onglets sans erreur,
   série de planches + annuler/rétablir, historique d'annulation après rechargement, plusieurs jardins,
-  jardin de fleurs, semis échelonnés et calendrier, invitations, et une synchro iPhone → iPad
+  jardin de fleurs, semis échelonnés et calendrier, cultures modifiables, variétés, objectif de récolte,
+  invitations, et une synchro iPhone → iPad
   qui passe par le vrai code du relais ;
 - `tests/relais.test.mjs` : le relais avec une base D1 simulée — accès, potagers, conflits de version,
   amis, photos, calendrier.

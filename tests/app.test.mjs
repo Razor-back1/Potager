@@ -158,3 +158,82 @@ test('synchro iPhone → iPad et calendrier abonné, via le vrai code du relais'
   assert.deepEqual([...tel.erreurs, ...pad.erreurs], []);
   await tel.ctx.close(); await pad.ctx.close();
 });
+
+test('modifier une culture puis revenir aux valeurs d\'origine', async () => {
+  const { ctx, page, erreurs } = await ouvrir();
+  await page.click('.tabs [data-tab="crops"]');
+  await page.click('[data-cact="edit"][data-crop="tomate"]');
+  await page.fill('#ce-j', '60');
+  await page.click('[data-c="save"]');
+  assert.equal(await page.evaluate(() => P.tomate.j), 60);
+  assert.deepEqual(await page.evaluate(() => S.cropEdits.tomate), { j: 60 });
+  /* les dates de récolte suivent */
+  const r = await page.evaluate(() => plantings().filter(x => x.p.id === 'tomate').map(x => days(parse(x.d), x.hv)));
+  assert.ok(r.length && r.every(d => d === 60), 'récolte pas recalculée : ' + r);
+  assert.match(await page.textContent('#v-crops'), /modifiée/);
+  /* annuler, puis valeurs d'origine */
+  await page.click('#undoBtnH');
+  assert.equal(await page.evaluate(() => P.tomate.j), 80);
+  await page.click('#redoBtnH');
+  assert.equal(await page.evaluate(() => P.tomate.j), 60);
+  await page.click('[data-cact="edit"][data-crop="tomate"]');
+  await page.click('[data-c="reset"]');
+  assert.equal(await page.evaluate(() => P.tomate.j), 80);
+  assert.equal(await page.evaluate(() => S.cropEdits.tomate), undefined);
+  assert.deepEqual(erreurs, []);
+  await ctx.close();
+});
+
+test('variété : hérite de sa culture, se plante, se supprime proprement', async () => {
+  const { ctx, page, erreurs } = await ouvrir();
+  await page.click('.tabs [data-tab="crops"]');
+  await page.click('[data-cact="variety"][data-crop="tomate"]');
+  await page.fill('#ce-n', 'Tomate cerise');
+  await page.fill('#ce-j', '55');
+  await page.click('[data-c="save"]');
+  const v = await page.evaluate(() => S.varieties[0]);
+  assert.equal(v.base, 'tomate'); assert.equal(v.j, 55);
+  const r = await page.evaluate(id => {
+    const i = PLANTS.indexOf(P[id]);
+    return { apres: PLANTS[i - 1].id, ico: ci(id), voisin: compat(id, 'basilic') === compat('tomate', 'basilic'), gel: FROST_SENSITIVE.has(id), fam: P[id].f };
+  }, v.id);
+  assert.equal(r.apres, 'tomate'); assert.match(r.ico, /#ci-tomate/); assert.ok(r.voisin); assert.ok(r.gel); assert.equal(r.fam, 'Solanacées');
+  /* plantée dans une zone, elle a son propre délai */
+  await page.evaluate(id => { const o = plantables().find(o => o.zones.some(z => z.crop === 'tomate')); o.zones.find(z => z.crop === 'tomate').crop = id; save() }, v.id);
+  assert.ok(await page.evaluate(id => plantings().some(x => x.p.id === id && days(parse(x.d), x.hv) === 55), v.id));
+  /* un jardin de fleurs ne la montre pas */
+  assert.ok(await page.evaluate(id => { S.kind = 'fleurs'; setCatalog(); const ok = !PLANTS.some(p => p.id === id); S.kind = 'potager'; setCatalog(); return ok }, v.id));
+  /* suppression : la zone repasse en tomate */
+  await page.click('.tabs [data-tab="crops"]');
+  const del = page.locator(`[data-cact="edit"][data-crop="${v.id}"]`);
+  await del.click();
+  await page.click('[data-c="delvar"]'); await page.click('[data-c="delvar"]');
+  assert.equal(await page.evaluate(() => S.varieties.length), 0);
+  assert.ok(await page.evaluate(() => plantables().some(o => o.zones.some(z => z.crop === 'tomate'))));
+  assert.deepEqual(erreurs, []);
+  await ctx.close();
+});
+
+test('objectif de récolte : 3 salades par semaine → quand et combien semer', async () => {
+  const { ctx, page, erreurs } = await ouvrir();
+  await page.click('.tabs [data-tab="crops"]');
+  await page.click('[data-cact="goal"][data-crop="laitue"]');
+  await page.fill('#cg-w', '3');
+  /* 3 salades × 14 j / 7 = 6, + 25 % de marge = 8 plants tous les 14 jours */
+  assert.match(await page.textContent('#cg-plan'), /Tous les 14 jours : 8 plants/);
+  await page.click('[data-c="goalsave"]');
+  assert.equal(await page.evaluate(() => S.goals.laitue.w), 3);
+  const r = await page.evaluate(() => {
+    const pg = planGoal('laitue', S.goals.laitue), ev = notifPlan().ev.filter(e => e.k === 'resow' && /laitue/.test(e.txt));
+    return { n: pg.list.length, ecarts: pg.list.slice(1).map((s, i) => days(pg.list[i].d, s.d)), mois: pg.list.map(s => s.d.getMonth() + 1), saison: [...P.laitue.m, ...(P.laitue.sg || [])], ev: ev.map(e => e.txt) };
+  });
+  assert.ok(r.n > 0);
+  assert.ok(r.ecarts.every(d => d % 14 === 0), 'semis pas espacés de 14 j');
+  assert.ok(r.mois.every(m => r.saison.includes(m)), 'semis hors saison');
+  assert.ok(r.ev.every(t => /8 plants/.test(t)));
+  /* rendement modifié : 2 salades par plant (laitue à couper) → 4 plants */
+  await page.evaluate(() => { S.cropEdits = { laitue: { yld: 2 } }; setCatalog() });
+  assert.equal(await page.evaluate(() => planGoal('laitue', S.goals.laitue).qty), 4);
+  assert.deepEqual(erreurs, []);
+  await ctx.close();
+});
