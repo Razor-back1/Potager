@@ -72,9 +72,8 @@ svg.i{width:1em;height:1em;display:inline-block;vertical-align:-.15em;flex:none}
 .facts{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px 14px;font-size:14px;color:var(--muted);margin-top:8px}
 .facts b{color:var(--ink);font-weight:600}
 .up{color:var(--warm)}.down{color:var(--cold)}
-.metar{grid-column:1/-1;margin-top:10px;display:flex;align-items:center;gap:8px;min-width:0}
-.metar code{font:500 12.5px/1.3 var(--f-mono);background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:6px 9px;white-space:nowrap;overflow-x:auto;min-width:0;flex:0 1 auto;cursor:copy;letter-spacing:.02em}
-.metar small{color:var(--muted);font-size:11.5px;flex:none}
+.metar{grid-column:1/-1;margin-top:12px;display:grid;gap:5px;min-width:0}
+.metar code{display:block;font:500 13px/1.45 var(--f-mono);background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:7px 10px;white-space:normal;overflow-wrap:anywhere;cursor:copy;letter-spacing:.01em}
 .alerts{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 2px}
 .alert{display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:500;color:var(--warn);background:var(--warn-bg);border-radius:10px;padding:7px 11px}
 .err{margin:10px 0;padding:10px 12px;border-radius:10px;background:var(--warn-bg);color:var(--warn);font-size:14px}
@@ -144,6 +143,15 @@ h2 span{text-transform:none;letter-spacing:0;font-weight:500;font-size:12.5px}
 .day .r{font-size:12px;white-space:nowrap;text-align:right;color:var(--muted);line-height:1.25}
 .day .r b{color:var(--rain);font-weight:600}
 
+/* résumé */
+.sumbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.cov{font-size:12.5px;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 12px;margin:16px 0 18px}
+.stat .v{font:600 22px/1.15 var(--f-display);font-variant-numeric:tabular-nums;margin-top:3px}
+.stat .v small{font-size:13px;font-weight:500;color:var(--muted);margin-left:2px}
+.stat .d{font-size:12.5px;color:var(--muted)}
+.more{display:block;width:100%;margin-top:10px;border:1px solid var(--line);background:transparent;border-radius:10px;padding:9px;font-weight:600;font-size:13.5px;cursor:pointer;color:var(--ink)}
+@media (min-width:640px){.stats{grid-template-columns:repeat(4,minmax(0,1fr))}}
 /* carnet */
 .tbl{overflow-x:auto;margin:0 -14px;padding:0 14px}
 table{width:100%;border-collapse:collapse;font-size:14px;min-width:340px}
@@ -217,7 +225,7 @@ tfoot td{font-weight:600;border-top:2px solid var(--line)}
     <div class="big" id="tNow">–<sup>°C</sup></div>
     <div class="sky"><svg id="skyIco"><use href="#i-cloud"/></svg><span class="cond" id="skyTxt">—</span></div>
     <div class="facts" id="facts"></div>
-    <div class="metar"><code id="metar" title="Toucher pour copier">—</code><small>format METAR</small></div>
+    <div class="metar"><span class="lbl">METAR de la station · toucher pour copier</span><code id="metar">—</code></div>
   </section>
   <div class="alerts" id="alerts" hidden></div>
 
@@ -271,8 +279,8 @@ tfoot td{font-weight:600;border-top:2px solid var(--line)}
     </div>
     <div class="chartbar">
       <div class="rd" id="rd"></div>
-      <div class="seg" role="group" aria-label="Période">
-        <button data-r="day">Jour</button><button data-r="week">7 j</button>
+      <div class="seg" id="rangeSeg" role="group" aria-label="Période">
+        <button data-r="day">Jour</button><button data-r="week">7 j</button><button data-r="month">30 j</button>
       </div>
     </div>
     <svg id="chart" role="img" aria-label="Courbe"></svg>
@@ -284,8 +292,13 @@ tfoot td{font-weight:600;border-top:2px solid var(--line)}
   <h2>7 jours <span>prévision</span></h2>
   <section class="card"><div class="days" id="days"></div></section>
 
-  <h2>Carnet de la station <span id="logNote"></span></h2>
-  <section class="card"><div class="tbl"><table id="log"></table></div></section>
+  <h2>Résumé de la station <span>mesuré à Leuze</span></h2>
+  <section class="card">
+    <div class="sumbar"><div class="seg" id="sumSeg" role="group" aria-label="Période du résumé"><button data-p="7">7 jours</button><button data-p="30">30 jours</button></div><span class="cov" id="sumCov"></span></div>
+    <div class="stats" id="stats"></div>
+    <div class="tbl"><table id="log"></table></div>
+    <button class="more" id="logMore" hidden>Afficher les 30 jours</button>
+  </section>
 
   <div class="foot">
     <div>Mesures : station <a id="wuLink" href="https://www.wunderground.com/dashboard/pws/IGHEZE29" target="_blank" rel="noopener">IGHEZE29</a> via Weather Underground. Prévisions : <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>.</div>
@@ -312,7 +325,7 @@ const LS={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}
 let cfg=Object.assign({},DEF,LS.get('meteo-cfg',{}));
 let S=LS.get('meteo-cache',null);
 if(S&&S.id!==cfg.id)S=null;
-const ui={metric:LS.get('meteo-metric','temp'),range:LS.get('meteo-range','day'),busy:false,err:null};
+const ui={metric:LS.get('meteo-metric','temp'),range:LS.get('meteo-range','day'),sumP:LS.get('meteo-sum',7),logAll:false,busy:false,err:null};
 const $=s=>document.getElementById(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
@@ -382,9 +395,10 @@ async function load(){
     if(s.status==='fulfilled')N.daily=(s.value&&s.value.summaries)||[];
     if(!N.fc||Date.now()-(N.fcAt||0)>30*60000||N.fcLat!==ob.lat){
       try{N.fc=await omGet(ob.lat||50.59,ob.lon||4.91);N.fcAt=Date.now();N.fcLat=ob.lat}catch(e){}}
-    S=N;ui.err=null;LS.set('meteo-cache',S);
+    S=N;ui.err=null;LS.set('meteo-cache',S);mergeDaily();
   }else ui.err=c.status==='rejected'?c.reason.message:'Weather Underground n\'a renvoyé aucune mesure.';
   ui.busy=false;$('btnRefresh').classList.remove('spin');render();
+  if(S&&S.cur)fillHistory();
 }
 
 /* ---------- séries ---------- */
@@ -400,7 +414,7 @@ function render(){
   renderStatus();
   const eb=$('errBox');eb.hidden=!ui.err;if(ui.err)eb.textContent=ui.err+(S?' Dernières mesures affichées.':'');
   if(!S||!S.cur){$('stAge').textContent=ui.err?'Hors ligne':'Chargement…';$('dot').className='dot'+(ui.err?' off':' old');return}
-  renderNow();renderTiles();renderChart();renderForecast();renderLog();
+  renderNow();renderTiles();renderChart();renderForecast();renderSummary();
 }
 function renderStatus(){
   if(!S||!S.cur)return;const ob=S.cur,t=T(ob),age=Date.now()-t;
@@ -472,12 +486,12 @@ function renderTiles(){
   $('dial').innerHTML=dial(ob.winddir,m.windSpeed);
   // pluie
   $('rTot').innerHTML=fmt(m.precipTotal,1)+'<small>mm</small>';
-  const daily=dailyRows();const tot7=daily.reduce((a,r)=>a+(r.rain||0),0);
-  let last='';const past=daily.filter(r=>r.key!==dayKey(Date.now())&&r.rain>=0.2);
+  const daily=histRows(7);const tot7=daily.reduce((a,r)=>a+(r.rain||0),0);
+  let last='';const past=histRows(30).filter(r=>!r.today&&r.rain>=0.2);
   if(m.precipRate>0)last=`<span class="pill rain">Il pleut · ${fmt(m.precipRate,1)} mm/h</span>`;
   else if(m.precipTotal>=0.2)last='<span>Pluie tombée aujourd\'hui</span>';
-  else if(past.length){const r=past[0];last=`<span>Dernière pluie <b>${wd(r.t)}</b> (${fmt(r.rain,1)} mm)</span>`}
-  else if(daily.length)last='<span>Aucune pluie depuis 7 jours</span>';
+  else if(past.length){const r=past[0];last=`<span>Dernière pluie <b>${r.k===dayKey(Date.now()-86400000)?'hier':wd(r.t)+' '+fDM.format(new Date(r.t))}</b> (${fmt(r.rain,1)} mm)</span>`}
+  else if(daily.length)last=`<span>Aucune pluie depuis ${histRows(30).length} jours</span>`;
   $('rTxt').innerHTML=last+`<span>7 jours <b>${fmt(tot7,1)} mm</b></span>`;
   // humidité
   $('hum').innerHTML=fmt(ob.humidity,0)+'<small>%</small>';
@@ -517,20 +531,67 @@ function spark(){
   const d=pts.map((p,i)=>(i?'L':'M')+x(p[0]).toFixed(1)+' '+y(p[1]).toFixed(1)).join('');const L=pts[pts.length-1];
   return `<path d="${d}" fill="none" class="l-main" stroke-width="1.8" stroke-linejoin="round"/><circle cx="${x(L[0]).toFixed(1)}" cy="${y(L[1]).toFixed(1)}" r="3" class="f-main"/><text x="2" y="${H-1}" style="fill:var(--muted);font:500 9.5px var(--f-display)">24 h</text>`}
 
-/* ---------- carnet 7 jours ---------- */
-function dailyRows(){
-  const m=new Map();
-  for(const s of (S.daily||[])){const t=T(s),k=dayKey(t),x=s.metric||{};m.set(k,{key:k,t,lo:x.tempLow,hi:x.tempHigh,rain:x.precipTotal,gust:x.windgustHigh,pmin:x.pressureMin,pmax:x.pressureMax})}
-  // aujourd'hui : toujours recalculé à partir des mesures du jour
-  const st=todayStats(),k=dayKey(Date.now());if(S.cur){const mm=S.cur.metric||{};m.set(k,{key:k,t:T(S.cur),lo:st.lo.v,hi:st.hi.v,rain:mm.precipTotal,gust:st.gust.v,today:true})}
-  return [...m.values()].sort((a,b)=>b.key-a.key).slice(0,7)}
-function renderLog(){
-  const rows=dailyRows(),U=wu_();if(!rows.length){$('log').innerHTML='';return}
-  const sum=rows.reduce((a,r)=>a+(r.rain||0),0);
-  $('logNote').textContent='mesuré à Leuze';
+/* ---------- historique 30 jours ----------
+   Weather Underground ne donne que 7 jours de résumés d'un coup : les jours plus anciens
+   sont lus un par un (history/daily) puis gardés sur l'appareil, une seule fois. */
+const HK=()=>'meteo-hist-'+cfg.id;
+let HIST=LS.get(HK(),{}),histBusy=false,histProg=null;
+const kT=k=>Date.UTC(Math.floor(k/10000),Math.floor(k/100)%100-1,k%100,10); // vers midi à Bruxelles
+const kOf=s=>s.obsTimeLocal?+s.obsTimeLocal.slice(0,10).replace(/-/g,''):dayKey(T(s));
+const final=r=>r&&r.at>kT(r.k)+14*3600000; // lu après 2 h du matin le lendemain : journée complète
+function rowOf(s){const x=s.metric||{};return{k:kOf(s),lo:x.tempLow,hi:x.tempHigh,avg:x.tempAvg,rain:x.precipTotal,gust:x.windgustHigh,wavg:x.windspeedAvg,pmin:x.pressureMin,pmax:x.pressureMax,hum:s.humidityAvg,sol:s.solarRadiationHigh,uv:s.uvHigh,at:Date.now()}}
+function mergeDaily(){const today=dayKey(Date.now());let ch=false;
+  for(const s of (S.daily||[])){const r=rowOf(s);if(r.k<today&&(!HIST[r.k]||HIST[r.k].none||!final(HIST[r.k]))){HIST[r.k]=r;ch=true}}
+  const old=dayKey(Date.now()-40*86400000);for(const k in HIST)if(+k<old){delete HIST[k];ch=true}
+  if(ch)LS.set(HK(),HIST)}
+function missingDays(){const out=[];for(let i=1;i<30;i++){const k=dayKey(Date.now()-i*86400000),r=HIST[k];
+  if(!r||(r.none&&Date.now()-r.at>6*3600000)||(!r.none&&!final(r)))out.push(k)}return out}
+async function fillHistory(){
+  if(histBusy)return;const need=missingDays();if(!need.length)return;histBusy=true;const id0=cfg.id;histProg={done:0,total:need.length};renderSummary();
+  for(const k of need){
+    if(cfg.id!==id0)break;
+    try{const j=await wuGet(`/v2/pws/history/daily?stationId=${encodeURIComponent(cfg.id)}&date=${k}`);const o=j&&j.observations&&j.observations[0];
+      HIST[k]=o?Object.assign(rowOf(o),{k}):{k,none:true,at:Date.now()}}
+    catch(e){if(/Aucune donnée/.test(e.message))HIST[k]={k,none:true,at:Date.now()};else break}
+    histProg.done++;LS.set(HK(),HIST);renderSummary();if(ui.range==='month')renderChart();
+    await new Promise(r=>setTimeout(r,window.__histDelay??2100)); // reste sous la limite de 30 appels/min de Weather Underground
+  }
+  histProg=null;histBusy=false;if(S)renderSummary();if(S&&ui.range==='month')renderChart()}
+function histRows(n){
+  const today=dayKey(Date.now()),rows=[];
+  if(S&&S.cur){const st=todayStats(),mm=S.cur.metric||{},d=S.day||[];
+    const vals=f=>d.map(f).filter(v=>v!=null),avg=f=>{const v=vals(f);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null},mx=f=>{const v=vals(f);return v.length?Math.max(...v):null},mn=f=>{const v=vals(f);return v.length?Math.min(...v):null};
+    rows.push({k:today,t:kT(today),today:true,lo:st.lo.v,hi:st.hi.v,avg:avg(o=>o.metric&&o.metric.tempAvg),rain:mm.precipTotal,gust:st.gust.v,wavg:avg(o=>o.metric&&o.metric.windspeedAvg),
+      pmin:mn(o=>o.metric&&o.metric.pressureMin),pmax:mx(o=>o.metric&&o.metric.pressureMax),hum:avg(o=>o.humidityAvg),sol:mx(o=>o.solarRadiationHigh),uv:mx(o=>o.uvHigh)})}
+  for(let i=1;i<n;i++){const k=dayKey(Date.now()-i*86400000),r=HIST[k];if(r&&!r.none)rows.push(Object.assign({},r,{t:kT(k)}))}
+  return rows}
+const dLbl=r=>r.today?"aujourd'hui":wd(r.t)+' '+fDM.format(new Date(r.t));
+function renderSummary(){
+  if(!S||!S.cur)return;const n=ui.sumP===30?30:7,rows=histRows(n),U=wu_();
+  document.querySelectorAll('#sumSeg button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.p===n));
+  const have=rows.length;$('sumCov').textContent=histProg&&n===30?`Lecture de l'historique… ${histProg.done}/${histProg.total}`:have<n?`${have} jours sur ${n} disponibles`:'';
+  if(!rows.length){$('stats').innerHTML='';$('log').innerHTML='';return}
+  const ok=f=>rows.filter(r=>f(r)!=null);
+  const ext=(f,big)=>{const v=ok(f);return v.length?v.reduce((a,r)=>(big?f(r)>f(a):f(r)<f(a))?r:a):null};
+  const mean=f=>{const v=ok(f);return v.length?v.reduce((a,r)=>a+f(r),0)/v.length:null};
+  const rain=rows.reduce((a,r)=>a+(r.rain||0),0),rdays=rows.filter(r=>r.rain>=0.2).length,wet=ext(r=>r.rain,true);
+  const tmax=ext(r=>r.hi,true),tmin=ext(r=>r.lo,false),frost=rows.filter(r=>r.lo!=null&&r.lo<=0).length,gst=ext(r=>r.gust,true);
+  const pmn=ext(r=>r.pmin,false),pmx=ext(r=>r.pmax,true);
+  const st=(l,v,d)=>`<div class="stat"><div class="lbl">${l}</div><div class="v">${v}</div><div class="d">${d}</div></div>`;
+  $('stats').innerHTML=
+    st('Pluie',`${fmt(rain,1)}<small>mm</small>`,`${rdays} jour${rdays>1?'s':''} de pluie`)+
+    st('Jour le plus pluvieux',wet&&wet.rain>=0.2?`${fmt(wet.rain,1)}<small>mm</small>`:'–',wet&&wet.rain>=0.2?dLbl(wet):'aucune pluie')+
+    st('Max absolu',tmax?`<span class="up">${fmt(tmax.hi,1)}</span><small>°C</small>`:'–',tmax?dLbl(tmax):'')+
+    st('Min absolu',tmin?`<span class="down">${fmt(tmin.lo,1)}</span><small>°C</small>`:'–',tmin?dLbl(tmin):'')+
+    st('Moyennes',`${fmt(mean(r=>r.hi),1)} / ${fmt(mean(r=>r.lo),1)}<small>°C</small>`,'maxi / mini du jour')+
+    st('Jours de gel',`${frost}`,'minimum ≤ 0 °C')+
+    st('Rafale max',gst?`${fmt(wv(gst.gust),U.d)}<small>${U.u}</small>`:'–',gst?dLbl(gst):'')+
+    st('Pression',pmn&&pmx?`${fmt(pmn.pmin,0)}–${fmt(pmx.pmax,0)}<small>hPa</small>`:'–',pmn&&pmx?`plus basse ${dLbl(pmn)}`:'');
+  const show=n===30&&!ui.logAll?rows.slice(0,10):rows;
   $('log').innerHTML=`<thead><tr><th>Jour</th><th>Min</th><th>Max</th><th>Pluie</th><th>Rafale</th></tr></thead><tbody>`+
-    rows.map(r=>`<tr><td>${r.today?'<b>Aujourd\'hui</b>':cap(wd(r.t))+' '+fDM.format(new Date(r.t))}</td><td class="num"><span class="c">${fmt(r.lo,1)}</span></td><td class="num"><span class="w">${fmt(r.hi,1)}</span></td><td class="num"><span class="${r.rain>=0.2?'rr':''}">${fmt(r.rain,1)}</span></td><td class="num">${fmt(wv(r.gust),U.d)}</td></tr>`).join('')+
-    `</tbody><tfoot><tr><td>Total pluie</td><td></td><td></td><td class="num">${fmt(sum,1)}</td><td style="color:var(--muted);font-weight:400;font-size:12px">${U.u}</td></tr></tfoot>`;
+    show.map(r=>`<tr><td>${r.today?'<b>Aujourd\'hui</b>':cap(wd(r.t))+' '+fDM.format(new Date(r.t))}</td><td class="num"><span class="c">${fmt(r.lo,1)}</span></td><td class="num"><span class="w">${fmt(r.hi,1)}</span></td><td class="num"><span class="${r.rain>=0.2?'rr':''}">${fmt(r.rain,1)}</span></td><td class="num">${fmt(wv(r.gust),U.d)}</td></tr>`).join('')+
+    `</tbody><tfoot><tr><td>Total pluie</td><td></td><td></td><td class="num">${fmt(rain,1)}</td><td style="color:var(--muted);font-weight:400;font-size:12px">${U.u}</td></tr></tfoot>`;
+  const mb=$('logMore');mb.hidden=!(n===30&&rows.length>10);mb.textContent=ui.logAll?'Réduire':`Afficher les ${rows.length} jours`;
 }
 
 /* ---------- prévisions ---------- */
@@ -565,15 +626,30 @@ function scaleY(vals,o){let lo=Math.min(...vals),hi=Math.max(...vals);if(!isFini
   const ms=o.minSpan||1;if(hi-lo<ms){const c=(hi+lo)/2;lo=c-ms/2;hi=c+ms/2;if(o.zero&&lo<0){hi-=lo;lo=0}}
   const st=niceStep(hi-lo);lo=Math.floor(lo/st+1e-9)*st;hi=Math.ceil(hi/st-1e-9)*st;if(hi<=lo)hi=lo+st;
   const ticks=[];for(let v=lo;v<=hi+st/1e3;v+=st)ticks.push(+v.toFixed(6));return{lo,hi,ticks}}
+function buildMonth(M,now){
+  const x0=midnight(now)-29*86400000,x1=x0+30*86400000,U=wu_(),rows=histRows(30).slice().reverse();
+  const unit=M.wind?U.u:M.unit,dec=M.wind?U.d:M.dec,cv=v=>v==null?null:(M.wind?v*U.f:v);
+  const model={x0,x1,day:false,month:true,days:30,unit,dec,lines:[],bars:null,ranges:null,fc:null,now,M};
+  const lbl=r=>r.today?"Aujourd'hui":cap(wd(r.t))+' '+fDM.format(new Date(r.t));
+  const line=(name,f,cls,area)=>({name,cls,area,pts:rows.filter(r=>f(r)!=null).map(r=>[r.t,cv(f(r))])});
+  switch(ui.metric){
+    case 'temp':model.ranges=rows.filter(r=>r.lo!=null&&r.hi!=null).map(r=>({t:r.t,lo:r.lo,hi:r.hi,label:lbl(r)}));model.rlab=['Mini','Maxi'];break;
+    case 'pres':model.ranges=rows.filter(r=>r.pmin!=null&&r.pmax!=null).map(r=>({t:r.t,lo:r.pmin,hi:r.pmax,label:lbl(r)}));model.rlab=['Mini','Maxi'];break;
+    case 'rain':model.bars=rows.map(r=>({t:r.t,v:r.rain||0,label:lbl(r)}));break;
+    case 'wind':model.lines.push(line('Vent moyen',r=>r.wavg,'main',true),line('Rafale max',r=>r.gust,'gust',false));break;
+    case 'hum':model.lines.push(line('Humidité moyenne',r=>r.hum,'main',true));break;
+    case 'sun':model.lines.push(line('Rayonnement max',r=>r.sol,'main',true));model.uvRows=rows;break}
+  return model}
 function buildModel(){
+  if(ui.range==='month')return buildMonth(MET[ui.metric],Date.now());
   const M=MET[ui.metric],day=ui.range==='day',now=Date.now(),x0=day?midnight(now):midnight(now)-6*86400000,x1=x0+(day?1:7)*86400000;
   const src=(day?(S.day||[]):allObs()).filter(o=>T(o)>=x0);const U=wu_();
   const conv=v=>v==null?null:(M.wind?v*U.f:v);const unit=M.wind?U.u:M.unit,dec=M.wind?U.d:M.dec;
-  const model={x0,x1,day,unit,dec,lines:[],bars:null,fc:null,now,M};
+  const model={x0,x1,day,days:day?1:7,unit,dec,lines:[],bars:null,ranges:null,fc:null,now,M};
   if(ui.metric==='rain'){
     if(day){const pts=src.map(o=>[T(o),o.metric&&o.metric.precipTotal]).filter(p=>p[1]!=null);if(S.cur.metric&&S.cur.metric.precipTotal!=null)pts.push([T(S.cur),S.cur.metric.precipTotal]);
       model.lines.push({name:'Cumul',cls:'rain',area:true,pts,step:true})}
-    else model.bars=dailyRows().filter(r=>r.t>=x0).map(r=>({t:midnight(r.t)+43200000,v:r.rain||0,label:r.today?"Aujourd'hui":cap(wd(r.t))}));
+    else model.bars=histRows(7).map(r=>({t:r.t,v:r.rain||0,label:r.today?"Aujourd'hui":cap(wd(r.t))}));
   }else{
     for(const [name,key,cls,area] of M.lines){const pts=src.map(o=>[T(o),conv(key?(o[key]??(o.metric||{})[key]):pres(o))]).filter(p=>p[1]!=null);model.lines.push({name,cls,area,pts})}
     if(day){const c=S.cur,m=c.metric||{};const lastV={temp:[m.temp,m.dewpt],wind:[m.windSpeed,m.windGust],pres:[m.pressure],hum:[c.humidity],sun:[c.solarRadiation]}[ui.metric];
@@ -584,51 +660,63 @@ function buildModel(){
   return model}
 function renderChart(){
   document.querySelectorAll('.chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===ui.metric));
-  document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.r===ui.range));
+  document.querySelectorAll('#rangeSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.r===ui.range));
   const svg=$('chart');const W=Math.max(280,svg.clientWidth||svg.parentNode.clientWidth-28),H=230,ml=38,mr=8,mt=16,mb=24;
   const m=CM=buildModel();m.W=W;m.H=H;m.ml=ml;m.mr=mr;m.mt=mt;m.mb=mb;svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
-  const vals=[];m.lines.forEach(l=>l.pts.forEach(p=>vals.push(p[1])));if(m.fc)m.fc.forEach(p=>vals.push(p[1]));if(m.bars)m.bars.forEach(b=>vals.push(b.v));
+  const vals=[];m.lines.forEach(l=>l.pts.forEach(p=>vals.push(p[1])));if(m.fc)m.fc.forEach(p=>vals.push(p[1]));if(m.bars)m.bars.forEach(b=>vals.push(b.v));if(m.ranges)m.ranges.forEach(r=>vals.push(r.lo,r.hi));
   if(!vals.length){svg.innerHTML=`<text x="${W/2}" y="${H/2}" text-anchor="middle">Pas encore de mesures sur cette période</text>`;$('rd').innerHTML='';return}
   const ys=m.ys=scaleY(vals,m.M);
   const X=m.X=t=>ml+(t-m.x0)/(m.x1-m.x0)*(W-ml-mr),Y=m.Y=v=>mt+(1-(v-ys.lo)/(ys.hi-ys.lo))*(H-mt-mb);
-  let s=`<defs>${['main','dew','gust','rain'].map(c=>`<linearGradient id="gr-${c}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-opacity=".28" style="stop-color:var(--${c==='main'?'data':c})"/><stop offset="1" style="stop-color:var(--${c==='main'?'data':c})" stop-opacity="0"/></linearGradient>`).join('')}</defs>`;
+  let s=`<defs>${['main','dew','gust','rain'].map(c=>`<linearGradient id="gr-${c}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-opacity=".28" style="stop-color:var(--${c==='main'?'data':c})"/><stop offset="1" style="stop-color:var(--${c==='main'?'data':c})" stop-opacity="0"/></linearGradient>`).join('')}<linearGradient id="gr-range" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:${ui.metric==='temp'?'var(--warm)':'var(--data)'}"/><stop offset="1" style="stop-color:${ui.metric==='temp'?'var(--cold)':'var(--data)'}"/></linearGradient></defs>`;
   ys.ticks.forEach(v=>{s+=`<line class="gl" x1="${ml}" x2="${W-mr}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}"/><text x="${ml-6}" y="${(Y(v)+3.5).toFixed(1)}" text-anchor="end">${fmt(v,ys.ticks.some(t=>t%1)?1:0)}</text>`});
   if(m.day){const lstep=W<460?6:3;for(let h=0;h<=24;h+=3){const t=m.x0+h*3600000,x=X(t);s+=`<line class="gl" x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${mt}" y2="${H-mb}" opacity=".5"/>`;if(h<24&&h%lstep===0)s+=`<text x="${(x+(h===0?2:0)).toFixed(1)}" y="${H-7}" text-anchor="${h===0?'start':'middle'}">${String(h).padStart(2,'0')}h</text>`}}
+  else if(m.month){for(let d=0;d<=30;d++){const t=m.x0+d*86400000,x=X(t),p=P(t+43200000);if(p.d===1||d===0||d===30)s+=`<line class="gl" x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${mt}" y2="${H-mb}" opacity="${p.d===1?.9:.5}"/>`;
+    if(d<30&&(29-d)%7===0)s+=`<text x="${Math.min(W-mr-14,X(t+43200000)).toFixed(1)}" y="${H-7}" text-anchor="middle">${p.d}/${p.mo}</text>`}}
   else{for(let d=0;d<=7;d++){const t=m.x0+d*86400000,x=X(t);s+=`<line class="gl" x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${mt}" y2="${H-mb}" opacity=".6"/>`;if(d<7)s+=`<text x="${(X(t+43200000)).toFixed(1)}" y="${H-7}" text-anchor="middle">${wd(t+43200000)}</text>`}}
   if(m.day&&m.now<m.x1){const x=X(m.now);s+=`<line x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${mt-4}" y2="${H-mb}" style="stroke:var(--ink)" stroke-width="1" stroke-dasharray="2 3" opacity=".45"/>`}
-  const gap=m.day?25*60000:2.5*3600000,base=Y(Math.max(ys.lo,Math.min(0,ys.hi)));
+  const gap=m.day?25*60000:m.month?1.6*86400000:2.5*3600000,base=Y(Math.max(ys.lo,Math.min(0,ys.hi)));
   const segs=(pts,step)=>{const out=[];let cur=[];pts.forEach((p,i)=>{if(i&&p[0]-pts[i-1][0]>gap){out.push(cur);cur=[]}if(step&&cur.length)cur.push([p[0],cur[cur.length-1][1]]);cur.push(p)});if(cur.length)out.push(cur);return out};
   const pd=seg=>seg.map((p,i)=>(i?'L':'M')+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1)).join('');
-  if(m.bars){const bw=(W-ml-mr)/7*.56;m.bars.forEach(b=>{const x=X(b.t),y=Y(b.v);s+=`<rect x="${(x-bw/2).toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0,base-y).toFixed(1)}" rx="3" class="f-rain" opacity=".85"/>`;if(b.v>=0.1)s+=`<text class="ann" x="${x.toFixed(1)}" y="${(y-5).toFixed(1)}" text-anchor="middle">${fmt(b.v,1)}</text>`})}
+  const slot=(W-ml-mr)/m.days;
+  if(m.bars){const bw=slot*(m.month?.62:.56),top=m.bars.reduce((a,b)=>b.v>a.v?b:a,m.bars[0]);m.bars.forEach(b=>{const x=X(b.t),y=Y(b.v);s+=`<rect x="${(x-bw/2).toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0,base-y).toFixed(1)}" rx="${m.month?1.5:3}" class="f-rain" opacity=".85"/>`;
+    if(b.v>=0.1&&(!m.month||b===top))s+=`<text class="ann" x="${Math.min(W-mr-12,Math.max(ml+12,x)).toFixed(1)}" y="${(y-5).toFixed(1)}" text-anchor="middle">${fmt(b.v,1)}</text>`})}
+  if(m.ranges&&m.ranges.length){const bw=Math.max(3,slot*.55),hi=m.ranges.reduce((a,r)=>r.hi>a.hi?r:a),lo=m.ranges.reduce((a,r)=>r.lo<a.lo?r:a);
+    m.ranges.forEach(r=>{const x=X(r.t),y1=Y(r.hi),y2=Y(r.lo);s+=`<rect x="${(x-bw/2).toFixed(1)}" y="${y1.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(2,y2-y1).toFixed(1)}" rx="${(bw/2).toFixed(1)}" fill="url(#gr-range)"/>`});
+    const cx=x=>Math.min(W-mr-16,Math.max(ml+16,x));s+=`<text class="ann" x="${cx(X(hi.t)).toFixed(1)}" y="${(Y(hi.hi)-6).toFixed(1)}" text-anchor="middle">${fmt(hi.hi,m.dec)}</text><text class="ann" x="${cx(X(lo.t)).toFixed(1)}" y="${(Y(lo.lo)+14).toFixed(1)}" text-anchor="middle">${fmt(lo.lo,m.dec)}</text>`}
   m.lines.slice().reverse().forEach(l=>{const sg=segs(l.pts,l.step);sg.forEach(seg=>{if(l.area&&seg.length>1)s+=`<path d="${pd(seg)}L${X(seg[seg.length-1][0]).toFixed(1)} ${base.toFixed(1)}L${X(seg[0][0]).toFixed(1)} ${base.toFixed(1)}Z" fill="url(#gr-${l.cls})"/>`;
     s+=`<path d="${pd(seg)}" fill="none" class="l-${l.cls}" stroke-width="${l.cls==='main'||l.cls==='rain'?2:1.6}" stroke-linejoin="round" stroke-linecap="round"/>`})});
   if(m.fc)s+=`<path d="${pd(m.fc)}" fill="none" class="l-fc" stroke-width="1.8"/>`;
   // extrêmes de la courbe principale
-  const L=m.lines[0];if(L&&L.pts.length>2&&ui.metric!=='rain'&&ui.metric!=='hum'){
+  const L=m.lines[0];if(L&&L.pts.length>2&&ui.metric!=='rain'&&ui.metric!=='hum'&&!m.month){
     const pick=(fn)=>L.pts.reduce((a,p)=>fn(p[1],a[1])?p:a);const mx=pick((a,b)=>a>b),mn=pick((a,b)=>a<b);
     const lab=(p,up)=>{const x=Math.min(W-mr-22,Math.max(ml+22,X(p[0]))),y=Y(p[1]);return `<circle cx="${X(p[0]).toFixed(1)}" cy="${y.toFixed(1)}" r="3" style="fill:var(--surface);stroke:var(--ink)" stroke-width="1.5"/><text class="ann" x="${x.toFixed(1)}" y="${(up?y-8:y+15).toFixed(1)}" text-anchor="middle">${fmt(p[1],m.dec)}</text>`};
     s+=lab(mx,Y(mx[1])-mt>14);if(ui.metric==='temp'||ui.metric==='pres')s+=lab(mn,H-mb-Y(mn[1])<16)}
   if(L&&L.pts.length){const p=L.pts[L.pts.length-1];s+=`<circle cx="${X(p[0]).toFixed(1)}" cy="${Y(p[1]).toFixed(1)}" r="4" class="f-${L.cls}" style="stroke:var(--surface)" stroke-width="2"/>`}
   s+=`<g id="cur" style="display:none"><line id="curL" y1="${mt}" y2="${H-mb}" style="stroke:var(--ink)" stroke-width="1" opacity=".5"/></g>`;
   svg.innerHTML=s;readout(null);
-  const note={temp:m.day?'pointillés : prévision du reste de la journée':'',rain:m.day?'cumul depuis minuit':'par jour',wind:'',pres:'',hum:'',sun:''}[ui.metric];$('chartNote').textContent=note;
+  const note=m.month?(histProg?`historique ${histProg.done}/${histProg.total}`:{temp:'mini et maxi par jour',pres:'mini et maxi par jour',rain:'par jour',wind:'par jour',hum:'moyenne par jour',sun:'maximum par jour'}[ui.metric]):{temp:m.day?'pointillés : prévision du reste de la journée':'',rain:m.day?'cumul depuis minuit':'par jour',wind:'',pres:'',hum:'',sun:''}[ui.metric];$('chartNote').textContent=note;
 }
 function readout(t){
   const m=CM;if(!m)return;const rd=$('rd');const g=document.getElementById('cur');
-  const sw=c=>`<i class="sw" style="background:var(--${c==='main'?'data':c})"></i>`;
+  const sw=c=>`<i class="sw" style="background:var(--${c==='main'?'data':c==='gust'?'accent':c})"></i>`;
   if(t==null){if(g)g.style.display='none';
-    if(m.bars){const tot=m.bars.reduce((a,b)=>a+b.v,0);rd.innerHTML=`<span class="k">Total 7 j <b>${fmt(tot,1)}</b> mm</span>`;return}
+    if(m.bars){const tot=m.bars.reduce((a,b)=>a+b.v,0);rd.innerHTML=`<span class="k">Total ${m.days} j <b>${fmt(tot,1)}</b> mm</span>`;return}
+    if(m.ranges){if(!m.ranges.length){rd.innerHTML='';return}const a=Math.min(...m.ranges.map(r=>r.lo)),b=Math.max(...m.ranges.map(r=>r.hi));rd.innerHTML=`<span class="k">${sw('cold')}Mini <b>${fmt(a,m.dec)}</b></span><span class="k">${sw('warm')}Maxi <b>${fmt(b,m.dec)}</b> ${m.unit}</span>`;return}
     rd.innerHTML=m.lines.map(l=>{const p=l.pts[l.pts.length-1];return p?`<span class="k">${sw(l.cls)}${l.name} <b>${fmt(p[1],m.dec)}</b> ${m.unit}</span>`:''}).join('');return}
   let html='',xs=null;
   if(m.bars){let b=m.bars.reduce((a,c)=>Math.abs(c.t-t)<Math.abs(a.t-t)?c:a,m.bars[0]);html=`<span class="k">${b.label} <b>${fmt(b.v,1)}</b> mm</span>`;xs=m.X(b.t);g.innerHTML=`<line y1="${m.mt}" y2="${m.H-m.mb}" x1="${xs}" x2="${xs}" style="stroke:var(--ink)" opacity=".4"/>`}
+  else if(m.ranges){if(!m.ranges.length)return;const r=m.ranges.reduce((a,c)=>Math.abs(c.t-t)<Math.abs(a.t-t)?c:a);xs=m.X(r.t);
+    html=`<span class="k" style="color:var(--muted)">${r.label}</span><span class="k">${m.rlab[0]} <b>${fmt(r.lo,m.dec)}</b></span><span class="k">${m.rlab[1]} <b>${fmt(r.hi,m.dec)}</b> ${m.unit}</span>`;
+    g.innerHTML=`<line y1="${m.mt}" y2="${m.H-m.mb}" x1="${xs}" x2="${xs}" style="stroke:var(--ink)" opacity=".4"/>`}
   else{const L=m.lines[0];if(!L.pts.length)return;let best=L.pts[0];for(const p of L.pts)if(Math.abs(p[0]-t)<Math.abs(best[0]-t))best=p;
     let fcp=null;if(m.fc&&t>best[0]+20*60000){fcp=m.fc.reduce((a,c)=>Math.abs(c[0]-t)<Math.abs(a[0]-t)?c:a)}
     const tt=fcp?fcp[0]:best[0];xs=m.X(tt);
-    const lbl=m.day?hm(tt):cap(wd(tt))+' '+hh(tt);
+    const lbl=m.day?hm(tt):m.month?cap(wd(tt))+' '+fDM.format(new Date(tt)):cap(wd(tt))+' '+hh(tt);
     html=`<span class="k" style="color:var(--muted)">${lbl}</span>`;let dots='';
     if(fcp){html+=`<span class="k">${sw('main')}Prévu <b>${fmt(fcp[1],m.dec)}</b> ${m.unit}</span>`;dots=`<circle cx="${xs}" cy="${m.Y(fcp[1])}" r="4" class="f-main"/>`}
-    else m.lines.forEach(l=>{let q=null;for(const p of l.pts)if(!q||Math.abs(p[0]-tt)<Math.abs(q[0]-tt))q=p;if(q&&Math.abs(q[0]-tt)<45*60000){html+=`<span class="k">${sw(l.cls)}${l.name} <b>${fmt(q[1],m.dec)}</b> ${m.unit}</span>`;dots+=`<circle cx="${m.X(q[0])}" cy="${m.Y(q[1])}" r="4" class="f-${l.cls}" style="stroke:var(--surface)" stroke-width="2"/>`}});
-    if(m.M.uv&&!fcp){const o=nearest(m.day?(S.day||[]):allObs(),tt,45*60000);if(o&&o.uvHigh!=null)html+=`<span class="k">UV <b>${fmt(o.uvHigh,0)}</b></span>`}
+    else m.lines.forEach(l=>{let q=null;for(const p of l.pts)if(!q||Math.abs(p[0]-tt)<Math.abs(q[0]-tt))q=p;if(q&&Math.abs(q[0]-tt)<(m.month?12*3600000:45*60000)){html+=`<span class="k">${sw(l.cls)}${l.name} <b>${fmt(q[1],m.dec)}</b> ${m.unit}</span>`;dots+=`<circle cx="${m.X(q[0])}" cy="${m.Y(q[1])}" r="4" class="f-${l.cls}" style="stroke:var(--surface)" stroke-width="2"/>`}});
+    if(m.M.uv&&m.month&&m.uvRows){const r=m.uvRows.find(r=>r.t===tt);if(r&&r.uv!=null)html+=`<span class="k">UV max <b>${fmt(r.uv,0)}</b></span>`}
+    else if(m.M.uv&&!fcp){const o=nearest(m.day?(S.day||[]):allObs(),tt,45*60000);if(o&&o.uvHigh!=null)html+=`<span class="k">UV <b>${fmt(o.uvHigh,0)}</b></span>`}
     g.innerHTML=`<line y1="${m.mt}" y2="${m.H-m.mb}" x1="${xs}" x2="${xs}" style="stroke:var(--ink)" opacity=".4"/>`+dots}
   g.style.display='';rd.innerHTML=html}
 (function(){const svg=$('chart');
@@ -640,7 +728,9 @@ function readout(t){
 
 /* ---------- interactions ---------- */
 document.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{ui.metric=b.dataset.m;LS.set('meteo-metric',ui.metric);if(S)renderChart()}));
-document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{ui.range=b.dataset.r;LS.set('meteo-range',ui.range);if(S)renderChart()}));
+document.querySelectorAll('#rangeSeg button').forEach(b=>b.addEventListener('click',()=>{ui.range=b.dataset.r;LS.set('meteo-range',ui.range);if(S)renderChart()}));
+document.querySelectorAll('#sumSeg button').forEach(b=>b.addEventListener('click',()=>{ui.sumP=+b.dataset.p;ui.logAll=false;LS.set('meteo-sum',ui.sumP);renderSummary()}));
+$('logMore').addEventListener('click',()=>{ui.logAll=!ui.logAll;renderSummary()});
 $('btnRefresh').addEventListener('click',()=>load());
 function toast(t){const e=$('toast');e.textContent=t;e.hidden=false;clearTimeout(toast.k);toast.k=setTimeout(()=>e.hidden=true,1800)}
 $('metar').addEventListener('click',async()=>{const t=$('metar').textContent;try{await navigator.clipboard.writeText(t);toast('METAR copié')}catch(e){const r=document.createRange();r.selectNodeContents($('metar'));const s=getSelection();s.removeAllRanges();s.addRange(r)}});
@@ -651,7 +741,7 @@ sheet.addEventListener('click',e=>{if(e.target===sheet)sheet.hidden=true});
 $('setReset').addEventListener('click',()=>{$('fId').value=DEF.id;$('fKey').value=DEF.key;$('fWind').value=DEF.wind});
 $('setForm').addEventListener('submit',e=>{e.preventDefault();const id=$('fId').value.trim().toUpperCase()||DEF.id,key=$('fKey').value.trim()||DEF.key,changed=id!==cfg.id||key!==cfg.key;
   cfg={id,key,wind:$('fWind').value};LS.set('meteo-cfg',cfg);sheet.hidden=true;$('wuLink').href='https://www.wunderground.com/dashboard/pws/'+encodeURIComponent(id);$('wuLink').textContent=id;
-  if(changed){S=null;load()}else render();toast('Réglages enregistrés')});
+  if(changed){S=null;HIST=LS.get(HK(),{});load()}else render();toast('Réglages enregistrés')});
 addEventListener('scroll',()=>$('top').classList.toggle('scrolled',scrollY>4),{passive:true});
 let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(S)renderChart()},150)});
 // tirer pour actualiser
