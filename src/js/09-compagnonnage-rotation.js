@@ -8,9 +8,9 @@ function conflicts(o){
   neighbors(o).forEach(n=>mine.forEach(z=>n.zones.forEach(z2=>{if(z2.crop&&compat(z.crop,z2.crop)<0)out.set(rk(z.crop,z2.crop)+n.id,{a:z.crop,b:z2.crop,where:'avec '+n.name})})));
   return[...out.values()];
 }
-function rotIssue(o,crop,Y){if(!crop||crop==='fraise'||!P[crop]||FLW())return null;const f=P[crop].f;
+function rotIssue(o,crop,Y){if(!crop||crop==='fraise'||!P[crop]||FLW()||VRG())return null;const f=P[crop].f;
   return(o.grown||[]).filter(g=>g.y<Y&&g.y>=Y-ROT_YEARS&&P[g.crop]&&g.crop!=='fraise'&&P[g.crop].f===f).sort((a,b)=>b.y-a.y)[0]||null}
-function rotIssues(o){if(FLW())return[];const out=[];o.zones.forEach(z=>{const r=rotIssue(o,z.crop,yearOf(z));if(r)out.push({crop:z.crop,prev:r})});return out}
+function rotIssues(o){if(FLW()||VRG())return[];const out=[];o.zones.forEach(z=>{const r=rotIssue(o,z.crop,yearOf(z));if(r)out.push({crop:z.crop,prev:r})});return out}
 function recordGrown(o,crop,y){if(!crop)return;o.grown=o.grown||[];if(!o.grown.some(g=>g.y===y&&g.crop===crop))o.grown.push({y,crop})}
 function advice(present){
   const good=new Set(),bad=new Set();

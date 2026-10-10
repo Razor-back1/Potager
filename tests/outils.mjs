@@ -46,8 +46,9 @@ export async function relais() {
 }
 
 /* un iPhone (ou iPad) simulé : réseau extérieur coupé, relais branché sur le relais simulé */
-export async function appareil(nav, adresse, { style = 'classic', modele = 'iPhone 13', relais: R = null, cle = null } = {}) {
+export async function appareil(nav, adresse, { style = 'classic', modele = 'iPhone 13', relais: R = null, cle = null, date = null } = {}) {
   const ctx = await nav.newContext({ ...devices[modele], serviceWorkers: 'block', acceptDownloads: true });
+  if (date) await ctx.clock.setFixedTime(new Date(date));   /* « aujourd'hui » imposé, pour tester une saison */
   await ctx.route('**/*', r => { const u = r.request().url(); return u.startsWith('http://127.0.0.1') ? r.continue() : r.abort() });
   if (R) await ctx.route('https://relais.test/**', async r => {
     const q = r.request();

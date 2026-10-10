@@ -41,12 +41,36 @@ function renderCrops(){
    ${b.length?`<div><span class="lbl">À éviter à côté</span><div class="chips" style="margin-top:4px">${b.map(q=>chip(q.id,'bad')).join('')}</div></div>`:''}
    ${ps.length?`<div class="note">À surveiller : ${ps.map(y=>`${y.n} (${mRange(y.m)})`).join(', ')}</div>`:''}
   </div>`};
+  if(VRG())return renderFruits(v,q,mo);
   const groups=cropGroups().map(g=>({...g,l:g.l.filter(x=>!q||(x.p.n+' '+x.p.f).toLowerCase().includes(q))})).filter(g=>g.l.length);
   v.innerHTML=`<div class="page"><h2>${FLW()?'Fleurs':'Cultures'}</h2><input id="cq" class="search" placeholder="${FLW()?'Chercher une fleur ou une famille':'Chercher une culture ou une famille'}" value="${esc(cq)}" aria-label="Chercher">
   ${groups.map(g=>`<div class="stack"><div><div class="section-t"><span class="lbl">${g.k} · ${g.t}</span><span class="mono note">${g.l.length}</span></div><span class="note">${g.d}</span></div>${g.l.map(card).join('')}</div>`).join('')||'<p class="note">Aucune culture ne correspond.</p>'}
   <p class="note">Classement pour ${MONTHS[mo-1]} (le point jaune sous le calendrier marque le mois en cours, les cases vertes les mois possibles). Cadre vert : bon voisin. Cadre rouge : à éviter. Valeurs indicatives pour un climat belge.</p></div>`;
   if(had){const i=$('#cq');i.focus();i.setSelectionRange(cq.length,cq.length)}
 }
+/* onglet « Fruitiers » d'un verger */
+const mRow=(l,ms,mo,col)=>`<div class="row" style="flex-wrap:nowrap"><span class="mlbl">${l}</span><div class="months" style="flex:1">${MSHORT.map((x,i)=>`<span class="${!col&&ms.includes(i+1)?'on':''} ${i+1===mo?'now':''}" ${col&&ms.includes(i+1)?`style="background:${col};color:#fff;border-color:${col}"`:''} title="${MONTHS[i]}">${x}</span>`).join('')}</div></div>`;
+function renderFruits(v,q,mo){const mine=new Map();trees().forEach(x=>{const k=x.p.id;mine.set(k,(mine.get(k)||0)+x.n)});
+  const card=p=>{const ps=PESTS.filter(y=>y.c.includes(bid(p.id))),n=mine.get(p.id)||0,care=p.care||[];
+    return`<div class="crop">
+   <div class="row between"><div class="row">${ci(p.id,1,'big')}<h3>${esc(p.n)}</h3><span class="note">${p.variety?'variété de '+esc(P[p.base].n.toLowerCase()):p.f}${p.edited?' · <span class="low">modifiée</span>':''}</span></div><span class="mono note">${p.t}${n?' · '+n+' au verger':''}</span></div>
+   <div class="mono note">Hauteur ${m2(p.ht)} m · distance ${m2(p.pl)} m · 1re récolte ≈ ${p.y} an${p.y>1?'s':''} après plantation · ≈ ${num(p.kg)} kg adulte · ☀ ${SUN_NEED[bid(p.id)]} h+ · rustique ${p.hardy} °C</div>
+   <div class="note" style="color:var(--ink)"><b>Pollinisation</b> · ${POLL_TXT[p.poll]}</div>
+   <div class="stack" style="gap:6px">${mRow('Plantation',p.m,mo)}${mRow('Floraison',p.flo,mo,p.c)}${mRow('Récolte',p.hv,mo)}</div>
+   <div class="note">Fleurs abîmées sous ${num(p.gel)} °C${p.flo.some(m=>m<=3)?' : floraison précoce, attention aux gelées de printemps':''}.</div>
+   ${care.length?`<div class="note"><b style="color:var(--ink)">Entretien</b> · ${care.map(cr=>`${mRange(cr.m)} : ${esc(cr.t.charAt(0).toLowerCase()+cr.t.slice(1))}`).join(' · ')}</div>`:''}
+   ${ps.length?`<div class="note">À surveiller : ${ps.map(y=>`${y.n} (${mRange(y.m)})`).join(', ')}</div>`:''}
+   <div class="row"><button class="btn small" data-cact="edit" data-crop="${p.id}">Modifier</button>${p.variety?'':`<button class="btn small" data-cact="variety" data-crop="${p.id}">+ Variété</button>`}</div>
+  </div>`};
+  const L=PLANTS.filter(p=>!q||(p.n+' '+p.f).toLowerCase().includes(q));
+  const G=[{t:'Dans ton verger',d:'Les espèces déjà plantées.',l:L.filter(p=>mine.has(p.id))},
+    {t:'À planter maintenant',d:'Racines nues de novembre à mars, hors gel ; en pot presque toute l\'année.',l:L.filter(p=>!mine.has(p.id)&&p.m.includes(mo))},
+    {t:'Plus tard',d:'Hors période de plantation.',l:L.filter(p=>!mine.has(p.id)&&!p.m.includes(mo))}].filter(g=>g.l.length);
+  const had=document.activeElement&&document.activeElement.id==='cq';
+  v.innerHTML=`<div class="page"><h2>Fruitiers</h2><input id="cq" class="search" placeholder="Chercher un fruitier ou une famille" value="${esc(cq)}" aria-label="Chercher">
+  ${G.map((g,i)=>`<div class="stack"><div><div class="section-t"><span class="lbl">${i+1} · ${g.t}</span><span class="mono note">${g.l.length}</span></div><span class="note">${g.d}</span></div>${g.l.map(card).join('')}</div>`).join('')||'<p class="note">Aucun fruitier ne correspond.</p>'}
+  <p class="note">Valeurs indicatives pour un climat belge : rendement d'un sujet adulte, années avant la 1re récolte et seuil de gel des fleurs varient selon la variété et le porte-greffe.</p></div>`;
+  if(had){const i=$('#cq');i.focus();i.setSelectionRange(i.value.length,i.value.length)}}
 $('#v-crops').addEventListener('click',e=>{const b=e.target.closest('[data-cact]');if(!b)return;const a=b.dataset.cact,c=b.dataset.crop;
   if(a==='semis')return openInv('semis');
   if(a==='edit'||a==='variety'||a==='goal')return openC(a,c);

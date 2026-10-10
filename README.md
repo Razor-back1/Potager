@@ -1,6 +1,6 @@
 # Atelier Potager
 
-App de gestion de potager et de jardin de fleurs : plan, plantations, rotation, journal, récoltes,
+App de gestion de potager, de jardin de fleurs et de verger : plan, plantations, rotation, journal, récoltes,
 météo, arrosage GARDENA, synchronisation entre appareils et amis invités.
 
 **Utiliser l'app** : https://razor-back1.github.io/Potager/ — sur iPhone, ouvrir dans Safari →
@@ -38,7 +38,8 @@ correspondent aux sources), puis lance :
 
 - `tests/app.test.mjs` : l'app dans un iPhone simulé — les 4 styles et tous les onglets sans erreur,
   série de planches + annuler/rétablir, historique d'annulation après rechargement, plusieurs jardins,
-  jardin de fleurs, semis échelonnés et calendrier, cultures modifiables, variétés, objectif de récolte,
+  jardin de fleurs, semis échelonnés et calendrier, cultures modifiables, variétés, objectif de récolte, verger (mise à fruit,
+  pollinisation, gel sur fleurs, planter un arbre),
   invitations, et une synchro iPhone → iPad
   qui passe par le vrai code du relais ;
 - `tests/relais.test.mjs` : le relais avec une base D1 simulée — accès, potagers, conflits de version,

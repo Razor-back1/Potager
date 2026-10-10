@@ -202,7 +202,7 @@ const stateOf=id=>id===GID?lastJSON:localStorage.getItem(keyOf(id));
 /* ce que le relais doit surveiller pour les notifications (calculé ici, avec toutes les règles de l'app) */
 function notifPlan(){const ev=[],seen=new Set(),add=(k,d,txt)=>{const id=k+':'+d+':'+txt;if(!seen.has(id)){seen.add(id);ev.push({id,k,d,txt})}};
   plantings().forEach(x=>{if(x.left>-30)add('harvest',iso(x.bu&&x.bu>x.hv?x.bu:x.hv),x.p.fl?`${x.p.n} en fleur (${fullName(x.o)})`:`${x.p.n} prêt à récolter (${fullName(x.o)})`)});
-  if(FLW()){const m0=new Date(YEAR,TODAY.getMonth(),1,12),seen=new Set();plantings().forEach(x=>(x.p.care||[]).forEach(cr=>{const k=x.p.id+cr.t;if(cr.m.includes(TODAY.getMonth()+1)&&!seen.has(k)){seen.add(k);add('care',iso(m0),`${x.p.n} : ${cr.t.charAt(0).toLowerCase()+cr.t.slice(1)}`)}}))}
+  if(FLW()||VRG()){const m0=new Date(YEAR,TODAY.getMonth(),1,12),seen=new Set();plantings().forEach(x=>(x.p.care||[]).forEach(cr=>{const k=x.p.id+cr.t;if(cr.m.includes(TODAY.getMonth()+1)&&!seen.has(k)){seen.add(k);add('care',iso(m0),`${x.p.n} : ${cr.t.charAt(0).toLowerCase()+cr.t.slice(1)}`)}}))}
   plantables().forEach(o=>{const bu=blockUntil(o);if(bu)add('dar',iso(bu),`Fin du délai après traitement : ${fullName(o)}`);
     o.zones.forEach(z=>(z.next||[]).forEach(n=>{if(n.date&&P[n.crop])add('plan',n.date,`À planter : ${P[n.crop].n} (${fullName(o)})`)}))});
   nurseryActive().forEach(n=>{if(P[n.crop])add('nursery',iso(readyOf(n)),`Semis de ${P[n.crop].n.toLowerCase()} prêts à repiquer`)});
@@ -210,6 +210,7 @@ function notifPlan(){const ev=[],seen=new Set(),add=(k,d,txt)=>{const id=k+':'+d
     x.plan.list.filter(s=>days(TODAY,s.d)<=120).forEach(s=>add('resow',iso(s.d),`Semer ${x.p.n.toLowerCase()} : ${s.qty} plants ${s.how} (objectif ${uTxt(x.goal.w,x.u)} par semaine)`))});
   const water=plantables().filter(isPlanted).map(o=>{const m=(o.journal||[]).filter(x=>x.k==='arrosage').map(x=>x.d).sort().pop()||null,r=serreOf(o)?null:(S.rain||[]).filter(x=>x.mm==null||x.mm>=RAIN_MIN).map(x=>x.d).sort().pop()||null;return{name:fullName(o),serre:!!serreOf(o),last:[m,r].filter(Boolean).sort().pop()||null}});
   const frost=[];plantables().forEach(o=>o.zones.forEach(z=>{if(z.crop&&FROST_SENSITIVE.has(z.crop)&&Object.keys(z.cells).length)frost.push({crop:P[z.crop].n.toLowerCase(),name:fullName(o),serre:!!serreOf(o)})}));
+  if(VRG())inBloom().forEach(b=>frost.push({crop:b.p.n.toLowerCase()+' en fleur',name:[...b.where].join(', '),serre:false}));
   return{ev,water,frost,geo:geoOr(),at:Date.now()}}
 let calErr=null;
 function icsOf(ev,name){const esc2=t=>String(t).replace(/\\/g,'\\\\').replace(/\n/g,'\\n').replace(/([,;])/g,'\\$1'),dd=d=>d.replace(/-/g,''),from=iso(addD(iso(TODAY),-30));
@@ -270,7 +271,8 @@ async function applyInvite(inv){GDN.set({url:inv.u,token:inv.t,role:'user',name:
   try{await syncPull(true)}catch(e){toast(e.message)}
   /* l'app démarre avec l'exemple choisi par celui qui invite */
   if(inv.k==='fleurs'&&!FLW()){if(S.example&&!localAt){S=sampleFlowers();lastJSON='';save();past=[];future=[]}else addGarden(sampleFlowers())}
-  if(inv.k==='potager'&&FLW())addGarden(sample());
+  if(inv.k==='verger'&&!VRG()){if(S.example&&!localAt){S=sampleOrchard();lastJSON='';save();past=[];future=[]}else addGarden(sampleOrchard())}
+  if(inv.k==='potager'&&(FLW()||VRG()))addGarden(sample());
   toast(inv.n?`Bienvenue ${inv.n} : ton app est reliée`:'Invitation acceptée : ton app est reliée');renderHeader();refresh()}
 async function loadFriends(){try{const r=await gReq('/admin/users');window._friends={list:r.users}}catch(x){window._friends={err:x.message}}if(sheetMode==='friends')renderSheet()}
 function setGeo(g){try{localStorage.setItem('potager-geo',JSON.stringify(g))}catch(e){}window._geoRes=null;wx=null;sheetMode='menu';renderSheet();toast('Lieu enregistré : '+g.name);syncStation(false);syncPushSoon()}

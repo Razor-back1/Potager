@@ -2,6 +2,7 @@
 function zoneGrid(o,z){
   const p=P[z.crop];if(!p)return null;
   const W=Math.min(o.w,o.h);
+  if(o.type==='fruitier')return{cols:1,rows:1,cellL:z.len,cellW:W,per:1};
   const cols=Math.max(1,Math.floor(z.len/Math.max(p.pl,15))),rows=Math.max(1,Math.floor(W/Math.max(p.rang,15)));
   const cellL=z.len/cols,cellW=W/rows;
   return{cols,rows,cellL,cellW,per:Math.max(1,Math.round(cellL/p.pl))*Math.max(1,Math.round(cellW/p.rang))};

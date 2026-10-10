@@ -21,6 +21,8 @@ function shapeSVG(o){
     case 'cuve':return`<circle r="${w/2}" class="s-water" stroke-width="2" ${ns}/><circle r="${w/2*.6}" fill="none" style="stroke:var(--surface)" stroke-opacity=".5" stroke-width="1" ${ns}/>`;
     case 'eau':return`<circle r="${w/2}" class="s-water-l" stroke-width="2" ${ns}/><circle r="${w/5}" class="s-water"/>`;
     case 'arbre':return`<circle r="${w/2}" class="s-leaf" stroke-width="1.5" stroke-dasharray="4 3" ${ns}/><circle r="${Math.max(8,w*.06)}" class="s-trunk"/>`;
+    case 'fruitier':{const z=o.zones&&o.zones[0],p=z&&P[z.crop],pr=1,sz=w*.42;
+      return`<circle r="${w/2}" class="s-leaf" fill-opacity=".55" stroke-width="1.5" ${ns}/>${p?`<circle r="${w/2*.92}" fill="${p.c}" fill-opacity=".18"/>`:''}<circle r="${Math.max(6,w*.05)}" class="s-trunk"/>${p&&sz*view.z>=14?`<use href="#${symOf(p.id,pr)}" x="${-sz/2}" y="${-sz/2}" width="${sz}" height="${sz}"/>`:''}`}
     case 'haie':if(o.bend)return`<path d="M${x+h/2} 0Q0 ${-2*o.bend} ${-x-h/2} 0" fill="none" style="stroke:var(--leaf-dark)" stroke-opacity=".8" stroke-width="${h}" stroke-linecap="round"/>`;
       return`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${Math.min(w,h)/2}" class="s-leaf-solid" fill-opacity=".8"/>`;
     case 'citerne':{const r=w/2;return`<circle r="${r}" class="s-water-l" stroke-width="2" stroke-dasharray="6 4" ${ns}/><path d="M${-r*.45} 0H${r*.45}M0 ${-r*.45}V${r*.45}" style="stroke:var(--water)" stroke-width="2" ${ns}/>${r*2*view.z>=46?`<text class="vol" text-anchor="middle" y="${r+14/view.z}" font-size="${11/view.z}">${num(+o.vol||0,0)} L</text>`:''}`}
@@ -62,7 +64,7 @@ function renderPlan(){
     <line class="rotline" x1="${cx}" y1="${cy}" x2="${kx}" y2="${ky}" vector-effect="non-scaling-stroke"/><g data-rot="1" transform="translate(${kx} ${ky})"><circle class="rotknob" r="${14/view.z}" vector-effect="non-scaling-stroke"/><text class="rotknobt" text-anchor="middle" dominant-baseline="central" font-size="${12/view.z}">${ro.rot}°</text></g>`}
   $('#editL').innerHTML=ed;
   renderWxLayer();
-  const order=['etang','ruisseau','citerne','alleeo','allee','haie','cloture','serre','arbre','abri','compost','cuve','eau','bac','planche','prise'];
+  const order=['etang','ruisseau','citerne','alleeo','allee','haie','cloture','serre','arbre','fruitier','abri','compost','cuve','eau','bac','planche','prise'];
   const list=[...G().objs].sort((a,b)=>(a.id===selId)-(b.id===selId)||order.indexOf(a.type)-order.indexOf(b.type));
   $('#layer').innerHTML=list.map(objSVG).join('');
   let sh='';const lv=!shade.on&&liveWx()&&!ctx&&wx.cur&&wx.cur.isDay&&['clear','partly'].includes(wxKind(wx.cur.code));

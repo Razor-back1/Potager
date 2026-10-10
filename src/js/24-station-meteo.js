@@ -103,7 +103,8 @@ const durTxt=s=>{if(s==null)return'–';const m=Math.round(s/60);return Math.flo
 function wxAdvice(){const A=[],cur=wx.cur||{},n=wx.now||{},fc=wx.fc||[],H=wx.hours||[];
   const t=n.t!=null?n.t:cur.t,h=n.h!=null?n.h:cur.h;
   if(wx.soil!=null){const sl=wx.soil,v=num(sl,0);
-    if(FLW())A.push({k:'soil',txt:sl<5?`Sol à ${v} °C : trop froid pour semer ; les bulbes de printemps peuvent encore se planter tant que le sol n'est pas gelé.`:sl<10?`Sol à ${v} °C : idéal pour planter tulipes, narcisses et vivaces ; trop froid pour semer.`:sl<15?`Sol à ${v} °C : bleuets, nigelles, soucis et pois de senteur lèvent ; attends pour cosmos, zinnias et dahlias.`:`Sol à ${v} °C : assez chaud pour semer cosmos, zinnias et tournesols, et mettre en place dahlias et cannas.`});
+    if(VRG()){const mo=TODAY.getMonth()+1;if([11,12,1,2,3].includes(mo))A.push({k:'soil',txt:sl<=0?`Sol à ${v} °C : gelé, attends le dégel pour planter les racines nues.`:`Sol à ${v} °C : bonne période pour planter les fruitiers à racines nues (hors gel).`})}
+    else if(FLW())A.push({k:'soil',txt:sl<5?`Sol à ${v} °C : trop froid pour semer ; les bulbes de printemps peuvent encore se planter tant que le sol n'est pas gelé.`:sl<10?`Sol à ${v} °C : idéal pour planter tulipes, narcisses et vivaces ; trop froid pour semer.`:sl<15?`Sol à ${v} °C : bleuets, nigelles, soucis et pois de senteur lèvent ; attends pour cosmos, zinnias et dahlias.`:`Sol à ${v} °C : assez chaud pour semer cosmos, zinnias et tournesols, et mettre en place dahlias et cannas.`});
     else A.push({k:'soil',txt:sl<5?`Sol à ${v} °C : trop froid, rien ne germe en pleine terre.`:sl<8?`Sol à ${v} °C : seuls fèves, pois, épinards et radis lèvent encore.`:sl<12?`Sol à ${v} °C : carottes, laitues, betteraves et oignons lèvent ; trop froid pour haricots et courges.`:`Sol à ${v} °C : assez chaud même pour haricots, courges et maïs.`})}
   if(wx.past){const b=wx.past.rain-wx.past.et0;
     if(b<=-8)A.push({k:'dry',txt:`Sol qui sèche : ${num(-b,0)} mm évaporés de plus que tombés sur 7 jours. Arrosage utile en plein air.`});
@@ -115,7 +116,10 @@ function wxAdvice(){const A=[],cur=wx.cur||{},n=wx.now||{},fc=wx.fc||[],H=wx.hou
     else A.push({k:'rain',txt:`Prochaine pluie : ${nr===1?'demain':DOWF[fc[nr].dow]||fc[nr].dow} (${num(fc[nr].mm,1)} mm).`})}
   const g=Math.max(...fc.slice(0,2).map(f=>f.gust||0));if(g>=50)A.push({k:'wind',txt:`Rafales jusqu'à ${num(g,0)} km/h d'ici demain : vérifie voiles, tuteurs et portes de serre.`});
   const hot=fc.slice(0,3).find(f=>(f.max||0)>=28);if(hot)A.push({k:'hot',txt:`Chaleur ${hot===fc[0]?"aujourd'hui":DOWF[hot.dow]||hot.dow} (${num(hot.max,0)} °C) : arrose tôt le matin et aère la serre.`});
-  if(h!=null&&h>=85&&t!=null&&t>=10&&t<=25&&wx.past&&wx.past.rain>=5){if(FLW()){const inP=new Set();plantables().forEach(o=>o.zones.forEach(z=>{if(z.crop&&Object.keys(z.cells).length)inP.add(z.crop)}));
+  if(VRG()){const bf=bloomFrost(wx.night);if(bf.length)A.push({k:'frost',txt:`Gel prévu cette nuit (${num(wx.night,1)} °C) en pleine floraison : ${bf.map(b=>b.p.n.toLowerCase()).join(', ')}. Voile sur les petits arbres et les palissés.`})}
+  if(VRG()&&h!=null&&h>=85&&t!=null&&t>=8&&wx.past&&wx.past.rain>=5&&[3,4,5,6].includes(TODAY.getMonth()+1)){const tv=trees().filter(x=>['fr_pommier','fr_poirier'].includes(bid(x.p.id)));
+    if(tv.length)A.push({k:'mold',txt:'Pluie et douceur au printemps : conditions à tavelure sur pommiers et poiriers. Ramasse les feuilles tachées, aère la ramure.'})}
+  else if(h!=null&&h>=85&&t!=null&&t>=10&&t<=25&&wx.past&&wx.past.rain>=5){if(FLW()){const inP=new Set();plantables().forEach(o=>o.zones.forEach(z=>{if(z.crop&&Object.keys(z.cells).length)inP.add(z.crop)}));
       const sens=[...new Set(FL_PESTS.filter(x=>/Oïdium|Botrytis|taches noires|Rouille/.test(x.n)).flatMap(x=>x.c))].filter(c=>inP.has(c)).map(c=>P[c].n.toLowerCase());
       A.push({k:'mold',txt:`Douceur et humidité : risque d'oïdium, de botrytis et de taches noires.${sens.length?' Surveille '+sens.slice(0,5).join(', ')+'.':' Aère les massifs et arrose au pied.'}`})}
     else A.push({k:'mold',txt:'Douceur et humidité : conditions favorables au mildiou. Surveille tomates et pommes de terre.'})}
@@ -125,7 +129,7 @@ function wxAdvice(){const A=[],cur=wx.cur||{},n=wx.now||{},fc=wx.fc||[],H=wx.hou
   if(st>=0&&len>=3){const d0=H[st].t.slice(0,10)===iso(TODAY);A.push({k:'treat',txt:`Fenêtre de traitement : ${st===0?'maintenant':(d0?"aujourd'hui":'demain')+' dès '+(+H[st].t.slice(11,13))+' h'} (vent faible, sec 6 h après).`})}
   else if(H.length)A.push({k:'notreat',txt:'Pas de bonne fenêtre de traitement dans les 24 h (vent, pluie ou nuit).'});
   return A}
-const ADV_C={soil:'var(--wood)',dry:'var(--sun)',wet:'var(--water)',ok:'var(--ok)',rain:'var(--water)',wind:'var(--muted)',hot:'var(--danger)',mold:'var(--danger)',treat:'var(--ok)',notreat:'var(--muted)'};
+const ADV_C={frost:'var(--frost)',soil:'var(--wood)',dry:'var(--sun)',wet:'var(--water)',ok:'var(--ok)',rain:'var(--water)',wind:'var(--muted)',hot:'var(--danger)',mold:'var(--danger)',treat:'var(--ok)',notreat:'var(--muted)'};
 function weatherPanel(){const hasKey=!!WU.get().key;
   const head=`<div class="row between"><h2>Météo</h2><button class="btn small" data-wact="wusync">${wxBusy?'…':'Actualiser'}</button></div>${GEO()?'':`<div class="alert amber"><span>Météo de Bruxelles par défaut. <button class="linkbtn" data-wact="geo">Indique le lieu de ton ${FLW()?'jardin':'potager'}</button></span></div>`}`;
   const link=hasKey?'':`<div class="row between" style="gap:8px"><span class="note">Relie ta station Weather Underground pour des mesures sur place et la pluie notée toute seule.</span><button class="btn small" data-wact="wuconf">Relier</button></div>`;
@@ -148,7 +152,7 @@ function weatherPanel(){const hasKey=!!WU.get().key;
   const p=wx.past,bal=p?p.rain-p.et0:null,rain7=fc.reduce((a,f)=>a+(+f.mm||0),0);
   const stats=`<div class="stats">${wx.soil!=null?`<div class="stat"><span class="lbl">Sol à 6 cm</span><span class="v">${num(wx.soil,1)} <small>°C</small></span></div>`:''}${f0.et0!=null?`<div class="stat"><span class="lbl">Évaporation auj.</span><span class="v">${num(f0.et0,1)} <small>mm</small></span></div>`:''}${bal!=null?`<div class="stat"><span class="lbl">Bilan 7 derniers j</span><span class="v" style="color:${bal<-8?'var(--sun)':bal>10?'var(--water)':'inherit'}">${bal>=.5?'+':''}${num(bal,0)} <small>mm</small></span><span class="note">pluie ${num(p.rain,0)} − évap. ${num(p.et0,0)}</span></div>`:''}${fc.length?`<div class="stat"><span class="lbl">Pluie prévue 7 j</span><span class="v">${num(rain7,0)} <small>mm</small></span></div>`:''}</div>`;
   const adv=wxAdvice();
-  const garden=`<div class="stack"><span class="lbl">${FLW()?'Pour le jardin':'Pour le potager'}</span>${stats}${adv.length?`<div class="wxadv">${adv.map(a=>`<div><i style="background:${ADV_C[a.k]||'var(--muted)'}"></i><span>${a.txt}</span></div>`).join('')}</div>`:''}</div>`;
+  const garden=`<div class="stack"><span class="lbl">${FLW()?'Pour le jardin':VRG()?'Pour le verger':'Pour le potager'}</span>${stats}${adv.length?`<div class="wxadv">${adv.map(a=>`<div><i style="background:${ADV_C[a.k]||'var(--muted)'}"></i><span>${a.txt}</span></div>`).join('')}</div>`:''}</div>`;
   return head+nowCard+hours+week+garden+link}
 addEventListener('visibilitychange',()=>{if(!document.hidden&&(!wx||Date.now()-wx.at>30*60000))syncStation(false)});
 

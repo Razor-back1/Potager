@@ -14,7 +14,7 @@ function hull(pts){pts=pts.slice().sort((a,b)=>a.x-b.x||a.y-b.y);const cr=(o,a,b
 function baseParts(o){if(!(o.type==='haie'&&o.bend))return[basePts(o)];const N=12,cx=o.x+o.w/2,cy=o.y+o.h/2,a=o.rot*Math.PI/180,c=Math.cos(a),s=Math.sin(a),L=o.w-o.h,t=o.h/2;
   const pt=u=>{const x=-L/2+u*L,y=-2*o.bend*2*u*(1-u);return{x,y}},W=(x,y)=>({x:cx+x*c-y*s,y:cy+x*s+y*c}),out=[];
   for(let i=0;i<N;i++){const p=pt(i/N),q=pt((i+1)/N),dx=q.x-p.x,dy=q.y-p.y,l=Math.hypot(dx,dy)||1,nx=-dy/l*t,ny=dx/l*t;out.push([W(p.x+nx,p.y+ny),W(q.x+nx,q.y+ny),W(q.x-nx,q.y-ny),W(p.x-nx,p.y-ny)])}return out}
-function shadowPolys(o,sp){const h=+o.height||0;if(h<=0)return[];const v=shadowVec(sp,h);if(!v)return[];const k0=o.type==='arbre'?.3:0;
+function shadowPolys(o,sp){const h=+o.height||0;if(h<=0)return[];const v=shadowVec(sp,h);if(!v)return[];const k0=o.type==='arbre'||o.type==='fruitier'?.3:0;
   return baseParts(o).map(b=>hull([...b.map(p=>({x:p.x+v.x*k0,y:p.y+v.y*k0})),...b.map(p=>({x:p.x+v.x,y:p.y+v.y}))]))}
 function shadowPoly(o,sp){return shadowPolys(o,sp)[0]||null}
 function inPoly(pt,poly){let ins=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a.y>pt.y)!==(b.y>pt.y)&&pt.x<(b.x-a.x)*(pt.y-a.y)/(b.y-a.y)+a.x)ins=!ins}return ins}
@@ -24,7 +24,7 @@ function sunHours(o,doy){return sunHoursAt({x:o.x+o.w/2,y:o.y+o.h/2},homeOf(o),o
 /* ---- besoin en soleil des cultures (heures de soleil direct par jour) ---- */
 const SUN_NEED0={laitue_h:3,tomate:6,poivron:6,aubergine:6,courgette:6,concombre:6,potiron:6,mais:6,haricot:6,basilic:6,fraise:6,pdt:6,
   carotte:4,betterave:4,poireau:4,oignon:5,ail:5,pois:4,feve:4,chou:4,celeri:4,fenouil:5,blette:4,persil:3,laitue:3,epinard:3,mache:3,radis:3};
-const SUN_NEED={...SUN_NEED0,...Object.fromEntries(FLOWERS.map(p=>[p.id,p.sun]))};
+const SUN_NEED={...SUN_NEED0,...Object.fromEntries([...FLOWERS,...FRUITS].map(p=>[p.id,p.sun]))};
 const sunLabel=n=>n>=6?'plein soleil':n>=4?'soleil ou mi-ombre':'supporte la mi-ombre';
 function zoneCenter(o,zi){let off=0;for(let i=0;i<zi;i++)off+=o.zones[i].len;const L=Math.max(o.w,o.h),u=off+o.zones[zi].len/2-L/2,horiz=o.w>=o.h;
   const lx=horiz?u:0,ly=horiz?0:u,a=o.rot*Math.PI/180;return{x:o.x+o.w/2+lx*Math.cos(a)-ly*Math.sin(a),y:o.y+o.h/2+lx*Math.sin(a)+ly*Math.cos(a)}}

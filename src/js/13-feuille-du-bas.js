@@ -28,7 +28,7 @@ function waterText(w){if(!w)return'Aucune eau notée';const when=w.ago===0?"aujo
   return w.src==='pluie'?`Pluie${w.mm!=null?' ('+num(w.mm)+' mm)':''} ${when}`:w.src==='gardena'?`Arrosé par GARDENA ${when}`:`Arrosé à la main ${when}`}
 function thirstLimit(){const m=TODAY.getMonth()+1;return m>=5&&m<=9?4:(m===4||m===10)?7:null}
 function isPlanted(o){return o.zones.some(z=>z.crop&&Object.keys(z.cells).length)}
-function thirsty(o){const lim=thirstLimit();if(!lim||!isPlanted(o))return false;const w=lastWater(o);return!w||w.ago>=lim}
+function thirsty(o){const lim=thirstLimit();if(!lim||!isPlanted(o))return false;if(o.type==='fruitier'&&o.zones[0].cells['0-0']&&fruitAge(o.zones[0].cells['0-0'])>=2)return false;const w=lastWater(o);return!w||w.ago>=lim}
 function planStatus(o){/* un seul indicateur par planche, le plus utile d'abord */
   if(o.type==='abri'){const n=(S.stock||[]).filter(isLow).length;return n?{c:'amber',t:'!',l:n+' produit'+(n>1?'s':'')+' en stock bas'}:null}
   if(!TYPES[o.type].plant)return null;
@@ -39,7 +39,7 @@ function planStatus(o){/* un seul indicateur par planche, le plus utile d'abord 
   if(sunIssues(o).some(x=>x.lvl==='insuffisant'))return{c:'shade',t:'☀',l:'Pas assez de soleil'};
   if(rotIssues(o).length)return{c:'amber',t:'↻',l:'Rotation à revoir'};
   return null}
-function cultureSheet(o){const t=TYPES[o.type],inS=!!serreOf(o);
+function cultureSheet(o){if(o.type==='fruitier')return fruitSheet(o);const t=TYPES[o.type],inS=!!serreOf(o);
   let h=`<div class="stack"><div class="cs-head"><div style="min-width:0"><span class="lbl">${FLW()&&o.type==='planche'?'Massif':t.l}${inS?' · sous serre':''}</span><div class="nm">${esc(o.name)}</div></div><button class="iconbtn" data-act="close" aria-label="Fermer"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`;
   if(t.plant){
     const pl=plantings().filter(x=>x.o===o);
@@ -86,7 +86,7 @@ function renderSheet(){
   if(sheetMode==='add'){
     h+=`<div class="stack"><div class="row between"><h3>Ajouter au potager</h3><button class="btn small" data-act="close">Fermer</button></div>
     <button class="btn primary" data-act="series">Série de planches avec allées</button>
-    <div class="typegrid">${Object.entries(TYPES).filter(([k])=>!(ctx&&(k==='serre'||k==='arbre'||k==='haie'||k==='etang'))).map(([k,t])=>`<button class="typebtn" data-act="add" data-type="${k}"><svg viewBox="0 0 46 30">${ICON[k]}</svg>${FLW()&&k==='planche'?'Massif ou planche':t.l}</button>`).join('')}</div>
+    <div class="typegrid">${Object.entries(TYPES).filter(([k])=>!(ctx&&(k==='serre'||k==='arbre'||k==='haie'||k==='etang'||k==='fruitier'))&&(k!=='fruitier'||VRG())).map(([k,t])=>`<button class="typebtn" data-act="add" data-type="${k}"><svg viewBox="0 0 46 30">${ICON[k]}</svg>${FLW()&&k==='planche'?'Massif ou planche':t.l}</button>`).join('')}</div>
     <p class="note">L'objet apparaît au centre de l'écran. Maintiens le doigt dessus pour le soulever et le déplacer. Tire la poignée jaune pour le redimensionner.</p></div>`;
   }else if(sheetMode==='series'){
     h+=`<div class="stack"><div class="row between"><h3>Série de planches</h3><button class="btn small" data-act="add-back">Retour</button></div>
@@ -152,9 +152,9 @@ function renderSheet(){
     h+=`<div class="stack"><div class="row between"><h3>Amis</h3><button class="btn small" data-act="relay-back">Retour</button></div>
     <p class="note" style="color:var(--ink)">Chaque ami reçoit un lien. Il l'ouvre sur son téléphone, ajoute l'app à l'écran d'accueil, et tout est relié : ses potagers, sa synchro et ses notifications, séparés des tiens. Il n'a aucun code à gérer.</p>
     <input id="fr-name" placeholder="Prénom de l'ami" autocomplete="off" value="${esc(window._frName||'')}">
-    <div><span class="lbl">Son app démarre avec</span><div class="seg" style="margin-top:6px"><button data-act="fr-kind" data-k="potager" aria-pressed="${window._invKind!=='fleurs'}">L'exemple potager</button><button data-act="fr-kind" data-k="fleurs" aria-pressed="${window._invKind==='fleurs'}">L'exemple fleurs</button></div></div>
+    <div><span class="lbl">Son app démarre avec</span><div class="seg" style="margin-top:6px"><button data-act="fr-kind" data-k="potager" aria-pressed="${window._invKind!=='fleurs'&&window._invKind!=='verger'}">L'exemple potager</button><button data-act="fr-kind" data-k="fleurs" aria-pressed="${window._invKind==='fleurs'}">L'exemple fleurs</button><button data-act="fr-kind" data-k="verger" aria-pressed="${window._invKind==='verger'}">L'exemple verger</button></div></div>
     <button class="btn primary" data-act="fr-invite" style="justify-self:start">Créer l'invitation</button>
-    ${window._newInv?`<div class="alert okay" style="display:grid;gap:8px"><span><b>Invitation pour ${esc(window._newInv.name)}</b>${window._newInv.k==='fleurs'?' (jardin de fleurs)':' (potager)'} : envoie-lui ce lien (il ne sert qu'à lui).</span><code class="autok">${esc(window._newInv.link)}</code><div class="row"><button class="btn small primary" data-act="fr-share">Envoyer</button><button class="btn small" data-act="fr-copy">Copier le lien</button></div></div>`:''}
+    ${window._newInv?`<div class="alert okay" style="display:grid;gap:8px"><span><b>Invitation pour ${esc(window._newInv.name)}</b>${window._newInv.k==='fleurs'?' (jardin de fleurs)':window._newInv.k==='verger'?' (verger)':' (potager)'} : envoie-lui ce lien (il ne sert qu'à lui).</span><code class="autok">${esc(window._newInv.link)}</code><div class="row"><button class="btn small primary" data-act="fr-share">Envoyer</button><button class="btn small" data-act="fr-copy">Copier le lien</button></div></div>`:''}
     <span class="lbl">Amis sur ton relais</span>
     ${!F?'<p class="note">Chargement…</p>':F.err?`<p class="note" style="color:var(--danger)">${esc(F.err)}</p>`:F.list.length?`<div class="glist">${F.list.map(u=>`<div class="grow"><span><b>${esc(u.name)}</b><span class="note" style="display:block">${u.last?'vu '+whenTxt(u.last):'pas encore connecté'} · ${u.n} potager${u.n>1?'s':''}</span></span><button class="btn small danger" data-act="fr-rm" data-id="${u.id}" data-n="${esc(u.name)}">Retirer</button></div>`).join('')}</div>`:'<p class="note">Personne pour l\'instant.</p>'}
     <p class="note">Retirer un ami efface ses potagers, ses photos et ses notifications de ton relais. Son lien ne marchera plus.</p></div>`;
@@ -186,7 +186,7 @@ function renderSheet(){
     const GLs=GL.get().list;
     h+=`<div class="stack"><div class="row between"><h3>Potager</h3><button class="btn small" data-act="close">Fermer</button></div>
     <div><span class="lbl">Mes potagers</span><div class="glist">${GLs.map(g=>`<div class="grow${g.id===GID?' cur':''}"><span><b>${esc(g.id===GID?S.name:(g.name||'Potager'))}</b>${(g.id===GID?S.example:g.ex)?' <span class="note">· exemple</span>':''}</span>${g.id===GID?'<span class="note">ouvert</span>':`<button class="btn small" data-act="gopen" data-g="${g.id}">Ouvrir</button>`}</div>`).join('')}</div>
-    <div class="row" style="margin-top:8px"><button class="btn small" data-act="gnew">+ Potager</button><button class="btn small" data-act="gnewfl">+ Jardin de fleurs</button><button class="btn small" data-act="gnewex">+ Exemple potager</button><button class="btn small" data-act="gnewexfl">+ Exemple fleurs</button>${GLs.length>1?'<button class="btn small danger" data-act="gdel">Supprimer celui-ci</button>':''}</div></div>
+    <div class="row" style="margin-top:8px"><button class="btn small" data-act="gnew">+ Potager</button><button class="btn small" data-act="gnewfl">+ Jardin de fleurs</button><button class="btn small" data-act="gnewvg">+ Verger</button><button class="btn small" data-act="gnewex">+ Exemple potager</button><button class="btn small" data-act="gnewexfl">+ Exemple fleurs</button><button class="btn small" data-act="gnewexvg">+ Exemple verger</button>${GLs.length>1?'<button class="btn small danger" data-act="gdel">Supprimer celui-ci</button>':''}</div></div>
     <label class="field"><span class="lbl">Nom</span><input id="g-name" value="${esc(S.name)}"></label>
     ${S.shape?`<div class="row between"><span><span class="lbl">Terrain</span><br><span class="mono">${num(Math.abs(polyArea(S.shape))/1e4)} m² · ${S.shape.length} côtés</span></span><span class="row"><button class="btn small" data-act="shape-rect">Revenir au rectangle</button></span></div>`:
     `<div class="grid2"><label class="field"><span class="lbl">Largeur du terrain (m)</span><input id="g-w" type="number" min="2" step="0.5" value="${S.w/100}"></label>
@@ -213,7 +213,7 @@ function renderSheet(){
     const o=obj(selId);if(!o){sheetMode=null;return renderSheet()}h+=cultureSheet(o);
   }else if(sheetMode==='obj'){
     const o=obj(selId);if(!o){sheetMode=null;return renderSheet()}const t=TYPES[o.type],L=o.locked?'disabled':'';
-    h+=`<div class="stack"><div class="row between" style="flex-wrap:nowrap"><div style="min-width:0;flex:1"><span class="lbl">${FLW()&&o.type==='planche'?'Massif':t.l}${o.locked?' · verrouillé':''}</span><input class="namein" id="o-name" value="${esc(o.name)}" aria-label="Nom"></div><button class="btn small" data-act="close">OK</button></div>`;
+    h+=`<div class="stack"><div class="row between" style="flex-wrap:nowrap"><div style="min-width:0;flex:1"><span class="lbl">${FLW()&&o.type==='planche'?'Massif':VRG()&&o.type==='planche'?'Rang':t.l}${o.locked?' · verrouillé':''}</span><input class="namein" id="o-name" value="${esc(o.name)}" aria-label="Nom"></div><button class="btn small" data-act="close">OK</button></div>`;
     if(o.type==='serre'&&!ctx){const n=(o.inner&&o.inner.objs||[]).filter(q=>TYPES[q.type].plant).length;h+=`<button class="btn primary" data-act="enterserre">Ouvrir la serre</button><p class="note">${n?n+' planche'+(n>1?'s':'')+' à l\'intérieur.':'Vide pour l\'instant.'} En mode culture, un tap sur la serre l'ouvre directement.</p>`}
     if(o.type==='citerne')h+=`<label class="field" style="max-width:240px"><span class="lbl">Volume (L)</span><input id="o-vol" type="number" min="0" step="100" value="${Math.round(+o.vol||0)}" ${L}></label><p class="note">Citerne enterrée : seul son volume compte, elle s'ajoute à la réserve d'eau (Eau &amp; météo). Pas d'ombre.</p>`;
     else h+=t.round?`<div class="grid2"><label class="field"><span class="lbl">Diamètre (cm)</span><input id="o-w" type="number" min="10" step="5" value="${Math.round(o.w)}" ${L}></label>`:
@@ -237,7 +237,7 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
   if(a==='series-align'){const tp=terrainPts();let best=null;tp.forEach((p,i)=>{const q=tp[(i+1)%tp.length],L=Math.hypot(q.x-p.x,q.y-p.y);if(!best||L>best.L)best={L,a:Math.atan2(q.y-p.y,q.x-p.x)*180/Math.PI}});
     const v=$('#sr-o').value==='v';let d=best.a-(v?90:0);d=((d%180)+180)%180;if(d>90)d-=180;$('#sr-a').value=Math.round(d);return}
   if(a==='add'){const t=TYPES[b.dataset.type],r=svg.getBoundingClientRect(),c=world(r.left+r.width/2,r.top+r.height*.3);
-    const n={id:uid(),type:b.dataset.type,x:snap(clamp(c.x-t.w/2,0,G().w-t.w)),y:snap(clamp(c.y-t.h/2,0,G().h-t.h)),w:t.w,h:t.h,rot:0,name:FLW()&&b.dataset.type==='planche'?'Massif':t.l,height:t.ht||0,locked:false};
+    const n={id:uid(),type:b.dataset.type,x:snap(clamp(c.x-t.w/2,0,G().w-t.w)),y:snap(clamp(c.y-t.h/2,0,G().h-t.h)),w:t.w,h:t.h,rot:0,name:b.dataset.type==='planche'&&FLW()?'Massif':b.dataset.type==='planche'&&VRG()?'Rang de petits fruits':t.l,height:t.ht||0,locked:false};
     if(t.plant){n.zones=[{id:uid(),crop:null,len:Math.max(t.w,t.h),date:iso(TODAY),cells:{}}];n.grown=[];n.journal=[]}
     if(n.type==='citerne')n.vol=5000;if(n.type==='alleeo')n.ring=70;if(n.type==='ruisseau')n.wave=100;
     G().objs.push(n);selId=n.id;sheetMode='obj';save();renderSheet();renderPlan()}
@@ -251,7 +251,7 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
       const px=(v?x0+i*(W+gap):x0)+w/2-c.x,py=(v?y0:y0+i*(W+gap))+h/2-c.y,qx=c.x+px*Math.cos(ar)-py*Math.sin(ar),qy=c.y+px*Math.sin(ar)+py*Math.cos(ar);
       if(withA&&i<n-1){const aw=v?gap:L,ah=v?L:gap,ax=(v?x0+i*(W+gap)+W:x0)+aw/2-c.x,ay=(v?y0:y0+i*(W+gap)+W)+ah/2-c.y,bx=c.x+ax*Math.cos(ar)-ay*Math.sin(ar),by=c.y+ax*Math.sin(ar)+ay*Math.cos(ar);
         G().objs.push({id:uid(),type:'allee',x:Math.round(bx-aw/2),y:Math.round(by-ah/2),w:aw,h:ah,rot:ang,name:'Allée '+(ka+i+1),height:0,locked:false,grp})}
-      G().objs.push({id,grp,type:'planche',x:Math.round(qx-w/2),y:Math.round(qy-h/2),w,h,rot:ang,name:(FLW()?'Massif ':'Planche ')+(k+i+1),height:0,locked:false,grown:[],journal:[],zones:[{id:uid(),crop:null,len:L,date:iso(TODAY),cells:{}}]})}
+      G().objs.push({id,grp,type:'planche',x:Math.round(qx-w/2),y:Math.round(qy-h/2),w,h,rot:ang,name:(FLW()?'Massif ':VRG()?'Rang ':'Planche ')+(k+i+1),height:0,locked:false,grown:[],journal:[],zones:[{id:uid(),crop:null,len:L,date:iso(TODAY),cells:{}}]})}
     sheetMode=null;save();renderSheet();renderPlan();toast(`${n} planche${n>1?'s':''} placée${n>1?'s':''}, allées de ${gap} cm`,true)}
   if((a==='rot'||a==='rot0')&&o){const d=a==='rot'?+b.dataset.d:-o.rot,ms=grpMembers(o);if(ms){const f=grpFrame(ms,o.rot);rotateMembers(ms.map(q=>({o:q,x:q.x,y:q.y,rot:q.rot})),{x:f.cx,y:f.cy},d)}else o.rot=((o.rot+d)%360+360)%360;save();renderSheet();renderPlan()}
   if(a==='ungroup'&&o){delete o.grp;const rest=G().objs.filter(q=>q.grp&&!grpMembers(q));rest.forEach(q=>delete q.grp);save();renderSheet();renderPlan();return toast(o.name+' détaché du bloc',true)}
@@ -293,10 +293,10 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
   if(a==='relay-mode'){window._rhave=b.dataset.m==='have'?true:b.dataset.m==='inv'?'inv':false;renderSheet();return}
   if(a==='inv-paste'){try{$('#inv-code').value=await navigator.clipboard.readText()}catch(x){toast('Colle le code à la main (appui long → Coller)')}return}
   if(a==='inv-use'){const inv=readInvite($('#inv-code').value);if(!inv)return toast('Invitation illisible : colle le lien complet reçu');await applyInvite(inv);renderSheet();return}
-  if(a==='inv-mine'){const c=GDN.get();try{await navigator.clipboard.writeText(APP_URL+'#join='+mkInvite(c.url,c.token,c.name||'',FLW()?'fleurs':''));toast('Invitation copiée : ouvre-la sur ton autre appareil')}catch(x){toast('Copie impossible')}return}
+  if(a==='inv-mine'){const c=GDN.get();try{await navigator.clipboard.writeText(APP_URL+'#join='+mkInvite(c.url,c.token,c.name||'',FLW()?'fleurs':VRG()?'verger':''));toast('Invitation copiée : ouvre-la sur ton autre appareil')}catch(x){toast('Copie impossible')}return}
   if(a==='friends'){sheetMode='friends';window._friends=null;window._newInv=null;window._frName='';renderSheet();loadFriends();return}
   if(a==='fr-kind'){window._frName=($('#fr-name').value||'');window._invKind=b.dataset.k;renderSheet();return}
-  if(a==='fr-invite'){const n=($('#fr-name').value||'').trim();if(!n)return toast('Indique le prénom de ton ami');b.disabled=true;const k=window._invKind==='fleurs'?'fleurs':'potager';
+  if(a==='fr-invite'){const n=($('#fr-name').value||'').trim();if(!n)return toast('Indique le prénom de ton ami');b.disabled=true;const k=['fleurs','verger'].includes(window._invKind)?window._invKind:'potager';
     try{const r=await gReq('/admin/invite','POST',{name:n});window._newInv={name:r.name,k,link:APP_URL+'#join='+mkInvite(GDN.get().url,r.token,r.name,k)};window._frName='';await loadFriends()}catch(x){toast(x.message)}renderSheet();return}
   if(a==='fr-share'){const I=window._newInv;try{if(navigator.share){await navigator.share({title:'Atelier Potager',text:`${I.name}, voici ton accès à l'app du potager. Ouvre ce lien sur ton téléphone :`,url:I.link});return}}catch(x){return}try{await navigator.clipboard.writeText(I.link);toast('Lien copié')}catch(x){}return}
   if(a==='fr-copy'){try{await navigator.clipboard.writeText(window._newInv.link);toast('Lien copié')}catch(x){toast('Copie impossible')}return}
@@ -333,6 +333,8 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
   if(a==='gopen'){switchGarden(b.dataset.g);sheetMode='menu';renderSheet();return toast('Potager ouvert : '+S.name)}
   if(a==='gnew'){const n=GL.get().list.length+1;addGarden(emptyGarden('Potager '+n));sheetMode='menu';renderSheet();return toast('Nouveau potager créé')}
   if(a==='gnewfl'){const n=GL.get().list.length+1;addGarden(emptyGarden('Jardin de fleurs '+n,'fleurs'));sheetMode='menu';renderSheet();return toast('Nouveau jardin de fleurs créé')}
+  if(a==='gnewvg'){const n=GL.get().list.length+1;addGarden(emptyGarden('Verger '+n,'verger'));sheetMode='menu';renderSheet();return toast('Nouveau verger créé')}
+  if(a==='gnewexvg'){addGarden(sampleOrchard());sheetMode='menu';renderSheet();return toast('Exemple de verger ajouté')}
   if(a==='gnewexfl'){addGarden(sampleFlowers());sheetMode='menu';renderSheet();return toast('Exemple de jardin de fleurs ajouté')}
   if(a==='gnewex'){addGarden(sample());sheetMode='menu';renderSheet();return toast('Exemple ajouté')}
   if(a==='gdel'){if(!b.classList.contains('armed')){b.classList.add('armed');b.textContent='Confirmer : supprimer « '+S.name+' »';return}const nm=S.name;deleteGarden(GID);sheetMode='menu';renderSheet();return toast('« '+nm+' » supprimé')}

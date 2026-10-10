@@ -1,0 +1,70 @@
+/* ================= Verger : arbres fruitiers et petits fruits (jardins de type « verger ») =================
+   t : arbre, arbuste ou liane · pl : distance de plantation (cm) · ht : hauteur adulte (cm)
+   y : années entre la plantation et la 1re vraie récolte · m : mois de plantation (racines nues de novembre à mars)
+   fl : floraison · hv : récolte · gel : température qui abîme la fleur épanouie (°C)
+   poll : auto (autofertile), partiel (meilleur avec un 2e), croise (il faut une 2e variété), dioique (pied mâle + femelle)
+   kg : récolte d'un sujet adulte · care : gestes du mois · valeurs moyennes pour un climat belge */
+const FRUITS=[
+ {id:'fr_pommier',n:'Pommier',f:'Rosacées',t:'arbre',c:'#c8433a',rang:450,pl:450,ht:450,y:4,m:[11,12,1,2,3],sg:[],flo:[4,5],hv:[8,9,10],gel:-2,poll:'croise',kg:40,sun:6,hardy:-25,
+  care:[{m:[1,2],t:'Taille d\'hiver : aérer le centre, garder les dards et les bourses'},{m:[2,3],t:'Traitement d\'hiver à l\'huile de colza ou de paraffine avant le débourrement'},{m:[5],t:'Pièges à phéromones contre le carpocapse'},{m:[6],t:'Éclaircir après la chute de juin : 1 à 2 fruits par bouquet'},{m:[7,8],t:'Taille en vert des gourmands'},{m:[10,11],t:'Ramasser les fruits tombés et les feuilles tavelées'}]},
+ {id:'fr_poirier',n:'Poirier',f:'Rosacées',t:'arbre',c:'#b8b33a',rang:400,pl:400,ht:450,y:4,m:[11,12,1,2,3],sg:[],flo:[4],hv:[8,9,10],gel:-2,poll:'croise',kg:30,sun:6,hardy:-25,
+  care:[{m:[1,2],t:'Taille d\'hiver : raccourcir les prolongements, garder les boutons à fruits'},{m:[2,3],t:'Traitement d\'hiver contre psylles et tavelure avant le débourrement'},{m:[6],t:'Éclaircir : 2 poires par bouquet au plus'},{m:[7,8],t:'Taille en vert ; cueillir les poires d\'été un peu avant maturité'},{m:[10,11],t:'Ramasser les feuilles tavelées'}]},
+ {id:'fr_prunier',n:'Prunier',f:'Rosacées',t:'arbre',c:'#6a3d8f',rang:500,pl:500,ht:500,y:4,m:[11,12,1,2,3],sg:[],flo:[4],hv:[7,8,9],gel:-2,poll:'partiel',kg:30,sun:6,hardy:-25,
+  care:[{m:[3],t:'Pas de grosse taille en hiver (gomme, plomb) : seulement le bois mort'},{m:[5],t:'Pièges contre le carpocapse des prunes'},{m:[6],t:'Éclaircir si l\'arbre est très chargé (branches cassantes)'},{m:[8,9],t:'Taille légère juste après la récolte ; retirer les fruits momifiés'}]},
+ {id:'fr_mirabellier',n:'Mirabellier',f:'Rosacées',t:'arbre',c:'#e3b23c',rang:500,pl:500,ht:500,y:4,m:[11,12,1,2,3],sg:[],flo:[4],hv:[8,9],gel:-2,poll:'auto',kg:30,sun:6,hardy:-25,
+  care:[{m:[3],t:'Taille très légère, seulement le bois mort ou mal placé'},{m:[8,9],t:'Récolter quand les fruits se détachent seuls ; taille légère après la récolte'},{m:[9,10],t:'Retirer les fruits momifiés (moniliose)'}]},
+ {id:'fr_cerisier',n:'Cerisier',f:'Rosacées',t:'arbre',c:'#b3152a',rang:600,pl:600,ht:700,y:5,m:[11,12,1,2,3],sg:[],flo:[4],hv:[6,7],gel:-2,poll:'croise',kg:30,sun:6,hardy:-25,
+  care:[{m:[5],t:'Pièges jaunes contre la mouche de la cerise, filet contre les oiseaux'},{m:[6,7],t:'Cueillir avec la queue ; surveiller Drosophila suzukii sur les variétés tardives'},{m:[7,8],t:'Tailler juste après la récolte, jamais en hiver'}]},
+ {id:'fr_griottier',n:'Griottier',f:'Rosacées',t:'arbre',c:'#8a1020',rang:400,pl:400,ht:400,y:3,m:[11,12,1,2,3],sg:[],flo:[4,5],hv:[7],gel:-2,poll:'auto',kg:15,sun:5,hardy:-25,
+  care:[{m:[4,5],t:'Couper les rameaux desséchés par la moniliose en fleur'},{m:[7,8],t:'Après la récolte : rabattre les rameaux qui ont fructifié (fruits sur le bois de l\'an passé)'}]},
+ {id:'fr_pecher',n:'Pêcher',f:'Rosacées',t:'arbre',c:'#f08a6c',rang:500,pl:500,ht:400,y:3,m:[11,12,2,3],sg:[],flo:[3,4],hv:[8,9],gel:-1,poll:'auto',kg:20,sun:8,hardy:-20,
+  care:[{m:[2],t:'Cuivre au gonflement des bourgeons contre la cloque'},{m:[3,4],t:'Taille à la floraison ; voile si gel annoncé (fleurs très sensibles)'},{m:[5,6],t:'Éclaircir : un fruit tous les 15 cm'},{m:[11],t:'Cuivre à la chute des feuilles contre la cloque'}]},
+ {id:'fr_abricotier',n:'Abricotier',f:'Rosacées',t:'arbre',c:'#f0a030',rang:500,pl:500,ht:400,y:4,m:[11,12,2,3],sg:[],flo:[3,4],hv:[7,8],gel:-1,poll:'auto',kg:20,sun:8,hardy:-20,
+  care:[{m:[3,4],t:'Floraison précoce : voile d\'hivernage les nuits de gel ; idéal contre un mur au sud'},{m:[5],t:'Éclaircir les fruits trop serrés'},{m:[8,9],t:'Taille légère après la récolte'}]},
+ {id:'fr_cognassier',n:'Cognassier',f:'Rosacées',t:'arbre',c:'#d9c23a',rang:400,pl:400,ht:400,y:4,m:[11,12,1,2,3],sg:[],flo:[5],hv:[10,11],gel:-2,poll:'auto',kg:25,sun:6,hardy:-25,
+  care:[{m:[1,2],t:'Taille légère : éclaircir le centre'},{m:[10,11],t:'Récolter avant les gelées, quand le duvet part au frottement'}]},
+ {id:'fr_noyer',n:'Noyer',f:'Juglandacées',t:'arbre',c:'#7a5a32',rang:1000,pl:1000,ht:1500,y:8,m:[11,12,1,2,3],sg:[],flo:[5],hv:[9,10],gel:-1,poll:'partiel',kg:30,sun:6,hardy:-25,
+  care:[{m:[5],t:'Jeunes pousses sensibles aux gelées tardives'},{m:[8],t:'Taille seulement en été (il pleure en hiver)'},{m:[9,10],t:'Ramasser les noix tombées tous les 2 jours et les sécher'}]},
+ {id:'fr_noisetier',n:'Noisetier',f:'Bétulacées',t:'arbuste',c:'#a8743c',rang:400,pl:400,ht:500,y:4,m:[11,12,1,2,3],sg:[],flo:[1,2,3],hv:[8,9],gel:-8,poll:'croise',kg:5,sun:5,hardy:-25,
+  care:[{m:[2,3],t:'Supprimer les vieilles tiges au ras du sol, garder 6 à 8 brins'},{m:[8,9],t:'Récolter au sol ; écarter les noisettes percées (balanin)'}]},
+ {id:'fr_figuier',n:'Figuier',f:'Moracées',t:'arbre',c:'#6d3d6a',rang:400,pl:400,ht:400,y:3,m:[4,5],sg:[],flo:[6],hv:[8,9],gel:-1,poll:'auto',kg:10,sun:8,hardy:-12,
+  care:[{m:[11,12,1,2],t:'Jeune figuier : paillage épais au pied et voile par grand froid'},{m:[4],t:'Retirer le bois gelé'},{m:[8,9],t:'Cueillir quand la figue ploie et qu\'une goutte perle'}]},
+ {id:'fr_framboisier',n:'Framboisier',f:'Rosacées',t:'arbuste',c:'#d1304f',rang:150,pl:50,ht:180,y:1,m:[11,12,2,3],sg:[],flo:[5,6],hv:[6,7],gel:-2,poll:'auto',kg:1,sun:5,hardy:-25,
+  care:[{m:[3],t:'Paillage et compost au pied ; palisser les nouvelles cannes'},{m:[8],t:'Après la récolte, couper au ras les cannes qui ont donné'}]},
+ {id:'fr_framboisier_r',n:'Framboisier remontant',f:'Rosacées',t:'arbuste',c:'#e0506a',rang:150,pl:50,ht:150,y:1,m:[11,12,2,3],sg:[],flo:[7,8],hv:[8,9,10],gel:-2,poll:'auto',kg:1,sun:5,hardy:-25,
+  care:[{m:[2],t:'Couper toutes les cannes au ras du sol (récolte d\'automne sur les nouvelles)'},{m:[3],t:'Paillage et compost au pied'}]},
+ {id:'fr_groseillier',n:'Groseillier',f:'Grossulariacées',t:'arbuste',c:'#d3203a',rang:150,pl:150,ht:150,y:2,m:[11,12,1,2,3],sg:[],flo:[4],hv:[6,7],gel:-2,poll:'auto',kg:3,sun:4,hardy:-25,
+  care:[{m:[1,2],t:'Taille : garder 8 à 10 branches de moins de 4 ans'},{m:[6,7],t:'Filet contre les oiseaux, cueillir les grappes entières'}]},
+ {id:'fr_cassissier',n:'Cassissier',f:'Grossulariacées',t:'arbuste',c:'#2a1f3d',rang:150,pl:150,ht:150,y:2,m:[11,12,1,2,3],sg:[],flo:[4],hv:[7],gel:-2,poll:'partiel',kg:3,sun:4,hardy:-25,
+  care:[{m:[1,2],t:'Taille : couper au ras un tiers des plus vieilles branches ; retirer les bourgeons gonflés (phytopte)'},{m:[7],t:'Récolter les grappes bien noires'}]},
+ {id:'fr_maquereau',n:'Groseillier à maquereau',f:'Grossulariacées',t:'arbuste',c:'#8fb34a',rang:150,pl:150,ht:120,y:2,m:[11,12,1,2,3],sg:[],flo:[4],hv:[6,7],gel:-2,poll:'auto',kg:3,sun:4,hardy:-25,
+  care:[{m:[1,2],t:'Taille : aérer le centre (oïdium)'},{m:[5,6],t:'Surveiller les larves de tenthrède qui dévorent les feuilles'}]},
+ {id:'fr_myrtillier',n:'Myrtillier',f:'Éricacées',t:'arbuste',c:'#3b5aa8',rang:150,pl:150,ht:150,y:3,m:[10,11,3,4],sg:[],flo:[4,5],hv:[7,8],gel:-2,poll:'partiel',kg:2,sun:5,hardy:-25,
+  care:[{m:[3,10],t:'Sol acide indispensable : en bac ou fosse de terre de bruyère, arroser à l\'eau de pluie'},{m:[2,3],t:'Supprimer le bois mort et les plus vieilles tiges'},{m:[6,7],t:'Filet contre les oiseaux'}]},
+ {id:'fr_muron',n:'Mûrier sans épines',f:'Rosacées',t:'arbuste',c:'#2b1a2e',rang:200,pl:300,ht:200,y:2,m:[11,12,2,3],sg:[],flo:[6,7],hv:[8,9],gel:-2,poll:'auto',kg:6,sun:5,hardy:-20,
+  care:[{m:[3],t:'Palisser les nouvelles tiges en éventail'},{m:[10],t:'Couper au ras les tiges qui ont fructifié'}]},
+ {id:'fr_vigne',n:'Vigne (raisin de table)',f:'Vitacées',t:'liane',c:'#6b3f7a',rang:200,pl:150,ht:200,y:3,m:[11,12,2,3,4],sg:[],flo:[6],hv:[9,10],gel:-1,poll:'auto',kg:5,sun:8,hardy:-18,
+  care:[{m:[1,2],t:'Taille d\'hiver : 2 yeux par coursons'},{m:[5],t:'Ébourgeonner : retirer les pousses sans grappe'},{m:[6,7,8],t:'Mildiou et oïdium : cuivre ou soufre après les pluies, rognage en juillet'},{m:[8,9],t:'Ensacher les grappes contre les guêpes'}]},
+ {id:'fr_kiwi',n:'Kiwi',f:'Actinidiacées',t:'liane',c:'#8a6a3a',rang:400,pl:400,ht:300,y:4,m:[3,4,5],sg:[],flo:[6],hv:[10,11],gel:-1,poll:'dioique',kg:30,sun:6,hardy:-15,
+  care:[{m:[4,5],t:'Jeunes pousses très sensibles aux gelées tardives : voile'},{m:[1,2],t:'Taille d\'hiver sur palissage'},{m:[10,11],t:'Récolter avant les gelées et laisser mûrir au fruitier'}]},
+ {id:'fr_kiwai',n:'Kiwaï',f:'Actinidiacées',t:'liane',c:'#6f9a3a',rang:300,pl:300,ht:300,y:3,m:[3,4,5,10,11],sg:[],flo:[6],hv:[9,10],gel:-1,poll:'dioique',kg:10,sun:5,hardy:-25,
+  care:[{m:[1,2],t:'Taille d\'hiver sur palissage'},{m:[9,10],t:'Cueillir à maturité, se mange avec la peau'}]}];
+FRUITS.forEach(p=>{p.j=Math.round(p.y*365)});
+const POLL_TXT={auto:'autofertile : un seul pied suffit',partiel:'partiellement autofertile : récolte meilleure avec un 2e pied',croise:'il faut une 2e variété qui fleurit en même temps, à moins de 50 m',dioique:'pieds mâles et femelles : 1 mâle pour 6 femelles (sauf variétés autofertiles)'};
+const FR_CI={fr_pommier:'fruit',fr_poirier:'fruit',fr_prunier:'oval',fr_mirabellier:'fruit',fr_cerisier:'cherry',fr_griottier:'cherry',fr_pecher:'fruit',fr_abricotier:'fruit',fr_cognassier:'fruit',
+  fr_noyer:'nut',fr_noisetier:'nut',fr_figuier:'fruit',fr_framboisier:'berry',fr_framboisier_r:'berry',fr_groseillier:'cluster',fr_cassissier:'cluster',fr_maquereau:'fruit',fr_myrtillier:'cluster',fr_muron:'berry',fr_vigne:'cluster',fr_kiwi:'oval',fr_kiwai:'oval'};
+const FR_PESTS=[
+ {n:'Tavelure',c:['fr_pommier','fr_poirier'],m:[4,5,6],t:'Après chaque pluie de printemps : ramasse les feuilles tachées, aère la ramure ; le cuivre agit en préventif.'},
+ {n:'Carpocapse',c:['fr_pommier','fr_poirier','fr_noyer'],m:[5,6,7,8],t:'Pièges à phéromones dès mai, bandes-pièges cartonnées autour du tronc en juillet.'},
+ {n:'Puceron cendré',c:['fr_pommier'],m:[4,5,6],t:'Feuilles enroulées en bout de rameau : coupe-les ; favorise les coccinelles et les mésanges.'},
+ {n:'Moniliose',c:['fr_prunier','fr_mirabellier','fr_cerisier','fr_griottier','fr_pecher','fr_abricotier','fr_cognassier','fr_pommier','fr_poirier'],m:[4,5,7,8,9],t:'Retire les fruits pourris et momifiés, coupe les rameaux desséchés.'},
+ {n:'Cloque du pêcher',c:['fr_pecher'],m:[3,4,5],t:'Feuilles boursouflées rouges : retire-les ; traitement au cuivre en novembre et en février.'},
+ {n:'Mouche de la cerise',c:['fr_cerisier'],m:[5,6],t:'Pièges jaunes englués dès le changement de couleur des cerises.'},
+ {n:'Drosophila suzukii',c:['fr_cerisier','fr_framboisier','fr_framboisier_r','fr_myrtillier','fr_muron','fr_vigne'],m:[6,7,8,9,10],t:'Cueille souvent et tout ce qui est mûr, retire les fruits abîmés, pièges au vinaigre de cidre.'},
+ {n:'Psylle du poirier',c:['fr_poirier'],m:[3,4,5,6],t:'Miellat collant et fumagine : argile kaolinite en préventif, laisse faire les auxiliaires.'},
+ {n:'Oïdium',c:['fr_pommier','fr_maquereau','fr_vigne'],m:[5,6,7,8],t:'Coupe les pousses blanchies ; soufre en préventif.'},
+ {n:'Mildiou de la vigne',c:['fr_vigne'],m:[6,7,8],t:'Taches huileuses après les pluies chaudes : cuivre (bouillie bordelaise) en préventif.'},
+ {n:'Balanin des noisettes',c:['fr_noisetier'],m:[6,7,8],t:'Laisse les poules sous les noisetiers, ramasse les noisettes percées.'},
+ {n:'Phytopte du cassissier',c:['fr_cassissier'],m:[1,2,3],t:'Bourgeons gonflés en boule : retire-les et brûle-les en hiver.'},
+ {n:'Tenthrède du groseillier',c:['fr_maquereau','fr_groseillier'],m:[5,6],t:'Larves vertes qui dévorent les feuilles : ramassage à la main.'},
+ {n:'Guêpes',c:['fr_vigne','fr_prunier','fr_figuier','fr_poirier'],m:[8,9],t:'Ensache les grappes et les fruits les plus exposés.'}];

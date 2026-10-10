@@ -12,6 +12,27 @@ function sampleFlowers(){const d=(m,dd,y=YEAR)=>`${y}-${String(m).padStart(2,'0'
   add('alleeo',1050,750,300,300,{name:'Allée ronde',ring:60});
   add('abri',1380,850,180,160,{name:'Abri'});
   return{v:8,kind:'fleurs',stock:[{id:'g-cos',name:'Cosmos « Sensation »',crop:'f_cosmos',cat:'graine',unit:'graines',min:0,moves:[{d:d(2,1),q:100}]}],nursery:[],rain:[],name:'Jardin de fleurs exemple',w:1600,h:1100,north:0,water:{roof:30,cap:500,level:300},frost:null,objs,example:true}}
+function sampleOrchard(){const d=(m,dd,y=YEAR)=>`${y}-${String(m).padStart(2,'0')}-${String(dd).padStart(2,'0')}`,objs=[];
+  const add=(type,x,yy,w,h,ex={})=>{const o={id:uid(),type,x,y:yy,w,h,rot:0,name:TYPES[type].l,height:TYPES[type].ht||0,locked:false,...ex};if(TYPES[type].plant){o.zones=o.zones||[];o.grown=[];o.journal=[]}objs.push(o);return o};
+  const J=(o,l)=>{o.journal=l.map(([k,dd,ex])=>({id:uid(),k,d:dd,t:'',...ex}))};
+  const tree=(c,name,x,y,w,date,jl=[])=>{const p=FRUITS.find(q=>q.id===c),o=add('fruitier',x,y,w,w,{name,height:p.ht});o.zones=[{id:uid(),crop:c,len:w,date,cells:{'0-0':date}}];o.grown=[{y:parse(date).getFullYear(),crop:c}];J(o,jl);return o};
+  const row=(name,x,y,w,h,zs,jl=[])=>{const o=add('planche',x,y,w,h,{name});o.zones=zs.map(([c,len,date])=>{const z={id:uid(),crop:c,len,date,cells:{}};fillZone(o,z,date);return z});o.grown=zs.map(([c,,date])=>({y:parse(date).getFullYear(),crop:c}));J(o,jl);return o};
+  add('haie',0,0,3000,90,{name:'Haie champêtre',locked:true});
+  add('cloture',2990,0,10,2200,{name:'Mur',height:200,locked:true});
+  tree('fr_pommier','Pommier Reinette',250,250,500,d(11,20,YEAR-8),[['traitement',d(2,20),{t:'Huile de colza, avant débourrement',dar:0}],['recolte',d(9,28),{crop:'fr_pommier',kg:32}],['recolte',d(10,12),{crop:'fr_pommier',kg:18}]]);
+  tree('fr_pommier','Pommier Boskoop',950,250,500,d(11,20,YEAR-8),[['recolte',d(10,5),{crop:'fr_pommier',kg:41}]]);
+  tree('fr_poirier','Poirier Conférence',1650,250,450,d(12,5,YEAR-6),[['recolte',d(9,15),{crop:'fr_poirier',kg:22}]]);
+  tree('fr_prunier','Prunier Reine-Claude',250,1000,500,d(2,10,YEAR-5),[['recolte',d(8,10),{crop:'fr_prunier',kg:27}]]);
+  tree('fr_cerisier','Cerisier Burlat',950,1000,500,d(11,25,YEAR-2));
+  tree('fr_noisetier','Noisetier',1650,1000,400,d(1,15,YEAR-4));
+  tree('fr_noisetier','Noisetier',2150,1000,400,d(1,15,YEAR-4));
+  tree('fr_pecher','Pêcher palissé',2600,300,350,d(3,5,YEAR-3),[['traitement',d(2,12),{t:'Cuivre contre la cloque',dar:0}]]);
+  tree('fr_figuier','Figuier',2600,900,350,d(5,10,YEAR-2));
+  row('Rang de framboisiers',250,1650,900,100,[['fr_framboisier',900,d(11,10,YEAR-3)]],[['recolte',d(7,5),{crop:'fr_framboisier',kg:4.2}],['recolte',d(7,18),{crop:'fr_framboisier',kg:3.1}]]);
+  row('Petits fruits',250,1850,900,150,[['fr_groseillier',450,d(11,10,YEAR-3)],['fr_cassissier',450,d(11,10,YEAR-3)]],[['recolte',d(7,1),{crop:'fr_groseillier',kg:6}],['recolte',d(7,12),{crop:'fr_cassissier',kg:4.5}]]);
+  add('compost',1500,1800,140,140,{name:'Compost'});
+  add('abri',2200,1750,250,200,{name:'Abri'});
+  return{v:8,kind:'verger',stock:[],nursery:[],rain:[],name:'Verger exemple',w:3000,h:2200,north:0,water:{roof:30,cap:500,level:300},frost:null,objs,example:true}}
 function sample(){
   const d=(m,dd,y=YEAR)=>`${y}-${String(m).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
   const objs=[];

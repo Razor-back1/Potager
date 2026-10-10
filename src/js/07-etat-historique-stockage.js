@@ -52,7 +52,7 @@ const homeOf=o=>{const s=serreOf(o);return s?s.inner:S};
 const fullName=o=>{const s=serreOf(o);return s?s.name+' › '+o.name:o.name};
 const obj=id=>allObjs().find(o=>o.id===id);
 /* hors mode édition, seuls ces objets se sélectionnent ; le reste laisse glisser la carte */
-const PICKABLE=new Set(['planche','bac','serre','abri']);
+const PICKABLE=new Set(['planche','bac','serre','abri','fruitier']);
 const plantables=()=>allObjs().filter(o=>TYPES[o.type]&&TYPES[o.type].plant);
 /* blocs : des objets qui bougent et tournent ensemble (série de planches et ses allées) */
 const grpOf=o=>o&&o.grp?G().objs.filter(q=>q.grp===o.grp):null;

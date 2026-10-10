@@ -80,21 +80,26 @@ const FL_PESTS=[
  {n:'Thrips',c:['f_glaieul'],m:[7,8],t:'Feuilles argentées : traite les bulbes avant de les stocker.'}];
 
 let PLANTS=VEG_PLANTS;
-const ALL_PLANTS=[...VEG_PLANTS,...FLOWERS];
+const ALL_PLANTS=[...VEG_PLANTS,...FLOWERS,...FRUITS];
 /* BASE : les fiches d'origine. P : les fiches du jardin ouvert (valeurs modifiées + variétés).
    Une variété (id « v_… ») hérite de sa culture de base (champ base) : icône, famille, voisins, ravageurs. */
 const BASE=Object.fromEntries(ALL_PLANTS.map(p=>[p.id,p]));
 const P={...BASE};
 const bid=id=>(P[id]&&P[id].base)||id;
 const FLW=()=>{try{return!!S&&S.kind==='fleurs'}catch(e){return false}};
+const VRG=()=>{try{return!!S&&S.kind==='verger'}catch(e){return false}};
+const KIND=()=>FLW()?'fleurs':VRG()?'verger':'potager';
+const kindOf=p=>p.hv?'verger':p.fl?'fleurs':'potager';
+const CATALOG={potager:VEG_PLANTS,fleurs:FLOWERS,verger:FRUITS};
 /* le catalogue suit le type du jardin ouvert : potager ou fleurs */
-function setCatalog(){const f=FLW();let ed={},vs=[];try{ed=S.cropEdits||{};vs=S.varieties||[]}catch(e){}
+function setCatalog(){const f=FLW(),K=KIND();let ed={},vs=[];try{ed=S.cropEdits||{};vs=S.varieties||[]}catch(e){}
   for(const k in P)if(!BASE[k])delete P[k];
   for(const k in BASE)P[k]=ed[k]&&Object.keys(ed[k]).length?{...BASE[k],...ed[k],edited:true}:BASE[k];
-  const mine=vs.filter(v=>BASE[v.base]&&!!BASE[v.base].fl===f);
+  const mine=vs.filter(v=>BASE[v.base]&&kindOf(BASE[v.base])===K);
   mine.forEach(v=>{P[v.id]={...P[v.base],edited:false,...v,variety:true}});
-  PLANTS=(f?FLOWERS:VEG_PLANTS).flatMap(p=>[P[p.id],...mine.filter(v=>v.base===p.id).map(v=>P[v.id])]);JT.recolte=f?'Coupe':'Récolte';
-  try{const h=document.querySelector('.tabs [data-tab="harvest"]'),c=document.querySelector('.tabs [data-tab="crops"]');if(h)h.lastChild.textContent=f?'Floraisons':'Récoltes';if(c)c.lastChild.textContent=f?'Fleurs':'Cultures'}catch(e){}}
+  for(const k in P)if(P[k].hv&&P[k].y&&P[k].j!==Math.round(P[k].y*365))P[k]={...P[k],j:Math.round(P[k].y*365)};
+  PLANTS=CATALOG[K].flatMap(p=>[P[p.id],...mine.filter(v=>v.base===p.id).map(v=>P[v.id])]);JT.recolte=f?'Coupe':'Récolte';
+  try{const h=document.querySelector('.tabs [data-tab="harvest"]'),c=document.querySelector('.tabs [data-tab="crops"]');if(h)h.lastChild.textContent=f?'Floraisons':'Récoltes';if(c)c.lastChild.textContent=f?'Fleurs':K==='verger'?'Fruitiers':'Cultures'}catch(e){}}
 /* date de la première floraison : après le délai j, au premier mois de floraison */
 function bloomStart(d,p){let t=addD(d,p.j||60);for(let i=0;i<14;i++){if(p.fl.includes(t.getMonth()+1))return t;t=new Date(t.getFullYear(),t.getMonth()+1,1,12)}return addD(d,p.j||60)}
 function bloomEndMonth(p,mo){let m=mo;for(let i=0;i<12&&p.fl.includes(m%12+1);i++)m=m%12+1;return m}
@@ -130,6 +135,7 @@ const LAT=50.55*Math.PI/180;
 
 const TYPES={
  planche:{l:'Planche de culture',w:90,h:500,plant:true,ht:0},
+ fruitier:{l:'Arbre fruitier',w:400,h:400,round:true,plant:true,ht:400},
  bac:{l:'Bac de culture',w:100,h:200,plant:true,ht:40},
  serre:{l:'Serre',w:300,h:500,ht:250},
  allee:{l:'Allée',w:70,h:500},

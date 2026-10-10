@@ -1,7 +1,7 @@
 /* ================= Récoltes ================= */
 function plantings(){const out=[];plantables().forEach(o=>{const bu=blockUntil(o);o.zones.forEach((z,zi)=>{const p=P[z.crop];if(!p)return;const g=zoneGrid(o,z),by={};
   for(const k in z.cells)(by[z.cells[k]]=by[z.cells[k]]||[]).push(k);
-  for(const d in by){const hv=p.fl?bloomStart(d,p):addD(d,p.j);out.push({o,z,zi,p,d,n:by[d].length*g.per,hv,bu,left:days(TODAY,hv),prog:clamp(days(parse(d),TODAY)/Math.max(1,p.fl?days(parse(d),hv):p.j),0,1)})}})});
+  for(const d in by){const hv=p.hv?fruitNext(d,p):p.fl?bloomStart(d,p):addD(d,p.j);out.push({o,z,zi,p,d,n:by[d].length*g.per,hv,bu,left:days(TODAY,hv),prog:clamp(days(parse(d),TODAY)/Math.max(1,p.fl||p.hv?days(parse(d),hv):p.j),0,1)})}})});
   return out.sort((a,b)=>a.hv-b.hv)}
 function hvRow(x){const due=x.bu&&x.left<=0?`<span class="due blocked">bloquée<br>→ ${fdate(x.bu)}</span>`:`<span class="due ${x.left<=0?'ready':''}">${x.left<=0?(x.left<-14?'prête depuis<br>'+(-x.left)+' j':'prête'):'dans<br>'+x.left+' j'}</span>`;
   return`<button class="hv" data-open="${x.o.id}" data-zi="${x.zi}">${ring(x.prog,x.p.id,x.left<=0&&!x.bu)}<span style="min-width:0"><span class="t">${x.p.n}</span> <span class="s">· ${esc(fullName(x.o))} · ≈ ${x.n} plant${x.n>1?'s':''}</span>

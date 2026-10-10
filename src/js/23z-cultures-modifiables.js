@@ -43,7 +43,10 @@ function renderC(){if(!cs)return;const el=$('#csheet'),p=P[cs.id];if(!p)return c
   if(cs.mode==='edit'||cs.mode==='variety'){const nv=cs.mode==='variety',si=succOf(cs.id),b=SUCC_INFO[bid(cs.id)];
     h+=head(nv?'Nouvelle variété de '+esc(P[bid(cs.id)].n.toLowerCase()):'Modifier : '+esc(p.n));
     if(nv||p.variety)h+=`<label class="field"><span class="lbl">Nom de la variété</span><input id="ce-n" value="${nv?'':esc(p.n)}" placeholder="ex. ${esc(P[bid(cs.id)].n)} cerise" autocomplete="off"></label>`;
-    h+=`<div class="grid2">${p.fl?'':nField('ce-rang','Entre les rangs',p.rang,5,300,1,'cm')}${nField('ce-pl',p.fl?'Espacement':'Sur le rang',p.pl,1,300,1,'cm')}${nField('ce-j',p.fl?'Jours jusqu\'à la floraison':'Jours jusqu\'à la récolte',p.j,10,400,1,'j')}</div>
+    if(p.hv)h+=`<div class="grid2">${nField('ce-pl','Distance de plantation',p.pl,20,2000,10,'cm')}${nField('ce-ht','Hauteur adulte',p.ht,30,3000,10,'cm')}${nField('ce-y','1re récolte après',p.y,1,15,1,'ans')}${nField('ce-kg','Récolte adulte',p.kg,.1,500,.1,'kg')}${nField('ce-gel','Fleurs abîmées sous',p.gel,-15,5,.5,'°C')}
+      <label class="field"><span class="lbl">Pollinisation</span><select id="ce-poll">${Object.entries({auto:'Autofertile',partiel:'Partiellement autofertile',croise:'Il faut une 2e variété',dioique:'Pieds mâle et femelle'}).map(([k,l])=>`<option value="${k}" ${p.poll===k?'selected':''}>${l}</option>`).join('')}</select></label></div>
+      <div><span class="lbl">Plantation</span>${monthPick('m',p.m)}</div><div><span class="lbl">Floraison</span>${monthPick('flo',p.flo)}</div><div><span class="lbl">Récolte</span>${monthPick('hv',p.hv)}</div>`;
+    else h+=`<div class="grid2">${p.fl?'':nField('ce-rang','Entre les rangs',p.rang,5,300,1,'cm')}${nField('ce-pl',p.fl?'Espacement':'Sur le rang',p.pl,1,300,1,'cm')}${nField('ce-j',p.fl?'Jours jusqu\'à la floraison':'Jours jusqu\'à la récolte',p.j,10,400,1,'j')}</div>
     <div><span class="lbl">${p.t==='bulbe'||p.t==='tubercule'?'Plantation des bulbes':'Semis direct ou plantation en place'}</span>${monthPick('m',p.m)}</div>
     <div><span class="lbl">Semis en godets (à l'abri)</span>${monthPick('sg',p.sg||[])}</div>`;
     if(si)h+=`<div class="grid2">${nField('ce-succ','Ressemer tous les',si.int,7,60,1,'j')}${nField('ce-yld','Récolte par plant',si.y,.001,100,b.u==='kg'?.01:1,b.u)}</div>
@@ -51,7 +54,7 @@ function renderC(){if(!cs)return;const el=$('#csheet'),p=P[cs.id];if(!p)return c
     h+=`<div class="row"><button class="btn primary" data-c="save">${nv?'Créer la variété':'Enregistrer'}</button>
       ${!nv&&p.edited&&!p.variety?'<button class="btn" data-c="reset">Valeurs d\'origine</button>':''}
       ${!nv&&p.variety?'<button class="btn danger" data-c="delvar">Supprimer la variété</button>':''}</div>
-      ${!nv&&!p.variety?`<p class="note">Valeurs d'origine : ${p.fl?'':'rangs '+BASE[cs.id].rang+' cm · '}${p.fl?'espacement':'plants'} ${BASE[cs.id].pl} cm · ${BASE[cs.id].j} j. Les changements valent pour « ${esc(S.name)} » et se synchronisent avec tes autres appareils.</p>`:''}`;
+      ${!nv&&!p.variety?`<p class="note">Valeurs d'origine : ${p.hv?`distance ${BASE[cs.id].pl} cm · 1re récolte ${BASE[cs.id].y} ans · ${BASE[cs.id].kg} kg`:`${p.fl?'':'rangs '+BASE[cs.id].rang+' cm · '}${p.fl?'espacement':'plants'} ${BASE[cs.id].pl} cm · ${BASE[cs.id].j} j`}. Les changements valent pour « ${esc(S.name)} » et se synchronisent avec tes autres appareils.</p>`:''}`;
   }else if(cs.mode==='goal'){const si=succOf(cs.id),g=(S.goals||{})[cs.id]||{w:'',from:iso(TODAY)};
     h+=head('Objectif de récolte : '+esc(p.n.toLowerCase()));
     h+=`<p class="note" style="color:var(--ink)">Dis combien tu veux récolter par semaine : l'app calcule quand semer et combien.</p>
@@ -68,23 +71,23 @@ function goalPlanHTML(id,g){if(!(g.w>0))return'<p class="note">Indique une quant
   <div class="glist">${pg.list.slice(0,8).map(s=>`<div class="grow"><span><b>${fdate(s.d)}</b> · ${s.qty} plants ${s.how}<span class="note" style="display:block">${pg.p.fl?'floraison':'récolte'} du ${fdate(s.hv0)} au ${fdate(s.hv1)}</span></span></div>`).join('')}</div>`}
 function readMonths(k){return[...$('#csheet').querySelectorAll(`[data-mk="${k}"] button[aria-pressed="true"]`)].map(b=>+b.dataset.m)}
 function readCropForm(p){const v=id=>{const e=$('#'+id);return e?+String(e.value).replace(',','.'):null},out={};
-  const lim={rang:[5,300],pl:[1,300],j:[10,400],succ:[7,60],yld:[.001,100]};
-  for(const[k,id]of[['rang','ce-rang'],['pl','ce-pl'],['j','ce-j'],['succ','ce-succ'],['yld','ce-yld']]){const x=v(id);if(x==null||!isFinite(x)||x<=0)continue;out[k]=k==='yld'?clamp(x,...lim[k]):Math.round(clamp(x,...lim[k]))}
-  out.m=readMonths('m');out.sg=readMonths('sg');return out}
+  const lim={rang:[5,300],pl:[1,2000],j:[10,400],succ:[7,60],yld:[.001,100],ht:[30,3000],y:[1,15],kg:[.1,500],gel:[-15,5]},dec=new Set(['yld','kg','gel']);
+  for(const[k,id]of[['rang','ce-rang'],['pl','ce-pl'],['j','ce-j'],['succ','ce-succ'],['yld','ce-yld'],['ht','ce-ht'],['y','ce-y'],['kg','ce-kg'],['gel','ce-gel']]){const x=v(id);if(x==null||!isFinite(x)||(x<=0&&k!=='gel'))continue;out[k]=dec.has(k)?Math.round(clamp(x,...lim[k])*100)/100:Math.round(clamp(x,...lim[k]))}
+  out.m=readMonths('m');if(p.hv){out.flo=readMonths('flo');out.hv=readMonths('hv');out.poll=$('#ce-poll').value}else out.sg=readMonths('sg');return out}
 $('#cback').onclick=closeC;
 $('#csheet').addEventListener('click',e=>{const mb=e.target.closest('.mpick button');if(mb){mb.setAttribute('aria-pressed',mb.getAttribute('aria-pressed')!=='true');return}
   const b=e.target.closest('[data-c]');if(!b||!cs)return;const a=b.dataset.c,id=cs.id,p=P[id];
   if(a==='close')return closeC();
   if(a==='toedit'){cs={mode:'edit',id};return renderC()}
-  if(a==='save'){const f=readCropForm(p);if(!f.m.length&&!f.sg.length)return toast('Choisis au moins un mois de semis');
+  if(a==='save'){const f=readCropForm(p);if(p.hv?!f.m.length:!f.m.length&&!f.sg.length)return toast(p.hv?'Choisis au moins un mois de plantation':'Choisis au moins un mois de semis');if(p.hv&&!f.hv.length)return toast('Choisis au moins un mois de récolte');
     const base=BASE[bid(id)],si=SUCC_INFO[bid(id)];
     if(cs.mode==='variety'||p.variety){const n=($('#ce-n').value||'').trim();if(!n)return toast('Donne un nom à la variété');
       const vals={n:n.slice(0,40),...f};if(!si){delete vals.succ;delete vals.yld}
       S.varieties=S.varieties||[];
       if(cs.mode==='variety'){const v={id:'v_'+uid(),base:bid(id),...vals};S.varieties.push(v);save();setCatalog();closeC();refresh();return toast('Variété « '+v.n+' » créée',true)}
       Object.assign(S.varieties.find(v=>v.id===id),vals);save();setCatalog();closeC();refresh();return toast('Variété enregistrée',true)}
-    const diff={};for(const k of['rang','pl','j'])if(f[k]!=null&&f[k]!==base[k])diff[k]=f[k];
-    for(const k of['m','sg'])if(JSON.stringify([...f[k]].sort((x,y)=>x-y))!==JSON.stringify([...(base[k]||[])].sort((x,y)=>x-y)))diff[k]=f[k];
+    const diff={};for(const k of['rang','pl','j','ht','y','kg','gel','poll'])if(f[k]!=null&&f[k]!==base[k])diff[k]=f[k];
+    for(const k of['m','sg','flo','hv'])if(f[k]&&JSON.stringify([...f[k]].sort((x,y)=>x-y))!==JSON.stringify([...(base[k]||[])].sort((x,y)=>x-y)))diff[k]=f[k];
     if(si){if(f.succ!=null&&f.succ!==si.int)diff.succ=f.succ;if(f.yld!=null&&Math.abs(f.yld-si.y)>1e-9)diff.yld=f.yld}
     S.cropEdits=S.cropEdits||{};if(Object.keys(diff).length)S.cropEdits[id]=diff;else delete S.cropEdits[id];
     save();setCatalog();closeC();refresh();return toast(Object.keys(diff).length?p.n+' : valeurs enregistrées':p.n+' : valeurs d\'origine',true)}

@@ -237,3 +237,94 @@ test('objectif de récolte : 3 salades par semaine → quand et combien semer', 
   assert.deepEqual(erreurs, []);
   await ctx.close();
 });
+
+const verger = async (opts) => {
+  const r = await ouvrir(opts);
+  await r.page.click('#menuBtn');
+  await r.page.click('[data-act="gnewexvg"]');
+  return r;
+};
+
+for (const style of ['classic', 'glass']) {
+  test(`verger (${style}) : chaque onglet s'affiche sans erreur`, async () => {
+    const { ctx, page, erreurs } = await verger({ style });
+    assert.equal(await page.evaluate(() => VRG()), true);
+    assert.ok(await page.evaluate(() => PLANTS.length > 15 && PLANTS.every(p => p.hv)));
+    for (const t of ONGLETS) {
+      await page.click(`.tabs [data-tab="${t}"]`);
+      assert.ok(await page.evaluate(t => document.querySelector('#v-' + t).innerHTML.length, t) > 50, t);
+    }
+    assert.equal(await page.textContent('.tabs [data-tab="crops"]'), 'Fruitiers');
+    assert.match(await page.textContent('#v-crops'), /Dans ton verger/);
+    assert.deepEqual(erreurs, []);
+    await ctx.close();
+  });
+}
+
+test('fruitier : récolte chaque année, pas avant la mise à fruit, pollinisation', async () => {
+  const { ctx, page, erreurs } = await verger({ date: '2026-10-10T10:00:00' });
+  const r = await page.evaluate(() => {
+    const t = trees(), by = n => t.find(x => x.o.name === n);
+    const pom = by('Pommier Reinette'), cer = by('Cerisier Burlat');
+    return { pom: pom.left, cerAn: cer.hv.getFullYear(), cerMois: cer.hv.getMonth() + 1, cerPlant: parse(cer.d).getFullYear(),
+      poll: pollIssues().map(q => q.p.id).sort(), n: t.length };
+  });
+  assert.ok(r.pom <= 0, 'le pommier devrait être en récolte en octobre');
+  assert.ok(r.cerAn >= r.cerPlant + 5 && [6, 7].includes(r.cerMois), `cerisier : ${r.cerMois}/${r.cerAn}`);
+  assert.deepEqual(r.poll, ['fr_cerisier', 'fr_poirier'], 'seuls le poirier et le cerisier manquent de partenaire');
+  await page.click('.tabs [data-tab="today"]');
+  const txt = await page.textContent('#v-today');
+  assert.match(txt, /Pollinisation/); assert.match(txt, /en récolte/); assert.match(txt, /Travaux du mois/);
+  assert.deepEqual(erreurs, []);
+  await ctx.close();
+});
+
+test('gel annoncé en pleine floraison : alerte sur les fleurs', async () => {
+  const { ctx, page, erreurs } = await verger({ date: '2027-04-15T10:00:00' });
+  await page.click('.tabs [data-tab="today"]');
+  await page.evaluate(() => { wx = { cur: { t: 9, code: 0, isDay: true }, night: -3, now: null, fc: null, hours: [] }; renderToday() });
+  const txt = await page.textContent('#v-today');
+  assert.match(txt, /Gel sur les fleurs/);
+  assert.match(txt, /pommier/);
+  const plan = await page.evaluate(() => notifPlan().frost.map(f => f.crop));
+  assert.ok(plan.some(c => /en fleur/.test(c)), 'le relais doit recevoir les arbres en fleur pour l\'alerte gel');
+  assert.deepEqual(erreurs, []);
+  await ctx.close();
+});
+
+test('planter un arbre fruitier sur le plan et modifier son espèce', async () => {
+  const { ctx, page, erreurs } = await verger();
+  await page.click('.tabs [data-tab="plan"]');
+  if (await page.isVisible('#sheet [data-act="close"]')) await page.click('#sheet [data-act="close"]');
+  await page.click('#editBtn'); await page.click('#addBtn');
+  await page.click('[data-act="add"][data-type="fruitier"]');
+  const id = await page.evaluate(() => selId);
+  if (await page.isVisible('#sheet [data-act="close"]')) await page.click('#sheet [data-act="close"]');
+  await page.click('#doneBtn');
+  /* toucher l'arbre sur le plan ouvre sa fiche */
+  const box = await page.locator(`#map [data-id="${id}"]`).boundingBox();
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await page.waitForSelector('[data-fr="set"]');
+  await page.click('[data-fr="set"][data-crop="fr_abricotier"]');
+  const o = await page.evaluate(id => { const o = obj(id); return { n: o.name, c: o.zones[0].crop, h: o.height, pl: plantings().filter(x => x.o === o).length } }, id);
+  assert.deepEqual(o, { n: 'Abricotier', c: 'fr_abricotier', h: 400, pl: 1 });
+  await page.fill('#fr-date', '2020-03-01'); await page.dispatchEvent('#fr-date', 'change');
+  assert.ok(await page.evaluate(id => trees().find(x => x.o.id === id).hv.getFullYear() >= 2020 + 4, id));
+  await page.click('[data-act="openbed"]');
+  assert.deepEqual(erreurs, []);
+  await ctx.close();
+});
+
+test('fruitier modifiable : variété tardive et mise à fruit', async () => {
+  const { ctx, page, erreurs } = await verger();
+  await page.click('.tabs [data-tab="crops"]');
+  await page.click('[data-cact="variety"][data-crop="fr_pommier"]');
+  await page.fill('#ce-n', 'Pommier Reinette grise');
+  await page.click('[data-mk="hv"] [data-m="8"]');   /* plus de récolte en août */
+  await page.fill('#ce-y', '6');
+  await page.click('[data-c="save"]');
+  const v = await page.evaluate(() => { const v = S.varieties[0]; return { hv: P[v.id].hv, y: P[v.id].y, j: P[v.id].j, ico: ci(v.id) } });
+  assert.deepEqual(v.hv, [9, 10]); assert.equal(v.y, 6); assert.equal(v.j, 2190); assert.match(v.ico, /#ci-fr_pommier/);
+  assert.deepEqual(erreurs, []);
+  await ctx.close();
+});
