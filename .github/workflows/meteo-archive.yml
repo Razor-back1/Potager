@@ -1,0 +1,51 @@
+name: Archive météo
+
+# Chaque nuit, enregistre la journée terminée de la station dans meteo/data.
+# Le premier passage rattrape aussi les 400 derniers jours (environ 15 minutes).
+on:
+  schedule:
+    - cron: '35 1 * * *'    # 03 h 35 l'été, 02 h 35 l'hiver à Bruxelles
+    - cron: '35 11 * * *'   # second passage de secours en journée
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/scripts/meteo-archive.mjs'
+      - '.github/workflows/meteo-archive.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: meteo-archive
+  cancel-in-progress: false
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Lire et archiver les mesures
+        run: node .github/scripts/meteo-archive.mjs
+        env:
+          WU_STATION: IGHEZE29
+          WU_KEY: ${{ secrets.WU_KEY }}
+
+      - name: Enregistrer dans le dépôt
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add meteo/data
+          if git diff --cached --quiet; then echo "Rien de nouveau."; exit 0; fi
+          git commit -q -m "Archive météo $(date -u +%F)"
+          for i in 1 2 3 4 5; do
+            git pull -q --rebase origin main && git push -q origin HEAD:main && exit 0
+            sleep $((i * 5))
+          done
+          exit 1
