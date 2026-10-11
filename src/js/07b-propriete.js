@@ -40,9 +40,6 @@ function ensureProperty(){fillKinds();const g=GL.get();if(g.list.some(x=>x.id===
   try{localStorage.setItem(keyOf(PROP_ID),JSON.stringify(st));localStorage.setItem(keyAtOf(PROP_ID),'1')}catch(e){return}   /* daté « très ancien » : une propriété déjà synchronisée ailleurs l'emporte */
   g.list.unshift({id:PROP_ID,name:st.name,k:'propriete'});GL.set(g)}
 ensureProperty();
-/* au démarrage, ouvrir directement la propriété si c'est l'onglet retenu */
-if(TOP==='prop'&&GID!==PROP_ID&&GL.get().list.some(x=>x.id===PROP_ID)){persist();GID=PROP_ID;const g0=GL.get();g0.cur=GID;GL.set(g0);
-  try{localAt=+localStorage.getItem(keyAtOf(GID))||0}catch(e){localAt=0}S=load()||emptyGarden('Ma propriété','propriete');lastJSON=JSON.stringify(S);loadUndo()}
 
 const propState=()=>gState(PROP_ID);
 /* parcelles posées sur la propriété (les jardins supprimés disparaissent du plan) */
@@ -80,21 +77,21 @@ function propSVG(W){const tp=terrainPts();let x0=Infinity,y0=Infinity,x1=-Infini
 /* ---- navigation : Plan · Potager · Fleurs · Verger · Eau ---- */
 const LASTKEY='atelier-potager-last';
 const lastOf=k=>{try{return(JSON.parse(localStorage.getItem(LASTKEY))||{})[k]}catch(e){return null}};
-const setLast=(k,id)=>{try{const v=JSON.parse(localStorage.getItem(LASTKEY))||{};v[k]=id;localStorage.setItem(LASTKEY,JSON.stringify(v))}catch(e){}};
+const setLast=(k,id)=>{try{const v=JSON.parse(localStorage.getItem(LASTKEY))||{};v[k]=id;if(KINDS.includes(k))v.kind=k;localStorage.setItem(LASTKEY,JSON.stringify(v))}catch(e){}};
 function pickGarden(k){const gs=gardensOf(k);if(!gs.length)return null;const l=lastOf(k);if(l&&gs.some(g=>g.id===l))return l;
   const placed=parcels().map(o=>o.gid);return(gs.find(g=>placed.includes(g.id))||gs.find(g=>!g.ex)||gs[0]).id}
 function setTop(k){if(!['prop','eau',...KINDS].includes(k))k='prop';TOP=k;saveNav();
-  if(k==='prop'){if(GID!==PROP_ID)switchGarden(PROP_ID);syncParcels();return setTab(SUB.prop==='plan'?'plan':'prop')}
+  if(k==='prop'){if(GID!==PROP_ID)switchGarden(PROP_ID);syncParcels();return setTab('prop')}
   if(k==='eau'){if(PROP()){const id=lastOf('eau')||pickGarden('potager')||pickGarden('fleurs')||pickGarden('verger');if(id&&GL.get().list.some(x=>x.id===id))switchGarden(id)}return setTab('weather')}
   if(PROP()||KIND()!==k){const id=pickGarden(k);if(!id){if(!PROP())switchGarden(PROP_ID);TOP=k;return setTab('empty')}switchGarden(id)}
-  setLast(k,GID);setTab(SUB[k]&&SUB[k]!=='prop'?SUB[k]:'today')}
+  setLast(k,GID);setTab('today')}
 /* garde l'onglet du bas cohérent avec le jardin ouvert (après une synchro, un import, le menu…) */
 function syncTop(){if(tab==='empty')return;if(tab==='weather'){TOP='eau';return}
   if(PROP()){if(TOP!=='prop')TOP='prop'}else if(TOP==='prop'||(TOP!=='eau'&&TOP!==KIND()))TOP=KIND()}
 const SEGS={prop:[['prop',"Vue d'ensemble"],['plan','Plan']]};
 function renderTopNav(){syncTop();saveNav();
   document.querySelectorAll('.tabs [data-top]').forEach(b=>{if(b.dataset.top===TOP)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
-    const k=b.dataset.top,bd=b.querySelector('.tbadge');if(!bd)return;let n=0;if(KINDS.includes(k))try{n=parcels().filter(o=>gKind(o.gid)===k).reduce((s,o)=>s+(statOf(o.gid).n||0),0)}catch(e){}
+    const k=b.dataset.top,bd=b.querySelector('.tbadge');if(KINDS.includes(k))b.hidden=!gardensOf(k).length&&TOP!==k;if(!bd)return;let n=0;if(KINDS.includes(k))try{n=parcels().filter(o=>gKind(o.gid)===k).reduce((s,o)=>s+(statOf(o.gid).n||0),0)}catch(e){}
     bd.textContent=n>9?'9+':n;bd.hidden=!n});
   const el=$('#subnav');if(!el)return;let h='';
   const chips=list=>list.length>1?`<div class="pchips">${list.map(g=>{const k=gKind(g.id),on=g.id===GID;return`<button class="pchip${on?' on':''}" data-g="${g.id}"${on?' aria-current="true"':''}><i style="background:${KCOL[k]||'var(--muted)'}"></i>${esc(g.id===GID?S.name:g.name||KLBL[k])}${g.ex?' <span class="note">exemple</span>':''}</button>`}).join('')}</div>`:'';
@@ -155,3 +152,9 @@ function parcelSheet(o){const st=gState(o.gid),k=st?(st.kind||'potager'):'potage
   <div class="row"><button class="btn primary" data-act="popen">Ouvrir</button><button class="btn" data-act="popenplan">Plan de la parcelle</button></div>
   <p class="note">La taille et la forme se changent dans le plan de la parcelle (crayon, puis « Forme du terrain »).</p>
   <button class="linkbtn" data-act="toedit">Déplacer ou tourner sur la propriété</button></div>`}
+
+/* au démarrage : « Aujourd'hui » du dernier type de jardin ouvert (potager, fleurs ou verger), la propriété seulement s'il n'y a aucun jardin */
+function rawOpen(id){if(id===GID)return;persist();GID=id;const g0=GL.get();g0.cur=GID;GL.set(g0);
+  try{localAt=+localStorage.getItem(keyAtOf(GID))||0}catch(e){localAt=0}S=load()||(id===PROP_ID?emptyGarden('Ma propriété','propriete'):sample());lastJSON=JSON.stringify(S);loadUndo()}
+{const k=[TOP,lastOf('kind'),...KINDS].find(k=>KINDS.includes(k)&&gardensOf(k).length);TOP=k||'prop';
+  if(TOP==='prop'){if(GL.get().list.some(x=>x.id===PROP_ID))rawOpen(PROP_ID)}else{const id=pickGarden(TOP);if(id)rawOpen(id)}}

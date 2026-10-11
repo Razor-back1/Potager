@@ -65,8 +65,8 @@ export async function appareil(nav, adresse, { style = 'classic', modele = 'iPho
   page.on('pageerror', e => erreurs.push(e.message));
   await page.goto(adresse);
   await page.waitForFunction(() => window.APP_PRETE === true);
-  /* l'app s'ouvre sur la propriété ; la plupart des tests travaillent dans le potager */
-  if (debut && debut !== 'prop') await page.click(`.tabs [data-top="${debut}"]`);
+  /* l'app s'ouvre sur « Aujourd'hui » du potager ; debut: 'prop' passe sur la propriété */
+  if (debut) await page.click(`.tabs [data-top="${debut}"]`);
   return { ctx, page, erreurs };
 }
 

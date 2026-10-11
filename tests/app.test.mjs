@@ -520,10 +520,14 @@ test('mise à jour : la propriété est créée, les vrais jardins posés dessus
     const ex = sampleOrchard(); localStorage.clear(); localStorage.setItem(keyOf('main'), JSON.stringify(st)); localStorage.setItem(keyOf('vx'), JSON.stringify(ex));
     localStorage.setItem('atelier-potager-list', JSON.stringify({ cur: 'main', list: [{ id: 'main', name: 'Mon potager' }, { id: 'vx', name: ex.name, ex: true }] })) });
   await page.reload(); await page.waitForFunction(() => window.APP_PRETE === true);
-  const r = await page.evaluate(() => ({ top: TOP, gid: GID, kind: S.kind, ids: GL.get().list.map(x => x.id + ':' + x.k), parc: S.objs.filter(o => o.type === 'parcelle').map(o => [o.gid, o.w, o.h, o.rot]) }));
-  assert.equal(r.top, 'prop'); assert.equal(r.gid, 'prop'); assert.equal(r.kind, 'propriete');
+  const r = await page.evaluate(() => ({ top: TOP, gid: GID, ids: GL.get().list.map(x => x.id + ':' + x.k) }));
+  assert.equal(r.top, 'potager', 'l\'app s\'ouvre sur Aujourd\'hui du potager'); assert.equal(r.gid, 'main');
   assert.deepEqual(r.ids, ['prop:propriete', 'main:potager', 'vx:verger']);
-  assert.deepEqual(r.parc, [['main', 1400, 900, 340]], 'seul le vrai potager est posé, tourné pour que son nord suive celui de la propriété');
+  assert.equal(await page.evaluate(() => tab), 'today');
+  await page.click('.tabs [data-top="prop"]');
+  assert.deepEqual(await page.evaluate(() => S.objs.filter(o => o.type === 'parcelle').map(o => [o.gid, o.w, o.h, o.rot])), [['main', 1400, 900, 340]], 'seul le vrai potager est posé, tourné pour que son nord suive celui de la propriété');
+  assert.equal(await page.isVisible('.tabs [data-top="fleurs"]'), false, 'pas de jardin de fleurs : pas d\'onglet Fleurs');
+  assert.equal(await page.isVisible('.tabs [data-top="verger"]'), true);
   const txt = await page.textContent('#v-prop');
   assert.match(txt, /Mon potager/); assert.match(txt, /Pas sur le plan/); assert.match(txt, /exemple/);
   /* toucher la parcelle ouvre le potager */
@@ -543,14 +547,12 @@ test('mise à jour : la propriété est créée, les vrais jardins posés dessus
   await ctx.close();
 });
 
-test('propriété : ajouter un verger, il est posé et a son onglet ; onglet vide sans jardin', async () => {
+test('propriété : ajouter un verger, il est posé et son onglet apparaît', async () => {
   const { ctx, page, erreurs } = await ouvrir({ debut: 'prop' });
-  await page.click('.tabs [data-top="fleurs"]');
-  assert.equal(await page.evaluate(() => tab), 'empty');
-  assert.match(await page.textContent('#v-empty'), /Pas encore de jardin de fleurs/);
-  assert.equal(await page.evaluate(() => S.name), 'Ma propriété', 'l\'en-tête ne montre pas un autre jardin');
-  await page.click('.tabs [data-top="prop"]');
+  assert.equal(await page.isVisible('.tabs [data-top="fleurs"]'), false);
+  assert.equal(await page.isVisible('.tabs [data-top="verger"]'), false);
   await page.click('#v-prop [data-pnew="verger"]');
+  assert.equal(await page.isVisible('.tabs [data-top="verger"]'), true, 'le verger créé fait apparaître son onglet');
   const r = await page.evaluate(() => { const o = S.objs.find(q => q.id === selId); return { tab, edit: editMode, type: o && o.type, k: o && gKind(o.gid), n: parcels().length } });
   assert.deepEqual(r, { tab: 'plan', edit: true, type: 'parcelle', k: 'verger', n: 2 });
   /* la taille d'une parcelle ne se change pas depuis la propriété : pas de poignée */
@@ -638,6 +640,19 @@ test('ébauche collée : contour, maison, étang, arbres posés ; la même captu
   await (await choix).setFiles({ name: 'capture.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') });
   await page.waitForFunction(() => bgOf() && tab === 'plan');
   assert.deepEqual(await page.evaluate(() => [BG.x, BG.y, BG.w, BG.h, sheetMode]), [-1250, -1000, 10000, 7500, null]);
+  assert.deepEqual(erreurs, []);
+  await ctx.close();
+});
+
+test('changer d\'onglet revient sur Aujourd\'hui, et l\'app redémarre sur Aujourd\'hui', async () => {
+  const { ctx, page, erreurs } = await ouvrir();
+  await onglet(page, 'crops');
+  await page.click('.tabs [data-top="prop"]');
+  await page.click('.tabs [data-top="potager"]');
+  assert.equal(await page.evaluate(() => tab), 'today');
+  await page.click('.tabs [data-top="prop"]');
+  await page.reload(); await page.waitForFunction(() => window.APP_PRETE === true);
+  assert.deepEqual(await page.evaluate(() => [TOP, tab]), ['potager', 'today']);
   assert.deepEqual(erreurs, []);
   await ctx.close();
 });
