@@ -465,10 +465,12 @@ test('terrain incliné : grille, aimantation et nouveaux objets suivent le terra
   assert.equal(await page.evaluate(id => obj(id).rot, id), 23);
   if (await page.isVisible('#sheet [data-act="close"]')) await page.click('#sheet [data-act="close"]');
   /* déplacé à la main : son centre tombe sur la grille du terrain (pas de 5 cm dans le repère incliné) */
+  /* seul sur le terrain : rien d'autre pour le caler, on vérifie la grille */
+  await page.evaluate(id => { S.objs = S.objs.filter(o => o.id === id); const o = obj(id); view.z = 1.5; view.cx = o.x + o.w / 2; view.cy = o.y + o.h / 2 + 150; renderPlan() }, id);   /* zoomé : le calage n'agit qu'à quelques cm */
   const avantXY = await page.evaluate(id => [obj(id).x, obj(id).y], id);
   const b = await page.locator(`#map [data-id="${id}"]`).boundingBox();
   await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down(); await page.waitForTimeout(450);
-  await page.mouse.move(b.x + b.width / 2 + 37, b.y + b.height / 2 + 23, { steps: 8 }); await page.mouse.up();
+  await page.mouse.move(b.x + b.width / 2 + 47, b.y + b.height / 2 + 31, { steps: 8 }); await page.mouse.up();
   assert.notDeepEqual(await page.evaluate(id => [obj(id).x, obj(id).y], id), avantXY, 'l\'objet n\'a pas été déplacé');
   const loc = await page.evaluate(id => { const o = obj(id), f = terrainFrame(), r = f.a * Math.PI / 180, cx = o.x + o.w / 2 - f.o.x, cy = o.y + o.h / 2 - f.o.y; return [cx * Math.cos(r) + cy * Math.sin(r), -cx * Math.sin(r) + cy * Math.cos(r)] }, id);
   for (const v of loc) assert.ok(Math.abs(v / 5 - Math.round(v / 5)) < 0.02, 'centre hors grille : ' + loc);
