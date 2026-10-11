@@ -613,3 +613,31 @@ test('capture satellite : importer, deux points et la distance mettent l\'image 
   assert.deepEqual(erreurs, []);
   await ctx.close();
 });
+
+test('ébauche collée : contour, maison, étang, arbres posés ; la même capture se cale toute seule', async () => {
+  const { ctx, page, erreurs } = await ouvrir({ debut: 'prop' });
+  const eb = { ebauche: 1, nord: 0, contour: [[0, 0], [80, 0], [80, 60], [0, 60]],
+    objets: [['maison', 5, 5, 20, 12, -10], ['etang', 40, 10, 20, 10, 0, [[0, .5], [.5, 0], [1, .5], [.5, 1]]], ['arbre', 60, 45, 8], ['arbre', 70, 50, 6], ['inconnu', 1, 1, 1, 1]],
+    fond: { l: 400, h: 300, mpx: .25, ox: 50, oy: 40 } };
+  page.on('dialog', d => d.accept(JSON.stringify(eb)));
+  await page.click('#v-prop [data-pbg="paste"]');
+  await page.waitForFunction(() => tab === 'plan' && S.shape, null, { timeout: 5000 });
+  const r = await page.evaluate(() => ({ tab, shape: S.shape.map(p => [p.x, p.y]), t: S.objs.map(o => o.type).sort(), m: S.objs.find(o => o.type === 'maison'), e: S.objs.find(o => o.type === 'etang').poly.length, a: S.objs.filter(o => o.type === 'arbre').map(o => [o.x + o.w / 2, o.y + o.h / 2, o.w]), p: S.objs.find(o => o.type === 'parcelle') }));
+  assert.equal(r.tab, 'plan');
+  assert.deepEqual(r.shape, [[0, 0], [8000, 0], [8000, 6000], [0, 6000]]);
+  assert.deepEqual(r.t, ['arbre', 'arbre', 'etang', 'maison', 'parcelle'], 'objets inconnus ignorés, la parcelle existante gardée');
+  assert.deepEqual([r.m.x, r.m.y, r.m.w, r.m.h, r.m.rot], [500, 500, 2000, 1200, 350]);
+  assert.equal(r.e, 4);
+  assert.deepEqual(r.a, [[6000, 4500, 800], [7000, 5000, 600]]);
+  assert.ok(r.p.x >= 0 && r.p.x + r.p.w <= 8000 && r.p.y >= 0 && r.p.y + r.p.h <= 6000, 'parcelle rangée dans le terrain');
+  /* une capture de même format (800 × 600 px, la même en plus grand) se cale sans étape d'échelle */
+  const png = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = 800; c.height = 600; c.getContext('2d').fillRect(0, 0, 800, 600); return c.toDataURL('image/png').split(',')[1] });
+  await page.click('.tabs [data-top="prop"]');
+  const choix = page.waitForEvent('filechooser');
+  await page.click('#v-prop [data-pbg="add"]');
+  await (await choix).setFiles({ name: 'capture.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') });
+  await page.waitForFunction(() => bgOf() && tab === 'plan');
+  assert.deepEqual(await page.evaluate(() => [BG.x, BG.y, BG.w, BG.h, sheetMode]), [-1250, -1000, 10000, 7500, null]);
+  assert.deepEqual(erreurs, []);
+  await ctx.close();
+});
