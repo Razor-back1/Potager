@@ -78,17 +78,22 @@ function renderPlan(){
 function fit(){const r=svg.getBoundingClientRect();const sh=sheetMode&&innerWidth<760?r.height*.45:0;view.z=Math.min((r.width-90)/G().w,(r.height-sh-90)/G().h);view.cx=G().w/2;view.cy=G().h/2+sh/2/view.z-20/view.z;renderPlan()}
 
 /* guides d'alignement */
-function alignSnap(o){if(terrainFrame().a)return null;   /* terrain incliné : la grille du terrain suffit */
-  const thr=8/view.z,A=aabb(o),xs=[A.x0,(A.x0+A.x1)/2,A.x1],ys=[A.y0,(A.y0+A.y1)/2,A.y1];let bx=null,by=null;
-  const T=G().objs.filter(q=>q!==o).map(aabb);T.push({x0:0,y0:0,x1:G().w,y1:G().h});
+function alignSnap(o){   /* calage sur les bords et les centres des autres objets et du terrain, dans le repère du terrain (incliné ou non) */
+  const f=terrainFrame(),r=f.a*Math.PI/180,c=Math.cos(r),s=Math.sin(r);
+  const L=p=>({x:(p.x-f.o.x)*c+(p.y-f.o.y)*s,y:-(p.x-f.o.x)*s+(p.y-f.o.y)*c}),W=(x,y)=>({x:f.o.x+x*c-y*s,y:f.o.y+x*s+y*c});
+  const bb=pts=>({x0:Math.min(...pts.map(p=>p.x)),y0:Math.min(...pts.map(p=>p.y)),x1:Math.max(...pts.map(p=>p.x)),y1:Math.max(...pts.map(p=>p.y))});
+  const box=q=>{const a=(q.rot||0)*Math.PI/180,ca=Math.cos(a),sa=Math.sin(a),cx=q.x+q.w/2,cy=q.y+q.h/2,hw=q.w/2,hh=q.h/2;
+    return bb([[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]].map(([u,v])=>L({x:cx+u*ca-v*sa,y:cy+u*sa+v*ca})))};
+  const thr=8/view.z,A=box(o),xs=[A.x0,(A.x0+A.x1)/2,A.x1],ys=[A.y0,(A.y0+A.y1)/2,A.y1];let bx=null,by=null;
+  const T=G().objs.filter(q=>q!==o).map(box);T.push(bb(terrainPts().map(L)));
   for(const B of T){const tx=[B.x0,(B.x0+B.x1)/2,B.x1],ty=[B.y0,(B.y0+B.y1)/2,B.y1];
     for(const a of xs)for(const t of tx){const d=t-a;if(Math.abs(d)<thr&&(!bx||Math.abs(d)<Math.abs(bx.d)))bx={d,v:t,B}}
     for(const a of ys)for(const t of ty){const d=t-a;if(Math.abs(d)<thr&&(!by||Math.abs(d)<Math.abs(by.d)))by={d,v:t,B}}}
-  if(bx)o.x+=bx.d;if(by)o.y+=by.d;const A2=aabb(o),g=[];
-  if(bx)g.push([bx.v,Math.min(A2.y0,bx.B.y0),bx.v,Math.max(A2.y1,bx.B.y1)]);
-  if(by)g.push([Math.min(A2.x0,by.B.x0),by.v,Math.max(A2.x1,by.B.x1),by.v]);
-  return g;
-}
+  if(bx||by){const d=W(bx?bx.d:0,by?by.d:0),z=W(0,0);o.x+=d.x-z.x;o.y+=d.y-z.y}
+  const A2=box(o),g=[],seg=(x1,y1,x2,y2)=>{const p=W(x1,y1),q=W(x2,y2);g.push([p.x,p.y,q.x,q.y])};
+  if(bx)seg(bx.v,Math.min(A2.y0,bx.B.y0),bx.v,Math.max(A2.y1,bx.B.y1));
+  if(by)seg(Math.min(A2.x0,by.B.x0),by.v,Math.max(A2.x1,by.B.x1),by.v);
+  return g.length?g:null}
 function nearest(o){let best=null;G().objs.forEach(q=>{if(q===o||q.type==='allee')return;const d=gap(o,q);if(!best||d<best.d)best={d,q}});return best}
 
 /* pointeur : appui long = déplacer, glisser = vue, deux doigts = zoom */

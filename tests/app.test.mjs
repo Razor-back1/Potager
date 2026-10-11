@@ -479,3 +479,30 @@ test('terrain incliné : grille, aimantation et nouveaux objets suivent le terra
   assert.deepEqual(erreurs, []);
   await ctx.close();
 });
+
+test('terrain incliné : la serre se cale au centre du terrain et sur les autres objets', async () => {
+  const { ctx, page, erreurs } = await ouvrir();
+  await page.click('.tabs [data-tab="plan"]');
+  if (await page.isVisible('#sheet [data-act="close"]')) await page.click('#sheet [data-act="close"]');
+  await page.click('#editBtn'); await page.click('#shapeBtn');
+  await page.click('[data-sh="rect"]');
+  for (let i = 0; i < 2; i++) await page.click('[data-sh="r15"]');
+  await page.check('#sh-all'); await page.click('[data-sh="r-1"]');   /* tout le plan, pour que la serre soit parallèle au terrain */
+  await page.click('[data-sh="done"]');
+  /* poser la serre à 3 cm du centre (repère du terrain), puis la tirer d'un pixel : elle se cale au centre */
+  const r = await page.evaluate(() => {
+    const o = S.objs.find(o => o.type === 'serre'), f = terrainFrame(), a = f.a * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
+    const L = p => ({ x: (p.x - f.o.x) * c + (p.y - f.o.y) * s, y: -(p.x - f.o.x) * s + (p.y - f.o.y) * c });
+    const lp = S.shape.map(L), cx = (Math.min(...lp.map(p => p.x)) + Math.max(...lp.map(p => p.x))) / 2, cy = (Math.min(...lp.map(p => p.y)) + Math.max(...lp.map(p => p.y))) / 2;
+    const W = (x, y) => ({ x: f.o.x + x * c - y * s, y: f.o.y + x * s + y * c }), w = W(cx + 3, cy - 2);
+    o.rot = f.a; o.x = w.x - o.w / 2; o.y = w.y - o.h / 2; renderPlan();
+    const g = guides; const before = { ...o };
+    const alignSnapResult = alignSnap(o);
+    const lc = L({ x: o.x + o.w / 2, y: o.y + o.h / 2 });
+    return { dx: lc.x - cx, dy: lc.y - cy, guides: (alignSnapResult || []).length };
+  });
+  assert.ok(Math.abs(r.dx) < 0.01 && Math.abs(r.dy) < 0.01, `serre pas calée au centre : ${r.dx}, ${r.dy}`);
+  assert.equal(r.guides, 2, 'deux lignes guides attendues');
+  assert.deepEqual(erreurs, []);
+  await ctx.close();
+});
