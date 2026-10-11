@@ -186,6 +186,7 @@ function renderSheet(){
     const GLs=GL.get().list;
     h+=`<div class="stack"><div class="row between"><h3>Potager</h3><button class="btn small" data-act="close">Fermer</button></div>
     <div><span class="lbl">Mes potagers</span><div class="glist">${GLs.map(g=>`<div class="grow${g.id===GID?' cur':''}"><span><b>${esc(g.id===GID?S.name:(g.name||'Potager'))}</b>${(g.id===GID?S.example:g.ex)?' <span class="note">· exemple</span>':''}</span>${g.id===GID?'<span class="note">ouvert</span>':`<button class="btn small" data-act="gopen" data-g="${g.id}">Ouvrir</button>`}</div>`).join('')}</div>
+    <div class="row" style="margin-top:8px"><button class="btn small" data-act="gvar">Variante : même terrain, plan vide</button><button class="btn small" data-act="gdup">Dupliquer celui-ci</button></div>
     <div class="row" style="margin-top:8px"><button class="btn small" data-act="gnew">+ Potager</button><button class="btn small" data-act="gnewfl">+ Jardin de fleurs</button><button class="btn small" data-act="gnewvg">+ Verger</button><button class="btn small" data-act="gnewex">+ Exemple potager</button><button class="btn small" data-act="gnewexfl">+ Exemple fleurs</button><button class="btn small" data-act="gnewexvg">+ Exemple verger</button>${GLs.length>1?'<button class="btn small danger" data-act="gdel">Supprimer celui-ci</button>':''}</div></div>
     <label class="field"><span class="lbl">Nom</span><input id="g-name" value="${esc(S.name)}"></label>
     ${S.shape?`<div class="row between"><span><span class="lbl">Terrain</span><br><span class="mono">${num(Math.abs(polyArea(S.shape))/1e4)} m² · ${S.shape.length} côtés</span></span><span class="row"><button class="btn small" data-act="shape-rect">Revenir au rectangle</button></span></div>`:
@@ -333,6 +334,7 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
   if(a==='gopen'){switchGarden(b.dataset.g);sheetMode='menu';renderSheet();return toast('Potager ouvert : '+S.name)}
   if(a==='gnew'){const n=GL.get().list.length+1;addGarden(emptyGarden('Potager '+n));sheetMode='menu';renderSheet();return toast('Nouveau potager créé')}
   if(a==='gnewfl'){const n=GL.get().list.length+1;addGarden(emptyGarden('Jardin de fleurs '+n,'fleurs'));sheetMode='menu';renderSheet();return toast('Nouveau jardin de fleurs créé')}
+  if(a==='gvar'||a==='gdup'){const c=gardenVariant(a==='gdup'),k=c.objs.length;addGarden(c);sheetMode='menu';renderSheet();return toast(a==='gdup'?'Copie créée : « '+c.name+' »':'« '+c.name+' » : terrain, '+k+' élément'+(k>1?'s':'')+' fixe'+(k>1?'s':'')+' (étang, arbres, haies, clôtures)')}
   if(a==='gnewvg'){const n=GL.get().list.length+1;addGarden(emptyGarden('Verger '+n,'verger'));sheetMode='menu';renderSheet();return toast('Nouveau verger créé')}
   if(a==='gnewexvg'){addGarden(sampleOrchard());sheetMode='menu';renderSheet();return toast('Exemple de verger ajouté')}
   if(a==='gnewexfl'){addGarden(sampleFlowers());sheetMode='menu';renderSheet();return toast('Exemple de jardin de fleurs ajouté')}

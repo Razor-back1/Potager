@@ -328,3 +328,20 @@ test('fruitier modifiable : variété tardive et mise à fruit', async () => {
   assert.deepEqual(erreurs, []);
   await ctx.close();
 });
+
+test('variante : même terrain et éléments fixes, plan vide ; copie complète', async () => {
+  const { ctx, page, erreurs } = await ouvrir();
+  const src = await page.evaluate(() => { S.shape = [{ x: 0, y: 0 }, { x: 1800, y: 0 }, { x: 1800, y: 1200 }, { x: 200, y: 1200 }]; S.north = 23; S.objs.push({ id: 'et1', type: 'etang', x: 100, y: 100, w: 400, h: 300, rot: 0, name: 'Étang', height: 0, locked: true }); save();
+    return { n: S.objs.length, fixes: S.objs.filter(o => FIXED_TYPES.has(o.type)).length, nom: S.name } });
+  await page.click('#menuBtn');
+  await page.click('[data-act="gvar"]');
+  const v = await page.evaluate(() => ({ nom: S.name, n: S.objs.length, types: [...new Set(S.objs.map(o => o.type))].sort(), north: S.north, shape: S.shape.length, ex: S.example }));
+  assert.equal(v.nom, src.nom + ' · variante 1');
+  assert.equal(v.n, src.fixes); assert.ok(v.types.every(t => ['etang', 'arbre', 'haie', 'cloture'].includes(t)));
+  assert.equal(v.north, 23); assert.equal(v.shape, 4); assert.equal(v.ex, false);
+  await page.click('[data-act="gdup"]');
+  assert.equal(await page.evaluate(() => S.objs.length), src.fixes, 'la copie d\'une variante reprend la variante');
+  assert.equal(await page.evaluate(() => GL.get().list.length), 3);
+  assert.deepEqual(erreurs, []);
+  await ctx.close();
+});

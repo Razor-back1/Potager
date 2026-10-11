@@ -22,6 +22,12 @@ function addGarden(state,open=true){const id=uid(),g=GL.get();try{localStorage.s
   g.list.push({id,name:state.name,ex:!!state.example});GL.set(g);if(open)switchGarden(id);try{if(relayOn())setTimeout(()=>syncPush(id),300)}catch(e){}return id}
 function deleteGarden(id){const g=GL.get();if(g.list.length<2)return;g.list=g.list.filter(x=>x.id!==id);GL.set(g);
   try{localStorage.removeItem(keyOf(id));localStorage.removeItem(keyAtOf(id))}catch(e){}try{if(relayOn())gReq('/garden?id='+encodeURIComponent(id),'DELETE').catch(()=>{})}catch(e){}if(id===GID){GID=null;switchGarden(g.list[0].id)}}
+/* variantes pour comparer des plans : même terrain (forme, orientation, lieu) et mêmes éléments fixes, ou copie complète */
+const FIXED_TYPES=new Set(['etang','arbre','haie','cloture']);
+function gardenVariant(full){const c=JSON.parse(JSON.stringify(S)),base=S.name.replace(/ · (variante|copie) \d+$/,'');
+  const n=GL.get().list.filter(g=>g.name===base||g.name.startsWith(base+' · ')).length;c.example=false;
+  if(full){c.name=base+' · copie '+n;return c}
+  c.name=base+' · variante '+n;c.objs=c.objs.filter(o=>FIXED_TYPES.has(o.type));c.stock=[];c.nursery=[];c.frost=null;delete c.succOff;delete c.goals;return c}
 const emptyGarden=(name='Mon potager',kind)=>({v:8,kind:kind||undefined,shape:null,rain:[],stock:[],nursery:[],name,w:1200,h:800,north:0,water:{roof:40,cap:1000,level:500},frost:null,objs:[],example:false});
 function save(coalesce){const j=JSON.stringify(S);if(j!==lastJSON){const now=Date.now();
   if(!(coalesce&&now-lastPush<1500&&past.length)){past.push(lastJSON);if(past.length>80)past.shift()}
