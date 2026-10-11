@@ -52,6 +52,7 @@ function renderPlan(){
   let edges='';tp.forEach((a,i)=>{const b=tp[(i+1)%tp.length],L=Math.hypot(b.x-a.x,b.y-a.y);if(L*view.z<40)return;const nx=(b.y-a.y)/L*sg,ny=-(b.x-a.x)/L*sg,o=14/view.z;
     edges+=`<text class="${shapeEdit?'edgetxt':'dimtxt'}" x="${(a.x+b.x)/2+nx*o}" y="${(a.y+b.y)/2+ny*o}" text-anchor="middle" dominant-baseline="central" font-size="${fs}">${m2(L)} m</text>`});
   const sur=!ctx&&S.surround;
+  {const f=terrainFrame(),tr=f.a?`translate(${f.o.x} ${f.o.y}) rotate(${f.a})`:'';['g1','g5'].forEach(k=>{const el=document.getElementById(k);if(!el)return;if(tr)el.setAttribute('patternTransform',tr);else el.removeAttribute('patternTransform')})}
   $('#groundL').innerHTML=`${sur?`<rect class="surround" x="${sur.x}" y="${sur.y}" width="${sur.w}" height="${sur.h}" vector-effect="non-scaling-stroke"/>`:''}<clipPath id="tclip"><polygon points="${pts}"/></clipPath><g clip-path="url(#tclip)"><rect class="ground" width="${G().w}" height="${G().h}"/><rect width="${G().w}" height="${G().h}" fill="url(#g1)"/><rect width="${G().w}" height="${G().h}" fill="url(#g5)"/></g><polygon class="bound" points="${pts}" vector-effect="non-scaling-stroke"/>${edges}`;
   let ed='';if(shapeEdit){const r=11/view.z;tp.forEach((a,i)=>{const b=tp[(i+1)%tp.length];ed+=`<line class="edgehit" data-edge="${i}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" vector-effect="non-scaling-stroke"/>`});tp.forEach((a,i)=>{const b=tp[(i+1)%tp.length];ed+=`<circle class="mid" data-mid="${i}" cx="${(a.x+b.x)/2}" cy="${(a.y+b.y)/2}" r="${r*.7}"/>`});
     tp.forEach((a,i)=>ed+=`<circle class="vtx${shapeEdit.sel===i?' sel':''}" data-vtx="${i}" cx="${a.x}" cy="${a.y}" r="${r}" vector-effect="non-scaling-stroke"/>`)}
@@ -77,7 +78,7 @@ function renderPlan(){
 function fit(){const r=svg.getBoundingClientRect();const sh=sheetMode&&innerWidth<760?r.height*.45:0;view.z=Math.min((r.width-90)/G().w,(r.height-sh-90)/G().h);view.cx=G().w/2;view.cy=G().h/2+sh/2/view.z-20/view.z;renderPlan()}
 
 /* guides d'alignement */
-function alignSnap(o){
+function alignSnap(o){if(terrainFrame().a)return null;   /* terrain incliné : la grille du terrain suffit */
   const thr=8/view.z,A=aabb(o),xs=[A.x0,(A.x0+A.x1)/2,A.x1],ys=[A.y0,(A.y0+A.y1)/2,A.y1];let bx=null,by=null;
   const T=G().objs.filter(q=>q!==o).map(aabb);T.push({x0:0,y0:0,x1:G().w,y1:G().h});
   for(const B of T){const tx=[B.x0,(B.x0+B.x1)/2,B.x1],ty=[B.y0,(B.y0+B.y1)/2,B.y1];
@@ -134,12 +135,12 @@ svg.addEventListener('pointermove',e=>{
     for(const a of[pv,nx]){if(Math.abs(q.x-a.x)<thr)q.x=a.x;if(Math.abs(q.y-a.y)<thr)q.y=a.y}
     sh[drag.i]=q;showHint(`${m2(Math.hypot(q.x-pv.x,q.y-pv.y))} m · ${m2(Math.hypot(q.x-nx.x,q.y-nx.y))} m`)}
   else if(drag.mode==='rot'){let ang=Math.atan2(p.y-drag.c.y,p.x-drag.c.x)*180/Math.PI+90;ang=(ang%360+360)%360;
-    let r=Math.round(ang);for(let k=0;k<=360;k+=45)if(Math.abs(ang-k)<1.5)r=k;if(drag.grp){rotateMembers(drag.grp,drag.c,r%360-drag.s.rot)}else o.rot=r%360;showHint(`Orientation ${o.rot}°${drag.grp?' · bloc':''}`)}
+    let r=Math.round(ang);const fa=terrainFrame().a;for(let k=-45;k<=405;k+=45){const t=k+fa;if(Math.abs(ang-t)<1.5)r=((t%360)+360)%360}if(drag.grp){rotateMembers(drag.grp,drag.c,r%360-drag.s.rot)}else o.rot=r%360;showHint(`Orientation ${o.rot}°${drag.grp?' · bloc':''}`)}
   else if(drag.mode==='edge'){const[a,b]=drag.s,L=Math.hypot(b.x-a.x,b.y-a.y)||1,sg=Math.sign(polyArea(G().shape))||1,nx=(b.y-a.y)/L*sg,ny=-(b.x-a.x)/L*sg;
     const t=snap((p.x-drag.p0.x)*nx+(p.y-drag.p0.y)*ny,10),n=G().shape.length;
     G().shape[drag.i]={x:Math.round(a.x+nx*t),y:Math.round(a.y+ny*t)};G().shape[(drag.i+1)%n]={x:Math.round(b.x+nx*t),y:Math.round(b.y+ny*t)};
     showHint(`${t>=0?'Agrandi':'Réduit'} de ${m2(Math.abs(t))} m`)}
-  else if(drag.mode==='move'){o.x=snap(drag.s.x+p.x-drag.p0.x);o.y=snap(drag.s.y+p.y-drag.p0.y);guides=drag.grp?null:alignSnap(o);if(drag.grp){const dx=o.x-drag.s.x,dy=o.y-drag.s.y;drag.grp.forEach(m=>{m.o.x=m.x+dx;m.o.y=m.y+dy})}
+  else if(drag.mode==='move'){const q=snapXY(o,drag.s.x+p.x-drag.p0.x,drag.s.y+p.y-drag.p0.y);o.x=q.x;o.y=q.y;guides=drag.grp?null:alignSnap(o);if(drag.grp){const dx=o.x-drag.s.x,dy=o.y-drag.s.y;drag.grp.forEach(m=>{m.o.x=m.x+dx;m.o.y=m.y+dy})}
     const n=nearest(o);showHint(n?`${n.d<1?'Contact':'Écart '+Math.round(n.d)+' cm'} · ${n.q.name}`:'Glisse pour déplacer')}
   else if(drag.mode==='resize'){const a=o.rot*Math.PI/180,dx=p.x-drag.p0.x,dy=p.y-drag.p0.y,lx=dx*Math.cos(a)+dy*Math.sin(a),ly=-dx*Math.sin(a)+dy*Math.cos(a),s=drag.s;
     let w=Math.max(10,snap(s.w+lx)),h=Math.max(10,snap(s.h+ly));if(TYPES[o.type].round)w=h=Math.max(w,h);

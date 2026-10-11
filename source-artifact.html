@@ -1231,6 +1231,14 @@ function grpFrame(ms,rot){/* boîte du bloc dans son propre repère (tourné de 
   const pts=ms.flatMap(basePts),c0={x:pts.reduce((a,p)=>a+p.x,0)/pts.length,y:pts.reduce((a,p)=>a+p.y,0)/pts.length},a=-rot*Math.PI/180,co=Math.cos(a),si=Math.sin(a);
   const loc=pts.map(p=>({x:(p.x-c0.x)*co-(p.y-c0.y)*si,y:(p.x-c0.x)*si+(p.y-c0.y)*co})),x0=Math.min(...loc.map(p=>p.x)),x1=Math.max(...loc.map(p=>p.x)),y0=Math.min(...loc.map(p=>p.y)),y1=Math.max(...loc.map(p=>p.y));
   const mx=(x0+x1)/2,my=(y0+y1)/2,b=rot*Math.PI/180;return{cx:c0.x+mx*Math.cos(b)-my*Math.sin(b),cy:c0.y+mx*Math.sin(b)+my*Math.cos(b),w:x1-x0,h:y1-y0}}
+/* repère du terrain : angle du plus long côté (ramené entre −45° et 45°) et son point de départ.
+   La grille, l'aimantation des objets et l'orientation des nouveaux objets le suivent. */
+function terrainFrame(){const g=G();if(ctx||!g.shape||g.shape.length<3)return{a:0,o:{x:0,y:0}};const tp=g.shape;let best=null;
+  tp.forEach((p,i)=>{const q=tp[(i+1)%tp.length],L=Math.hypot(q.x-p.x,q.y-p.y);if(!best||L>best.L+.5)best={L,p,q}});
+  let a=Math.atan2(best.q.y-best.p.y,best.q.x-best.p.x)*180/Math.PI;a=((a%90)+90)%90;if(a>45)a-=90;a=Math.round(a*10)/10;return{a:Math.abs(a)<.05?0:a,o:best.p}}
+/* position aimantée sur la grille du terrain (centre de l'objet, pas de 5 cm) */
+function snapXY(o,x,y){const f=terrainFrame();if(!f.a)return{x:snap(x),y:snap(y)};const r=f.a*Math.PI/180,c=Math.cos(r),s=Math.sin(r),cx=x+o.w/2-f.o.x,cy=y+o.h/2-f.o.y,u=snap(cx*c+cy*s),v=snap(-cx*s+cy*c);
+  return{x:f.o.x+u*c-v*s-o.w/2,y:f.o.y+u*s+v*c-o.h/2}}
 /* tourner un objet (ou tout son bloc) de d degrés */
 function rotObj(o,d){const ms=grpMembers(o);if(ms){const f=grpFrame(ms,o.rot);rotateMembers(ms.map(q=>({o:q,x:q.x,y:q.y,rot:q.rot})),{x:f.cx,y:f.cy},d)}else o.rot=Math.round(((o.rot+d)%360+360)%360*10)/10}
 /* tourner le terrain autour de son centre ; avec « all », tout le plan tourne et le nord suit */
@@ -1416,6 +1424,7 @@ function renderPlan(){
   let edges='';tp.forEach((a,i)=>{const b=tp[(i+1)%tp.length],L=Math.hypot(b.x-a.x,b.y-a.y);if(L*view.z<40)return;const nx=(b.y-a.y)/L*sg,ny=-(b.x-a.x)/L*sg,o=14/view.z;
     edges+=`<text class="${shapeEdit?'edgetxt':'dimtxt'}" x="${(a.x+b.x)/2+nx*o}" y="${(a.y+b.y)/2+ny*o}" text-anchor="middle" dominant-baseline="central" font-size="${fs}">${m2(L)} m</text>`});
   const sur=!ctx&&S.surround;
+  {const f=terrainFrame(),tr=f.a?`translate(${f.o.x} ${f.o.y}) rotate(${f.a})`:'';['g1','g5'].forEach(k=>{const el=document.getElementById(k);if(!el)return;if(tr)el.setAttribute('patternTransform',tr);else el.removeAttribute('patternTransform')})}
   $('#groundL').innerHTML=`${sur?`<rect class="surround" x="${sur.x}" y="${sur.y}" width="${sur.w}" height="${sur.h}" vector-effect="non-scaling-stroke"/>`:''}<clipPath id="tclip"><polygon points="${pts}"/></clipPath><g clip-path="url(#tclip)"><rect class="ground" width="${G().w}" height="${G().h}"/><rect width="${G().w}" height="${G().h}" fill="url(#g1)"/><rect width="${G().w}" height="${G().h}" fill="url(#g5)"/></g><polygon class="bound" points="${pts}" vector-effect="non-scaling-stroke"/>${edges}`;
   let ed='';if(shapeEdit){const r=11/view.z;tp.forEach((a,i)=>{const b=tp[(i+1)%tp.length];ed+=`<line class="edgehit" data-edge="${i}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" vector-effect="non-scaling-stroke"/>`});tp.forEach((a,i)=>{const b=tp[(i+1)%tp.length];ed+=`<circle class="mid" data-mid="${i}" cx="${(a.x+b.x)/2}" cy="${(a.y+b.y)/2}" r="${r*.7}"/>`});
     tp.forEach((a,i)=>ed+=`<circle class="vtx${shapeEdit.sel===i?' sel':''}" data-vtx="${i}" cx="${a.x}" cy="${a.y}" r="${r}" vector-effect="non-scaling-stroke"/>`)}
@@ -1441,7 +1450,7 @@ function renderPlan(){
 function fit(){const r=svg.getBoundingClientRect();const sh=sheetMode&&innerWidth<760?r.height*.45:0;view.z=Math.min((r.width-90)/G().w,(r.height-sh-90)/G().h);view.cx=G().w/2;view.cy=G().h/2+sh/2/view.z-20/view.z;renderPlan()}
 
 /* guides d'alignement */
-function alignSnap(o){
+function alignSnap(o){if(terrainFrame().a)return null;   /* terrain incliné : la grille du terrain suffit */
   const thr=8/view.z,A=aabb(o),xs=[A.x0,(A.x0+A.x1)/2,A.x1],ys=[A.y0,(A.y0+A.y1)/2,A.y1];let bx=null,by=null;
   const T=G().objs.filter(q=>q!==o).map(aabb);T.push({x0:0,y0:0,x1:G().w,y1:G().h});
   for(const B of T){const tx=[B.x0,(B.x0+B.x1)/2,B.x1],ty=[B.y0,(B.y0+B.y1)/2,B.y1];
@@ -1498,12 +1507,12 @@ svg.addEventListener('pointermove',e=>{
     for(const a of[pv,nx]){if(Math.abs(q.x-a.x)<thr)q.x=a.x;if(Math.abs(q.y-a.y)<thr)q.y=a.y}
     sh[drag.i]=q;showHint(`${m2(Math.hypot(q.x-pv.x,q.y-pv.y))} m · ${m2(Math.hypot(q.x-nx.x,q.y-nx.y))} m`)}
   else if(drag.mode==='rot'){let ang=Math.atan2(p.y-drag.c.y,p.x-drag.c.x)*180/Math.PI+90;ang=(ang%360+360)%360;
-    let r=Math.round(ang);for(let k=0;k<=360;k+=45)if(Math.abs(ang-k)<1.5)r=k;if(drag.grp){rotateMembers(drag.grp,drag.c,r%360-drag.s.rot)}else o.rot=r%360;showHint(`Orientation ${o.rot}°${drag.grp?' · bloc':''}`)}
+    let r=Math.round(ang);const fa=terrainFrame().a;for(let k=-45;k<=405;k+=45){const t=k+fa;if(Math.abs(ang-t)<1.5)r=((t%360)+360)%360}if(drag.grp){rotateMembers(drag.grp,drag.c,r%360-drag.s.rot)}else o.rot=r%360;showHint(`Orientation ${o.rot}°${drag.grp?' · bloc':''}`)}
   else if(drag.mode==='edge'){const[a,b]=drag.s,L=Math.hypot(b.x-a.x,b.y-a.y)||1,sg=Math.sign(polyArea(G().shape))||1,nx=(b.y-a.y)/L*sg,ny=-(b.x-a.x)/L*sg;
     const t=snap((p.x-drag.p0.x)*nx+(p.y-drag.p0.y)*ny,10),n=G().shape.length;
     G().shape[drag.i]={x:Math.round(a.x+nx*t),y:Math.round(a.y+ny*t)};G().shape[(drag.i+1)%n]={x:Math.round(b.x+nx*t),y:Math.round(b.y+ny*t)};
     showHint(`${t>=0?'Agrandi':'Réduit'} de ${m2(Math.abs(t))} m`)}
-  else if(drag.mode==='move'){o.x=snap(drag.s.x+p.x-drag.p0.x);o.y=snap(drag.s.y+p.y-drag.p0.y);guides=drag.grp?null:alignSnap(o);if(drag.grp){const dx=o.x-drag.s.x,dy=o.y-drag.s.y;drag.grp.forEach(m=>{m.o.x=m.x+dx;m.o.y=m.y+dy})}
+  else if(drag.mode==='move'){const q=snapXY(o,drag.s.x+p.x-drag.p0.x,drag.s.y+p.y-drag.p0.y);o.x=q.x;o.y=q.y;guides=drag.grp?null:alignSnap(o);if(drag.grp){const dx=o.x-drag.s.x,dy=o.y-drag.s.y;drag.grp.forEach(m=>{m.o.x=m.x+dx;m.o.y=m.y+dy})}
     const n=nearest(o);showHint(n?`${n.d<1?'Contact':'Écart '+Math.round(n.d)+' cm'} · ${n.q.name}`:'Glisse pour déplacer')}
   else if(drag.mode==='resize'){const a=o.rot*Math.PI/180,dx=p.x-drag.p0.x,dy=p.y-drag.p0.y,lx=dx*Math.cos(a)+dy*Math.sin(a),ly=-dx*Math.sin(a)+dy*Math.cos(a),s=drag.s;
     let w=Math.max(10,snap(s.w+lx)),h=Math.max(10,snap(s.h+ly));if(TYPES[o.type].round)w=h=Math.max(w,h);
@@ -1662,7 +1671,7 @@ function renderSheet(){
     <label class="field"><span class="lbl">Longueur (cm)</span><input id="sr-l" type="number" min="50" step="10" value="500"></label>
     <label class="field"><span class="lbl">Largeur (cm)</span><input id="sr-w" type="number" min="30" step="5" value="90"></label>
     <label class="field"><span class="lbl">Allée entre (cm)</span><input id="sr-g" type="number" min="0" step="5" value="70"></label>
-    <label class="field"><span class="lbl">Inclinaison (°)</span><input id="sr-a" type="number" min="-180" max="180" step="5" value="0"></label></div>
+    <label class="field"><span class="lbl">Inclinaison (°)</span><input id="sr-a" type="number" min="-180" max="180" step="1" value="${terrainFrame().a}"></label></div>
     <label class="row" style="gap:8px"><input type="checkbox" id="sr-al" checked> Dessiner les allées entre les planches</label>
     <p class="note">La série forme un bloc : il se déplace et tourne d'un seul tenant. Chaque planche garde son propre menu, avec un bouton pour la détacher du bloc.</p>
     ${G().shape?'<button class="btn small" data-act="series-align" style="justify-self:start">Aligner sur le plus long côté du terrain</button>':''}
@@ -1791,7 +1800,7 @@ function renderSheet(){
     if(o.type==='alleeo')h+=`<div class="grid2"><label class="field"><span class="lbl">Largeur de l'allée (cm)</span><input id="o-ring" type="number" min="10" step="5" value="${Math.round(+o.ring||70)}" ${L}></label><div class="field"><span class="lbl">Forme</span><button class="btn small" data-act="mkcircle" ${L}>Faire un cercle</button></div></div><p class="note">Largeur et longueur = dimensions extérieures. Si l'allée est plus large que la moitié, le rond devient plein (placette).</p>`;
     if(o.type==='ruisseau')h+=`<div class="grid2"><label class="field"><span class="lbl">Courbure (cm)</span><input id="o-bend" type="number" step="10" value="${Math.round(o.bend||0)}" ${L}></label><label class="field"><span class="lbl">Méandre (cm)</span><input id="o-wave" type="number" step="10" value="${Math.round(o.wave||0)}" ${L}></label></div><p class="note">Largeur = longueur du cours d'eau, longueur = largeur du lit. Courbure : il bombe d'un côté ; méandre : il ondule en S. L'eau s'écoule dans le sens des tirets ; « Inverser le sens » le retourne.</p><button class="btn small" data-act="flipflow" style="justify-self:start" ${L}>Inverser le sens</button>`;
     if(o.type==='haie')h+=`<label class="field" style="max-width:260px"><span class="lbl">Courbure (cm)</span><input id="o-bend" type="number" step="10" value="${Math.round(o.bend||0)}" ${L}></label><p class="note">0 = haie droite. La valeur est la flèche au milieu de la haie ; négative pour bomber de l'autre côté.</p>`;
-    if(!t.round&&!o.locked)h+=`<div class="row"><span class="lbl">Orientation</span><input id="o-rot" class="mono" type="number" inputmode="decimal" step="1" value="${Math.round(o.rot*10)/10}" style="width:64px;min-height:34px;padding:0 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);color:var(--ink)" aria-label="Orientation en degrés"><button class="btn small" data-act="rot" data-d="-1" aria-label="Tourner de 1° à gauche">−1°</button><button class="btn small" data-act="rot" data-d="1" aria-label="Tourner de 1° à droite">+1°</button><button class="btn small" data-act="rot" data-d="90">+90°</button><button class="btn small" data-act="rot0">0°</button></div><p class="note">Réglage fin au degré près avec −1° / +1° ou en tapant l'angle. Le rond jaune autour de l'objet tourne aussi au degré près (léger aimant tous les 45°).</p>`;
+    if(!t.round&&!o.locked)h+=`<div class="row"><span class="lbl">Orientation</span><input id="o-rot" class="mono" type="number" inputmode="decimal" step="1" value="${Math.round(o.rot*10)/10}" style="width:64px;min-height:34px;padding:0 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);color:var(--ink)" aria-label="Orientation en degrés"><button class="btn small" data-act="rot" data-d="-1" aria-label="Tourner de 1° à gauche">−1°</button><button class="btn small" data-act="rot" data-d="1" aria-label="Tourner de 1° à droite">+1°</button><button class="btn small" data-act="rot" data-d="90">+90°</button><button class="btn small" data-act="rot0">${terrainFrame().a?'Droit':'0°'}</button></div><p class="note">Réglage fin au degré près avec −1° / +1° ou en tapant l'angle. Le rond jaune autour de l'objet tourne aussi au degré près (léger aimant tous les 45°).</p>`;
     h+=`<div class="row"><button class="btn small" data-act="lock">${o.locked?'Déverrouiller':'Verrouiller'}</button><button class="btn small" data-act="dup">Dupliquer</button>${o.locked?'':'<button class="btn small danger" data-act="del">Supprimer</button>'}</div>`;
     h+=o.locked?`<p class="note">Verrouillé : l'objet ne peut plus être déplacé, redimensionné ni supprimé.</p>`:`<p class="note">Maintiens le doigt sur l'objet pour le soulever, puis glisse-le.</p>`;
     h+=`</div>`;
@@ -1805,7 +1814,7 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
   if(a==='series-align'){const tp=terrainPts();let best=null;tp.forEach((p,i)=>{const q=tp[(i+1)%tp.length],L=Math.hypot(q.x-p.x,q.y-p.y);if(!best||L>best.L)best={L,a:Math.atan2(q.y-p.y,q.x-p.x)*180/Math.PI}});
     const v=$('#sr-o').value==='v';let d=best.a-(v?90:0);d=((d%180)+180)%180;if(d>90)d-=180;$('#sr-a').value=Math.round(d);return}
   if(a==='add'){const t=TYPES[b.dataset.type],r=svg.getBoundingClientRect(),c=world(r.left+r.width/2,r.top+r.height*.3);
-    const n={id:uid(),type:b.dataset.type,x:snap(clamp(c.x-t.w/2,0,G().w-t.w)),y:snap(clamp(c.y-t.h/2,0,G().h-t.h)),w:t.w,h:t.h,rot:0,name:b.dataset.type==='planche'&&FLW()?'Massif':b.dataset.type==='planche'&&VRG()?'Rang de petits fruits':t.l,height:t.ht||0,locked:false};
+    const n={id:uid(),type:b.dataset.type,x:snap(clamp(c.x-t.w/2,0,G().w-t.w)),y:snap(clamp(c.y-t.h/2,0,G().h-t.h)),w:t.w,h:t.h,rot:0,name:b.dataset.type==='planche'&&FLW()?'Massif':b.dataset.type==='planche'&&VRG()?'Rang de petits fruits':t.l,height:t.ht||0,locked:false};if(!t.round){const fa=terrainFrame().a;if(fa)n.rot=fa}
     if(t.plant){n.zones=[{id:uid(),crop:null,len:Math.max(t.w,t.h),date:iso(TODAY),cells:{}}];n.grown=[];n.journal=[]}
     if(n.type==='citerne')n.vol=5000;if(n.type==='alleeo')n.ring=70;if(n.type==='ruisseau')n.wave=100;
     G().objs.push(n);selId=n.id;sheetMode='obj';save();renderSheet();renderPlan()}
@@ -1821,7 +1830,7 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
         G().objs.push({id:uid(),type:'allee',x:Math.round(bx-aw/2),y:Math.round(by-ah/2),w:aw,h:ah,rot:ang,name:'Allée '+(ka+i+1),height:0,locked:false,grp})}
       G().objs.push({id,grp,type:'planche',x:Math.round(qx-w/2),y:Math.round(qy-h/2),w,h,rot:ang,name:(FLW()?'Massif ':VRG()?'Rang ':'Planche ')+(k+i+1),height:0,locked:false,grown:[],journal:[],zones:[{id:uid(),crop:null,len:L,date:iso(TODAY),cells:{}}]})}
     sheetMode=null;save();renderSheet();renderPlan();toast(`${n} planche${n>1?'s':''} placée${n>1?'s':''}, allées de ${gap} cm`,true)}
-  if((a==='rot'||a==='rot0')&&o){rotObj(o,a==='rot'?+b.dataset.d:-o.rot);save(true);renderSheet();renderPlan()}
+  if((a==='rot'||a==='rot0')&&o){rotObj(o,a==='rot'?+b.dataset.d:terrainFrame().a-o.rot);save(true);renderSheet();renderPlan()}
   if(a==='ungroup'&&o){delete o.grp;const rest=G().objs.filter(q=>q.grp&&!grpMembers(q));rest.forEach(q=>delete q.grp);save();renderSheet();renderPlan();return toast(o.name+' détaché du bloc',true)}
   if(a==='ungroupall'&&o){const ms=grpOf(o)||[];ms.forEach(q=>delete q.grp);save();renderSheet();renderPlan();return toast('Bloc dissous : '+ms.length+' objets indépendants',true)}
   if(a==='lock'&&o){o.locked=!o.locked;save();renderSheet();renderPlan()}

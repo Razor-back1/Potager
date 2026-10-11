@@ -67,6 +67,14 @@ function grpFrame(ms,rot){/* boîte du bloc dans son propre repère (tourné de 
   const pts=ms.flatMap(basePts),c0={x:pts.reduce((a,p)=>a+p.x,0)/pts.length,y:pts.reduce((a,p)=>a+p.y,0)/pts.length},a=-rot*Math.PI/180,co=Math.cos(a),si=Math.sin(a);
   const loc=pts.map(p=>({x:(p.x-c0.x)*co-(p.y-c0.y)*si,y:(p.x-c0.x)*si+(p.y-c0.y)*co})),x0=Math.min(...loc.map(p=>p.x)),x1=Math.max(...loc.map(p=>p.x)),y0=Math.min(...loc.map(p=>p.y)),y1=Math.max(...loc.map(p=>p.y));
   const mx=(x0+x1)/2,my=(y0+y1)/2,b=rot*Math.PI/180;return{cx:c0.x+mx*Math.cos(b)-my*Math.sin(b),cy:c0.y+mx*Math.sin(b)+my*Math.cos(b),w:x1-x0,h:y1-y0}}
+/* repère du terrain : angle du plus long côté (ramené entre −45° et 45°) et son point de départ.
+   La grille, l'aimantation des objets et l'orientation des nouveaux objets le suivent. */
+function terrainFrame(){const g=G();if(ctx||!g.shape||g.shape.length<3)return{a:0,o:{x:0,y:0}};const tp=g.shape;let best=null;
+  tp.forEach((p,i)=>{const q=tp[(i+1)%tp.length],L=Math.hypot(q.x-p.x,q.y-p.y);if(!best||L>best.L+.5)best={L,p,q}});
+  let a=Math.atan2(best.q.y-best.p.y,best.q.x-best.p.x)*180/Math.PI;a=((a%90)+90)%90;if(a>45)a-=90;a=Math.round(a*10)/10;return{a:Math.abs(a)<.05?0:a,o:best.p}}
+/* position aimantée sur la grille du terrain (centre de l'objet, pas de 5 cm) */
+function snapXY(o,x,y){const f=terrainFrame();if(!f.a)return{x:snap(x),y:snap(y)};const r=f.a*Math.PI/180,c=Math.cos(r),s=Math.sin(r),cx=x+o.w/2-f.o.x,cy=y+o.h/2-f.o.y,u=snap(cx*c+cy*s),v=snap(-cx*s+cy*c);
+  return{x:f.o.x+u*c-v*s-o.w/2,y:f.o.y+u*s+v*c-o.h/2}}
 /* tourner un objet (ou tout son bloc) de d degrés */
 function rotObj(o,d){const ms=grpMembers(o);if(ms){const f=grpFrame(ms,o.rot);rotateMembers(ms.map(q=>({o:q,x:q.x,y:q.y,rot:q.rot})),{x:f.cx,y:f.cy},d)}else o.rot=Math.round(((o.rot+d)%360+360)%360*10)/10}
 /* tourner le terrain autour de son centre ; avec « all », tout le plan tourne et le nord suit */
