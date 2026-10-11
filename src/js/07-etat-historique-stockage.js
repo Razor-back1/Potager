@@ -67,6 +67,16 @@ function grpFrame(ms,rot){/* boîte du bloc dans son propre repère (tourné de 
   const pts=ms.flatMap(basePts),c0={x:pts.reduce((a,p)=>a+p.x,0)/pts.length,y:pts.reduce((a,p)=>a+p.y,0)/pts.length},a=-rot*Math.PI/180,co=Math.cos(a),si=Math.sin(a);
   const loc=pts.map(p=>({x:(p.x-c0.x)*co-(p.y-c0.y)*si,y:(p.x-c0.x)*si+(p.y-c0.y)*co})),x0=Math.min(...loc.map(p=>p.x)),x1=Math.max(...loc.map(p=>p.x)),y0=Math.min(...loc.map(p=>p.y)),y1=Math.max(...loc.map(p=>p.y));
   const mx=(x0+x1)/2,my=(y0+y1)/2,b=rot*Math.PI/180;return{cx:c0.x+mx*Math.cos(b)-my*Math.sin(b),cy:c0.y+mx*Math.sin(b)+my*Math.cos(b),w:x1-x0,h:y1-y0}}
+/* tourner un objet (ou tout son bloc) de d degrés */
+function rotObj(o,d){const ms=grpMembers(o);if(ms){const f=grpFrame(ms,o.rot);rotateMembers(ms.map(q=>({o:q,x:q.x,y:q.y,rot:q.rot})),{x:f.cx,y:f.cy},d)}else o.rot=Math.round(((o.rot+d)%360+360)%360*10)/10}
+/* tourner le terrain autour de son centre ; avec « all », tout le plan tourne et le nord suit */
+function rotateTerrain(d,all){const g=G(),pts=g.shape||rectPts(),xs=pts.map(p=>p.x),ys=pts.map(p=>p.y);
+  const c={x:(Math.min(...xs)+Math.max(...xs))/2,y:(Math.min(...ys)+Math.max(...ys))/2},a=d*Math.PI/180,co=Math.cos(a),si=Math.sin(a);
+  g.shape=pts.map(p=>({x:Math.round(c.x+(p.x-c.x)*co-(p.y-c.y)*si),y:Math.round(c.y+(p.x-c.x)*si+(p.y-c.y)*co)}));
+  if(all){rotateMembers(g.objs.map(o=>({o,x:o.x,y:o.y,rot:o.rot||0})),c,d);if(g===S)S.north=(((S.north+d)%360)+360)%360}
+  const mx=Math.min(...g.shape.map(p=>p.x)),my=Math.min(...g.shape.map(p=>p.y)),dx=mx<0?-mx:0,dy=my<0?-my:0;
+  if(dx||dy){g.shape.forEach(p=>{p.x+=dx;p.y+=dy});g.objs.forEach(o=>{o.x+=dx;o.y+=dy});if(g.surround){g.surround.x+=dx;g.surround.y+=dy}}
+  updateBox()}
 function rotateMembers(st,c,delta){const a=delta*Math.PI/180,co=Math.cos(a),si=Math.sin(a);
-  st.forEach(({o,x,y,rot})=>{const ox=x+o.w/2-c.x,oy=y+o.h/2-c.y;o.x=Math.round(c.x+ox*co-oy*si-o.w/2);o.y=Math.round(c.y+ox*si+oy*co-o.h/2);o.rot=(((rot+delta)%360)+360)%360})}
+  st.forEach(({o,x,y,rot})=>{const ox=x+o.w/2-c.x,oy=y+o.h/2-c.y;o.x=Math.round(c.x+ox*co-oy*si-o.w/2);o.y=Math.round(c.y+ox*si+oy*co-o.h/2);o.rot=Math.round((((rot+delta)%360)+360)%360*10)/10})}
 

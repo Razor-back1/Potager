@@ -362,3 +362,33 @@ test('modifier la forme du terrain depuis le mode édition', async () => {
   assert.deepEqual(erreurs, []);
   await ctx.close();
 });
+
+test('rotation au degré près : objet, angle tapé, terrain seul ou avec tout le plan', async () => {
+  const { ctx, page, erreurs } = await ouvrir();
+  await page.click('.tabs [data-tab="plan"]');
+  if (await page.isVisible('#sheet [data-act="close"]')) await page.click('#sheet [data-act="close"]');
+  await page.click('#editBtn');
+  const id = await page.evaluate(() => { const o = S.objs.find(o => o.type === 'planche' && !o.grp && !o.locked); selId = o.id; sheetMode = 'obj'; renderSheet(); renderPlan(); return o.id });
+  const rot = () => page.evaluate(id => obj(id).rot, id);
+  const r0 = await rot();
+  await page.click('[data-act="rot"][data-d="1"]'); await page.click('[data-act="rot"][data-d="1"]');
+  assert.equal(await rot(), (r0 + 2) % 360);
+  await page.click('[data-act="rot"][data-d="-1"]');
+  assert.equal(await rot(), (r0 + 1) % 360);
+  await page.fill('#o-rot', '37'); await page.dispatchEvent('#o-rot', 'change');
+  assert.equal(await rot(), 37);
+  if (await page.isVisible('#sheet [data-act="close"]')) await page.click('#sheet [data-act="close"]');
+  await page.click('#shapeBtn');
+  const avant = await page.evaluate(id => ({ shape: JSON.stringify(S.shape || rectPts()), o: { ...obj(id) }, north: S.north }), id);
+  await page.click('[data-sh="r1"]');
+  const t1 = await page.evaluate(id => ({ shape: JSON.stringify(S.shape), rot: obj(id).rot, north: S.north, min: Math.min(...S.shape.flatMap(p => [p.x, p.y])) }), id);
+  assert.notEqual(t1.shape, avant.shape); assert.equal(t1.rot, 37, 'terrain seul : les objets ne bougent pas'); assert.equal(t1.north, avant.north); assert.ok(t1.min >= 0);
+  await page.check('#sh-all');
+  await page.click('[data-sh="r-15"]');
+  const t2 = await page.evaluate(id => ({ rot: obj(id).rot, north: S.north, min: Math.min(...S.shape.flatMap(p => [p.x, p.y])) }), id);
+  assert.equal(t2.rot, 22, 'avec tout le plan : l\'objet tourne aussi'); assert.equal(t2.north, (avant.north - 15 + 360) % 360, 'le nord suit'); assert.ok(t2.min >= 0);
+  await page.click('#undoBtnH');
+  assert.equal(await rot(), 37);
+  assert.deepEqual(erreurs, []);
+  await ctx.close();
+});

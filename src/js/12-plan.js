@@ -172,6 +172,8 @@ function renderShapebar(){const el=$('#shapebar');el.hidden=!shapeEdit||tab!=='p
   const tp=terrainPts(),A=Math.abs(polyArea(tp))/1e4;
   el.innerHTML=`<div class="row between"><b>Forme du terrain</b><span class="mono">${num(A)} m² · ${tp.length} côtés</span></div>
   <span class="note">Glisse un côté pour l'écarter ou le rapprocher, un point rond pour déplacer un coin. Tire un point vert au milieu d'un côté pour créer un coin.</span>
+  <div class="row" style="flex-wrap:wrap;gap:6px"><span class="lbl">Tourner</span><button class="btn small" data-sh="r-15">−15°</button><button class="btn small" data-sh="r-1">−1°</button><button class="btn small" data-sh="r1">+1°</button><button class="btn small" data-sh="r15">+15°</button>
+  <label class="row" style="gap:6px;font-size:13px;flex-wrap:nowrap"><input type="checkbox" id="sh-all" ${shapeEdit.all?'checked':''}>avec tous les objets</label></div>
   <div class="row" style="flex-wrap:wrap;gap:6px">${shapeEdit.sel!=null&&tp.length>3?'<button class="btn small danger" data-sh="del">Supprimer le point</button>':''}<button class="btn small" data-sh="rect">Rectangle</button><button class="btn small" data-sh="L">En L</button><button class="btn small" data-sh="trap">Trapèze</button><button class="btn small primary" data-sh="done">Terminer</button></div>`}
 function enterSerre(id){shapeEdit=null;ctx=id;selId=null;sheetMode=null;G();renderSheet();fit();renderCtxbar();renderSunbar()}
 function exitSerre(){const id=ctx;ctx=null;selId=id;sheetMode=null;renderSheet();fit();renderCtxbar();renderSunbar()}
@@ -181,6 +183,7 @@ $('#ctxbar').addEventListener('click',e=>{const b=e.target.closest('[data-cx]');
 function startShapeEdit(){if(!G().shape){G().shape=rectPts();save()}shapeEdit={sel:null};selId=null;sheetMode=null;renderSheet();fit();renderShapebar()}
 $('#shapebar').addEventListener('click',e=>{const b=e.target.closest('[data-sh]');if(!b)return;const a=b.dataset.sh,W=G().w,H=G().h;
   if(a==='done'){shapeEdit=null;renderShapebar();renderPlan();return}
+  if(/^r-?\d+$/.test(a)){shapeEdit.all=$('#sh-all').checked;rotateTerrain(+a.slice(1),shapeEdit.all);shapeEdit.sel=null;save(true);renderShapebar();renderPlan();return}
   if(a==='del'&&shapeEdit.sel!=null&&G().shape.length>3){G().shape.splice(shapeEdit.sel,1);shapeEdit.sel=null}
   if(a==='rect')G().shape=rectPts();
   if(a==='L')G().shape=[{x:0,y:0},{x:W,y:0},{x:W,y:snap(H/2,10)},{x:snap(W/2,10),y:snap(H/2,10)},{x:snap(W/2,10),y:H},{x:0,y:H}];
