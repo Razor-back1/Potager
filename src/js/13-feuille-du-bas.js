@@ -196,7 +196,7 @@ function renderSheet(){
   }else if(sheetMode==='menu'){
     const GLs=GL.get().list.filter(g=>g.id!==PROP_ID);
     h+=`<div class="stack"><div class="row between"><h3>${PROP()?'Propriété':esc(KLBL[KIND()])}</h3><button class="btn small" data-act="close">Fermer</button></div>
-    <div><span class="lbl">Mes jardins</span><div class="glist">${GLs.map(g=>`<div class="grow${g.id===GID?' cur':''}"><span><i class="gdot" style="background:${KCOL[g.id===GID?KIND():g.k||'potager']}"></i><b>${esc(g.id===GID?S.name:(g.name||'Potager'))}</b>${(g.id===GID?S.example:g.ex)?' <span class="note">· exemple</span>':''}</span>${g.id===GID?'<span class="note">ouvert</span>':`<button class="btn small" data-act="gopen" data-g="${g.id}">Ouvrir</button>`}</div>`).join('')}</div>
+    <div><span class="lbl">Mes jardins</span><div class="glist">${GLs.map(g=>`<div class="grow${g.id===GID?' cur':''}"><span><i class="gdot" style="background:${KCOL[g.id===GID?KIND():g.k||'potager']}"></i><b>${esc(g.id===GID?S.name:(g.name||'Potager'))}</b>${(g.id===GID?S.example:g.ex)?' <span class="note">· exemple</span>':''}</span><span class="row" style="gap:6px;flex-wrap:nowrap">${parcels().some(o=>o.gid===g.id)?'':`<button class="btn small primary" data-act="gplace" data-g="${g.id}">Poser sur le plan</button>`}${g.id===GID?'<span class="note">ouvert</span>':`<button class="btn small" data-act="gopen" data-g="${g.id}">Ouvrir</button>`}</span></div>`).join('')}</div>
     ${PROP()?'':'<div class="row" style="margin-top:8px"><button class="btn small" data-act="gvar">Variante : même terrain, plan vide</button><button class="btn small" data-act="gdup">Dupliquer celui-ci</button></div>'}
     <div class="row" style="margin-top:8px"><button class="btn small" data-act="gnew">+ Potager</button><button class="btn small" data-act="gnewfl">+ Jardin de fleurs</button><button class="btn small" data-act="gnewvg">+ Verger</button><button class="btn small" data-act="gnewex">+ Exemple potager</button><button class="btn small" data-act="gnewexfl">+ Exemple fleurs</button><button class="btn small" data-act="gnewexvg">+ Exemple verger</button>${GLs.length>1&&!PROP()?'<button class="btn small danger" data-act="gdel">Supprimer celui-ci</button>':''}</div></div>
     <label class="field"><span class="lbl">Nom</span><input id="g-name" value="${esc(S.name)}"></label>
@@ -347,6 +347,7 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
   if(a==='shape-edit')startShapeEdit();
   if(a==='shape-rect'){S.shape=null;save();renderSheet();renderPlan();toast('Terrain redevenu rectangulaire',true)}
   if(a==='reload'){S=sample();selId=null;sheetMode=null;save();fit();renderSheet();toast('Exemple remis à zéro',true)}
+  if(a==='gplace'){placeInProp(b.dataset.g);renderSheet();refresh();return toast('Posé sur la propriété : il apparaît dans son onglet',true)}
   if(a==='gopen'){sheetMode=null;if(editMode)setEdit(false);openParcel(b.dataset.g);renderSheet();return toast('Ouvert : '+S.name)}
   if(a==='gnew'){const n=gardensOf('potager').length+1;return newGarden(emptyGarden('Potager '+n),'Nouveau potager, posé sur la propriété')}
   if(a==='gnewfl'){const n=gardensOf('fleurs').length+1;return newGarden(emptyGarden('Jardin de fleurs'+(n>1?' '+n:''),'fleurs'),'Nouveau jardin de fleurs, posé sur la propriété')}

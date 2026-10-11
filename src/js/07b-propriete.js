@@ -48,8 +48,8 @@ const propState=()=>gState(PROP_ID);
 function parcels(){const st=propState();return st?st.objs.filter(o=>o.type==='parcelle'&&GL.get().list.some(x=>x.id===o.gid)):[]}
 /* garde la taille et le nom de chaque parcelle alignés sur son jardin (sans toucher à l'historique) */
 function syncParcels(){if(!PROP())return;const L=GL.get().list;let ch=false;
-  S.objs=S.objs.filter(o=>{if(o.type!=='parcelle')return true;if(!L.some(x=>x.id===o.gid)){ch=true;return false}return true});
-  S.objs.forEach(o=>{if(o.type!=='parcelle')return;const st=gState(o.gid);if(!st)return;
+  /* une parcelle dont le jardin n'est pas (encore) sur cet appareil reste dans l'état : elle réapparaît dès que la synchro l'apporte */
+  S.objs.forEach(o=>{if(o.type!=='parcelle'||!L.some(x=>x.id===o.gid))return;const st=gState(o.gid);if(!st)return;
     if(o.w!==st.w||o.h!==st.h){o.x+=(o.w-st.w)/2;o.y+=(o.h-st.h)/2;o.w=st.w;o.h=st.h;ch=true}if(o.name!==st.name){o.name=st.name;ch=true}});
   if(ch){lastJSON=JSON.stringify(S);persist()}}
 
@@ -101,8 +101,10 @@ function renderTopNav(){syncTop();saveNav();
   if(TOP==='prop')h=seg(SEGS.prop);
   else if(TOP==='eau'){const gs=KINDS.flatMap(activeOf);if(!gs.some(g=>g.id===GID)&&!PROP())gs.push(GL.get().list.find(g=>g.id===GID));h=chips(gs)}
   else if(tab!=='empty'){const gs=activeOf(TOP);if(!gs.some(g=>g.id===GID)&&!PROP())gs.push(GL.get().list.find(g=>g.id===GID));h=chips(gs)+seg([['today',"Aujourd'hui"],['plan','Plan'],['harvest',FLW()?'Floraisons':'Récoltes'],['crops',FLW()?'Fleurs':VRG()?'Fruitiers':'Cultures']])}
+  if(KINDS.includes(TOP)&&tab!=='empty'&&!PROP()&&!parcels().some(o=>o.gid===GID))h=`<div class="pwarn"><span>Ce jardin n'est pas sur la propriété.</span><button class="btn small primary" data-pput="1">Le poser sur le plan</button></div>`+h;
   el.innerHTML=h;el.hidden=!h}
 $('#subnav').addEventListener('click',e=>{const t=e.target.closest('[data-tab]');if(t){if(t.dataset.tab===tab&&tab==='plan'){sheetMode=null;selId=null;shapeEdit=null;renderSheet();fit();return}return setTab(t.dataset.tab)}
+  if(e.target.closest('[data-pput]')){placeInProp(GID);refresh();return toast('Posé sur la propriété : tu peux le déplacer depuis Plan',true)}
   const g=e.target.closest('[data-g]');if(g&&g.dataset.g!==GID){switchGarden(g.dataset.g);if(TOP==='eau')setLast('eau',GID);else{setLast(KIND(),GID);if(tab==='empty')setTab('today')}renderTopNav()}});
 
 /* ---- vue d'ensemble de la propriété ---- */
@@ -131,11 +133,11 @@ function renderProp(){const v=$('#v-prop');if(!PROP()){v.innerHTML='';return}syn
   const prow=(id,k,name,sub,right)=>`<button class="trow" data-pg="${id}"><span class="pico" style="background:${KCOL[k]}"><svg viewBox="0 0 24 24">${ico[k]}</svg></span><span><b>${esc(name)}</b><span class="note" style="display:block">${sub}</span></span>${right}</button>`;
   const desc=x=>{const g=x.g;if(!g)return'';const n=g.objs.filter(o=>TYPES[o.type]&&TYPES[o.type].plant).length;return`${x.k==='verger'?n+' arbre'+(n>1?'s':''):n+(x.k==='fleurs'?' massif':' planche')+(n>1?'s':'')} · ${num(Math.abs(polyArea(g.shape&&g.shape.length>2?g.shape:[{x:0,y:0},{x:g.w,y:0},{x:g.w,y:g.h},{x:0,y:g.h}]))/1e4,0)} m²`};
   v.innerHTML=`<div class="page"><div class="ttitle"><h2>${esc(S.name)}</h2><span class="note">${ps.length} parcelle${ps.length>1?'s':''} · ${num(area,0)} m²</span></div>
+  ${loose.length?`<div class="tcard"><h3>Pas sur le plan</h3><span class="note">Ces jardins n'apparaissent pas dans les onglets du bas. « Poser » les met sur la propriété et les rend actifs ; sinon supprime-les.</span>${loose.map(g=>{const k=gKind(g.id)||'potager';return`<div class="trow"><span class="pico" style="background:${KCOL[k]}"><svg viewBox="0 0 24 24">${ico[k]}</svg></span><span><b>${esc(g.name||KLBL[k])}</b>${g.ex?' <span class="note">· exemple</span>':''}</span><span class="row" style="gap:6px"><button class="btn small" data-pg="${g.id}">Ouvrir</button><button class="btn small primary" data-pplace="${g.id}">Poser</button><button class="btn small danger" data-pdel="${g.id}" aria-label="Supprimer ${esc(g.name||'')}">Supprimer</button></span></div>`}).join('')}</div>`:''}
   ${nt!=null&&nt<=2&&sens.length?`<div class="tcard frost"><h3>Gel possible cette nuit · ${num(nt)} °C</h3><span>${sens.map(x=>`<b>${x.s.sens}</b> culture${x.s.sens>1?'s':''} sensible${x.s.sens>1?'s':''} : ${esc(x.o.name)}`).join(' · ')}</span><button class="btn small" data-pg="${sens[0].o.gid}" style="justify-self:start">Voir quoi couvrir</button></div>`:''}
   <div class="tcard pcard"><div class="row between"><h3>Plan</h3><button class="btn small" data-pplan="1">Modifier</button></div>${propSVG(700)}<div class="plegend">${KINDS.map(k=>`<span><i style="background:${KCOL[k]}"></i>${KLBL[k]}</span>`).join('')}<span class="note">Touche une parcelle</span></div></div>
   <div class="tcard"><h3>Parcelles</h3>${st.map(x=>prow(x.o.gid,x.k,x.o.name,desc(x),x.s.n?`<span class="pbadge">${x.s.n}</span>`:'<span class="note">›</span>')).join('')||'<p class="note">Aucune parcelle pour l\'instant.</p>'}
     <div class="row"><button class="btn small primary" data-pnew="potager">+ Potager</button><button class="btn small" data-pnew="fleurs">+ Jardin de fleurs</button><button class="btn small" data-pnew="verger">+ Verger</button></div></div>
-  ${loose.length?`<div class="tcard"><h3>Pas sur le plan</h3><span class="note">Ces jardins n'apparaissent pas dans les onglets du bas. Pose-les sur le plan pour t'en servir, ou supprime-les.</span>${loose.map(g=>{const k=gKind(g.id)||'potager';return`<div class="trow"><span class="pico" style="background:${KCOL[k]}"><svg viewBox="0 0 24 24">${ico[k]}</svg></span><span><b>${esc(g.name||KLBL[k])}</b>${g.ex?' <span class="note">· exemple</span>':''}</span><span class="row" style="gap:6px"><button class="btn small" data-pg="${g.id}">Ouvrir</button><button class="btn small" data-pplace="${g.id}">Poser</button><button class="btn small danger" data-pdel="${g.id}" aria-label="Supprimer ${esc(g.name||'')}">Supprimer</button></span></div>`}).join('')}</div>`:''}
   <div class="tcard"><h3>Plan depuis une capture</h3><span class="note">Fais une capture de Google Maps (vue satellite) avec la barre d'échelle, puis :</span>
     <div class="row"><button class="btn small primary" data-pbg="ask">1 · Copier la demande pour Claude</button><button class="btn small" data-pbg="paste">2 · Coller sa réponse</button></div>
     <span class="note">Envoie la demande et la capture à Claude (l'app Claude ou claude.ai), copie sa réponse et colle-la ici : contour, maison, étang, arbres… sont posés d'un coup. Tu corriges ensuite à la main.</span>

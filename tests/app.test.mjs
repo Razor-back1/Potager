@@ -665,3 +665,31 @@ test('changer d\'onglet revient sur Aujourd\'hui, et l\'app redémarre sur Aujou
   assert.deepEqual(erreurs, []);
   await ctx.close();
 });
+
+test('vieux jardins pas liés à la propriété : les poser depuis le menu ou le bandeau', async () => {
+  const ctx = await nav.newContext({ serviceWorkers: 'block' });
+  await ctx.route('**/*', r => r.request().url().startsWith('http://127.0.0.1') ? r.continue() : r.abort());
+  const page = await ctx.newPage(), erreurs = []; page.on('pageerror', e => erreurs.push(e.message));
+  await page.goto(srv.url); await page.waitForFunction(() => window.APP_PRETE === true);
+  /* une propriété sans parcelle (et une parcelle d'un jardin absent de cet appareil), deux vieux potagers */
+  await page.evaluate(() => { const p = emptyGarden('Ma propriété', 'propriete'); p.objs.push({ id: 'x', type: 'parcelle', gid: 'ailleurs', name: 'Ailleurs', x: 0, y: 0, w: 500, h: 500, rot: 0, zones: [] });
+    localStorage.clear(); localStorage.setItem(keyOf('prop'), JSON.stringify(p)); localStorage.setItem(keyOf('main'), JSON.stringify(emptyGarden('Vieux 1'))); localStorage.setItem(keyOf('g2'), JSON.stringify(emptyGarden('Vieux 2')));
+    localStorage.setItem('atelier-potager-list', JSON.stringify({ cur: 'main', list: [{ id: 'prop', name: 'Ma propriété', k: 'propriete' }, { id: 'main', name: 'Vieux 1' }, { id: 'g2', name: 'Vieux 2' }] })) });
+  await page.reload(); await page.waitForFunction(() => window.APP_PRETE === true);
+  assert.deepEqual(await page.evaluate(() => [TOP, tab]), ['prop', 'prop'], 'aucun jardin posé : on arrive sur la propriété');
+  assert.equal(await page.isVisible('.tabs [data-top="potager"]'), false);
+  assert.match(await page.textContent('#v-prop .tcard'), /Pas sur le plan/, 'la carte des jardins à poser est en haut');
+  /* menu : « Poser sur le plan » */
+  await page.click('#menuBtn');
+  await page.click('[data-act="gplace"][data-g="main"]');
+  assert.equal(await page.isVisible('.tabs [data-top="potager"]'), true);
+  /* l'autre, ouvert depuis le menu, affiche un bandeau pour le poser */
+  await page.click('[data-act="gopen"][data-g="g2"]');
+  assert.ok(await page.isVisible('#subnav [data-pput]'));
+  await page.click('#subnav [data-pput]');
+  assert.equal(await page.isVisible('#subnav [data-pput]'), false);
+  await page.click('.tabs [data-top="prop"]');
+  assert.deepEqual(await page.evaluate(() => S.objs.filter(o => o.type === 'parcelle').map(o => o.gid).sort()), ['ailleurs', 'g2', 'main'], 'la parcelle d\'un jardin absent n\'est pas effacée');
+  assert.deepEqual(erreurs, []);
+  await ctx.close();
+});
