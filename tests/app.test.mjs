@@ -392,3 +392,40 @@ test('rotation au degré près : objet, angle tapé, terrain seul ou avec tout l
   assert.deepEqual(erreurs, []);
   await ctx.close();
 });
+
+test('terrain : Rectangle puis rotation sans que le plan saute, dimensions au cm, déplacement par appui long', async () => {
+  const { ctx, page, erreurs } = await ouvrir();
+  await page.click('.tabs [data-tab="plan"]');
+  if (await page.isVisible('#sheet [data-act="close"]')) await page.click('#sheet [data-act="close"]');
+  await page.click('#editBtn'); await page.click('#shapeBtn');
+  await page.click('[data-sh="rect"]');
+  const id = await page.evaluate(() => S.objs.find(o => o.type === 'planche').id);
+  const ecran = () => page.locator(`#map [data-id="${id}"]`).boundingBox();
+  const b0 = await ecran();
+  for (let i = 0; i < 3; i++) await page.click('[data-sh="r-15"]');   /* 45° : le rectangle dépasse en coordonnées négatives */
+  const b1 = await ecran();
+  assert.ok(Math.abs(b1.x - b0.x) < 2 && Math.abs(b1.y - b0.y) < 2, `la planche a sauté à l'écran : ${JSON.stringify([b0, b1])}`);
+  /* dimensions du rectangle tourné */
+  assert.ok(await page.isVisible('#sh-w'), 'champs largeur / longueur absents');
+  await page.fill('#sh-w', '15'); await page.dispatchEvent('#sh-w', 'change');
+  await page.fill('#sh-l', '9.5'); await page.dispatchEvent('#sh-l', 'change');
+  const r = await page.evaluate(() => { const r = rectInfo(S.shape); return { W: Math.round(r.W), L: Math.round(r.L), ang: Math.round(r.ang * 180 / Math.PI) } });
+  assert.deepEqual({ W: r.W, L: r.L }, { W: 1500, L: 950 }); assert.equal(Math.abs(r.ang) % 90, 45);
+  /* appui long dans le terrain puis glisser : le terrain se déplace, pas les objets */
+  const avant = await page.evaluate(id => ({ s: JSON.stringify(S.shape), o: obj(id).x - Math.min(...S.shape.map(p => p.x)) }), id);
+  const box = await page.locator('#map').boundingBox(), c = await page.evaluate(() => { const xs = S.shape.map(p => p.x), ys = S.shape.map(p => p.y); return { x: (Math.min(...xs) + Math.max(...xs)) / 2, y: (Math.min(...ys) + Math.max(...ys)) / 2 } });
+  /* un point du terrain visible à l'écran (pas sous le panneau) */
+  const sc = await page.evaluate(() => { const r = svg.getBoundingClientRect(), xs = S.shape.map(p => p.x), ys = S.shape.map(p => p.y);
+    for (let fy = .9; fy > .1; fy -= .05) for (let fx = .2; fx < .8; fx += .1) { const w = { x: Math.min(...xs) + fx * (Math.max(...xs) - Math.min(...xs)), y: Math.min(...ys) + fy * (Math.max(...ys) - Math.min(...ys)) };
+      if (!inPoly(w, S.shape)) continue; const x = r.left + r.width / 2 + (w.x - view.cx) * view.z, y = r.top + r.height / 2 + (w.y - view.cy) * view.z, el = document.elementFromPoint(x, y);
+      if (el && el.closest('#map') && !el.closest('[data-vtx],[data-edge],[data-mid]')) return { x, y } } return null });
+  assert.ok(sc, 'aucun point du terrain accessible');
+  await page.mouse.move(sc.x, sc.y); await page.mouse.down(); await page.waitForTimeout(500);
+  await page.mouse.move(sc.x + 40, sc.y + 25, { steps: 6 }); await page.mouse.up();
+  const apres = await page.evaluate(id => ({ s: JSON.stringify(S.shape), o: obj(id).x - Math.min(...S.shape.map(p => p.x)) }), id);
+  /* les coordonnées sont recalées sur le terrain : c'est la position des objets par rapport au terrain qui change */
+  assert.notEqual(apres.o, avant.o, 'le terrain doit bouger par rapport aux objets');
+  assert.ok(box);
+  assert.deepEqual(erreurs, []);
+  await ctx.close();
+});

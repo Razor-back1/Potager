@@ -47,7 +47,7 @@ const terrainPts=()=>G().shape&&G().shape.length>=3?G().shape:rectPts();
 const polyArea=pts=>{let a=0;pts.forEach((p,i)=>{const q=pts[(i+1)%pts.length];a+=p.x*q.y-q.x*p.y});return a/2};
 /* garde le terrain en coordonnées positives : décale le terrain, les objets et la vue ensemble */
 function normalizeShape(){if(!G().shape)return;const dx=-Math.min(...G().shape.map(p=>p.x)),dy=-Math.min(...G().shape.map(p=>p.y));if(!dx&&!dy)return;
-  G().shape.forEach(p=>{p.x+=dx;p.y+=dy});G().objs.forEach(o=>{o.x+=dx;o.y+=dy});view.cx+=dx;view.cy+=dy}
+  G().shape.forEach(p=>{p.x+=dx;p.y+=dy});G().objs.forEach(o=>{o.x+=dx;o.y+=dy});if(G().surround){G().surround.x+=dx;G().surround.y+=dy}view.cx+=dx;view.cy+=dy}
 function updateBox(){if(!G().shape)return;G().w=Math.max(100,...G().shape.map(p=>p.x));G().h=Math.max(100,...G().shape.map(p=>p.y))}
 /* contexte : le potager (S) ou l'intérieur d'une serre */
 let ctx=null;
@@ -74,9 +74,13 @@ function rotateTerrain(d,all){const g=G(),pts=g.shape||rectPts(),xs=pts.map(p=>p
   const c={x:(Math.min(...xs)+Math.max(...xs))/2,y:(Math.min(...ys)+Math.max(...ys))/2},a=d*Math.PI/180,co=Math.cos(a),si=Math.sin(a);
   g.shape=pts.map(p=>({x:Math.round(c.x+(p.x-c.x)*co-(p.y-c.y)*si),y:Math.round(c.y+(p.x-c.x)*si+(p.y-c.y)*co)}));
   if(all){rotateMembers(g.objs.map(o=>({o,x:o.x,y:o.y,rot:o.rot||0})),c,d);if(g===S)S.north=(((S.north+d)%360)+360)%360}
-  const mx=Math.min(...g.shape.map(p=>p.x)),my=Math.min(...g.shape.map(p=>p.y)),dx=mx<0?-mx:0,dy=my<0?-my:0;
-  if(dx||dy){g.shape.forEach(p=>{p.x+=dx;p.y+=dy});g.objs.forEach(o=>{o.x+=dx;o.y+=dy});if(g.surround){g.surround.x+=dx;g.surround.y+=dy}}
-  updateBox()}
+  normalizeShape();updateBox()}
+/* rectangle (4 coins à angle droit) : largeur, longueur et angle, pour le redimensionner au centimètre */
+function rectInfo(pts){if(!pts||pts.length!==4)return null;const[a,b,c,d]=pts,u={x:b.x-a.x,y:b.y-a.y},v={x:c.x-b.x,y:c.y-b.y},W=Math.hypot(u.x,u.y),L=Math.hypot(v.x,v.y);
+  if(W<1||L<1||Math.abs((u.x*v.x+u.y*v.y)/(W*L))>.03||Math.hypot(d.x-(a.x+v.x),d.y-(a.y+v.y))>3)return null;
+  return{W,L,ang:Math.atan2(u.y,u.x),sg:Math.sign(u.x*v.y-u.y*v.x)||1,c:{x:(a.x+c.x)/2,y:(a.y+c.y)/2}}}
+function setRect(W,L){const r=rectInfo(G().shape);if(!r)return;const ux=Math.cos(r.ang),uy=Math.sin(r.ang),vx=-uy*r.sg,vy=ux*r.sg,P=(s,t)=>({x:Math.round(r.c.x+s*W/2*ux+t*L/2*vx),y:Math.round(r.c.y+s*W/2*uy+t*L/2*vy)});
+  G().shape=[P(-1,-1),P(1,-1),P(1,1),P(-1,1)];normalizeShape();updateBox()}
 function rotateMembers(st,c,delta){const a=delta*Math.PI/180,co=Math.cos(a),si=Math.sin(a);
   st.forEach(({o,x,y,rot})=>{const ox=x+o.w/2-c.x,oy=y+o.h/2-c.y;o.x=Math.round(c.x+ox*co-oy*si-o.w/2);o.y=Math.round(c.y+ox*si+oy*co-o.h/2);o.rot=Math.round((((rot+delta)%360)+360)%360*10)/10})}
 

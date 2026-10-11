@@ -1211,7 +1211,7 @@ const terrainPts=()=>G().shape&&G().shape.length>=3?G().shape:rectPts();
 const polyArea=pts=>{let a=0;pts.forEach((p,i)=>{const q=pts[(i+1)%pts.length];a+=p.x*q.y-q.x*p.y});return a/2};
 /* garde le terrain en coordonnées positives : décale le terrain, les objets et la vue ensemble */
 function normalizeShape(){if(!G().shape)return;const dx=-Math.min(...G().shape.map(p=>p.x)),dy=-Math.min(...G().shape.map(p=>p.y));if(!dx&&!dy)return;
-  G().shape.forEach(p=>{p.x+=dx;p.y+=dy});G().objs.forEach(o=>{o.x+=dx;o.y+=dy});view.cx+=dx;view.cy+=dy}
+  G().shape.forEach(p=>{p.x+=dx;p.y+=dy});G().objs.forEach(o=>{o.x+=dx;o.y+=dy});if(G().surround){G().surround.x+=dx;G().surround.y+=dy}view.cx+=dx;view.cy+=dy}
 function updateBox(){if(!G().shape)return;G().w=Math.max(100,...G().shape.map(p=>p.x));G().h=Math.max(100,...G().shape.map(p=>p.y))}
 /* contexte : le potager (S) ou l'intérieur d'une serre */
 let ctx=null;
@@ -1238,9 +1238,13 @@ function rotateTerrain(d,all){const g=G(),pts=g.shape||rectPts(),xs=pts.map(p=>p
   const c={x:(Math.min(...xs)+Math.max(...xs))/2,y:(Math.min(...ys)+Math.max(...ys))/2},a=d*Math.PI/180,co=Math.cos(a),si=Math.sin(a);
   g.shape=pts.map(p=>({x:Math.round(c.x+(p.x-c.x)*co-(p.y-c.y)*si),y:Math.round(c.y+(p.x-c.x)*si+(p.y-c.y)*co)}));
   if(all){rotateMembers(g.objs.map(o=>({o,x:o.x,y:o.y,rot:o.rot||0})),c,d);if(g===S)S.north=(((S.north+d)%360)+360)%360}
-  const mx=Math.min(...g.shape.map(p=>p.x)),my=Math.min(...g.shape.map(p=>p.y)),dx=mx<0?-mx:0,dy=my<0?-my:0;
-  if(dx||dy){g.shape.forEach(p=>{p.x+=dx;p.y+=dy});g.objs.forEach(o=>{o.x+=dx;o.y+=dy});if(g.surround){g.surround.x+=dx;g.surround.y+=dy}}
-  updateBox()}
+  normalizeShape();updateBox()}
+/* rectangle (4 coins à angle droit) : largeur, longueur et angle, pour le redimensionner au centimètre */
+function rectInfo(pts){if(!pts||pts.length!==4)return null;const[a,b,c,d]=pts,u={x:b.x-a.x,y:b.y-a.y},v={x:c.x-b.x,y:c.y-b.y},W=Math.hypot(u.x,u.y),L=Math.hypot(v.x,v.y);
+  if(W<1||L<1||Math.abs((u.x*v.x+u.y*v.y)/(W*L))>.03||Math.hypot(d.x-(a.x+v.x),d.y-(a.y+v.y))>3)return null;
+  return{W,L,ang:Math.atan2(u.y,u.x),sg:Math.sign(u.x*v.y-u.y*v.x)||1,c:{x:(a.x+c.x)/2,y:(a.y+c.y)/2}}}
+function setRect(W,L){const r=rectInfo(G().shape);if(!r)return;const ux=Math.cos(r.ang),uy=Math.sin(r.ang),vx=-uy*r.sg,vy=ux*r.sg,P=(s,t)=>({x:Math.round(r.c.x+s*W/2*ux+t*L/2*vx),y:Math.round(r.c.y+s*W/2*uy+t*L/2*vy)});
+  G().shape=[P(-1,-1),P(1,-1),P(1,1),P(-1,1)];normalizeShape();updateBox()}
 function rotateMembers(st,c,delta){const a=delta*Math.PI/180,co=Math.cos(a),si=Math.sin(a);
   st.forEach(({o,x,y,rot})=>{const ox=x+o.w/2-c.x,oy=y+o.h/2-c.y;o.x=Math.round(c.x+ox*co-oy*si-o.w/2);o.y=Math.round(c.y+ox*si+oy*co-o.h/2);o.rot=Math.round((((rot+delta)%360)+360)%360*10)/10})}
 
@@ -1465,6 +1469,9 @@ svg.addEventListener('pointerdown',e=>{
     if(v){shapeEdit.sel=+v.dataset.vtx;drag={mode:'vtx',i:shapeEdit.sel,sx:e.clientX,sy:e.clientY};renderPlan();renderShapebar();return}
     if(m){const i=+m.dataset.mid+1,a=G().shape[i-1],b=G().shape[i%G().shape.length];G().shape.splice(i,0,{x:snap((a.x+b.x)/2,10),y:snap((a.y+b.y)/2,10)});shapeEdit.sel=i;drag={mode:'vtx',i,sx:e.clientX,sy:e.clientY,inserted:true};renderPlan();renderShapebar();return}
     const ed=e.target.closest('[data-edge]');if(ed){const i=+ed.dataset.edge,n=G().shape.length;shapeEdit.sel=null;drag={mode:'edge',i,p0:world(e.clientX,e.clientY),s:[{...G().shape[i]},{...G().shape[(i+1)%n]}],sx:e.clientX,sy:e.clientY};renderShapebar();return}
+    const wp=world(e.clientX,e.clientY);
+    if(inPoly(wp,G().shape)){drag={mode:'shold',p0:wp,s:G().shape.map(q=>({...q})),sx:e.clientX,sy:e.clientY,c0:{x:view.cx,y:view.cy}};
+      holdT=setTimeout(()=>{if(!drag||drag.mode!=='shold')return;drag.mode='smove';drag.moved=false;if(navigator.vibrate)navigator.vibrate(12);showHint('Glisse pour déplacer le terrain')},380);return}
     drag={mode:'pan',sx:e.clientX,sy:e.clientY,c0:{x:view.cx,y:view.cy}};return}
   const h=e.target.closest('[data-handle]'),g0=e.target.closest('[data-id]'),g=g0&&(editMode||PICKABLE.has((obj(g0.dataset.id)||{}).type))?g0:null,p=world(e.clientX,e.clientY);
   if(h&&selId){const o=obj(selId);drag={mode:'resize',o,p0:p,s:{...o},sx:e.clientX,sy:e.clientY}}
@@ -1481,10 +1488,11 @@ svg.addEventListener('pointermove',e=>{
   if(pinch&&ptrs.size===2){const[a,b]=[...ptrs.values()],r=svg.getBoundingClientRect();view.z=clamp(pinch.z0*Math.hypot(a.x-b.x,a.y-b.y)/pinch.d0,.04,6);
     view.cx=pinch.m.x-((a.x+b.x)/2-r.left-r.width/2)/view.z;view.cy=pinch.m.y-((a.y+b.y)/2-r.top-r.height/2)/view.z;renderPlan();return}
   if(!drag||drag.mode==='done')return;
-  if(drag.mode==='hold'){if(Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)<6)return;clearTimeout(holdT);drag.mode='pan'}
+  if(drag.mode==='hold'||drag.mode==='shold'){if(Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)<6)return;clearTimeout(holdT);drag.mode='pan'}
   if(!drag.moved&&Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)<5)return;drag.moved=true;
   const p=world(e.clientX,e.clientY),o=drag.o;
   if(drag.mode==='pan'){view.cx=drag.c0.x-(e.clientX-drag.sx)/view.z;view.cy=drag.c0.y-(e.clientY-drag.sy)/view.z}
+  else if(drag.mode==='smove'){const dx=snap(p.x-drag.p0.x,10),dy=snap(p.y-drag.p0.y,10);G().shape=drag.s.map(q=>({x:q.x+dx,y:q.y+dy}));showHint(`Terrain déplacé de ${m2(Math.hypot(dx,dy))} m`)}
   else if(drag.mode==='vtx'){const sh=G().shape,n=sh.length,pv=sh[(drag.i-1+n)%n],nx=sh[(drag.i+1)%n],thr=10/view.z;
     const q={x:snap(p.x,10),y:snap(p.y,10)};
     for(const a of[pv,nx]){if(Math.abs(q.x-a.x)<thr)q.x=a.x;if(Math.abs(q.y-a.y)<thr)q.y=a.y}
@@ -1508,7 +1516,8 @@ svg.addEventListener('pointermove',e=>{
 function endPtr(e){ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;clearTimeout(holdT);
   if(drag&&ptrs.size===0){
     if(drag.mode==='hold'){if(!editMode&&drag.o.type==='abri'){openInv()}else if(!ctx&&drag.o.type==='serre'&&!editMode){enterSerre(drag.o.id)}else{sheetMode='obj';renderSheet();keepAboveSheet(drag.o)}}
-    else if(drag.mode==='pan'&&!drag.moved){if(shapeEdit){shapeEdit.sel=null;renderShapebar()}else{selId=null;sheetMode=null;renderSheet()}renderPlan()}
+    else if(drag.mode==='smove'&&drag.moved){normalizeShape();updateBox();save();renderShapebar()}
+    else if((drag.mode==='pan'||drag.mode==='shold'||drag.mode==='smove')&&!drag.moved){if(shapeEdit){shapeEdit.sel=null;renderShapebar()}else{selId=null;sheetMode=null;renderSheet()}renderPlan()}
     else if(drag.mode==='rot'&&drag.moved){save();if(sheetMode)renderSheet()}
     else if((drag.mode==='vtx'&&(drag.moved||drag.inserted))||(drag.mode==='edge'&&drag.moved)){normalizeShape();updateBox();save();renderShapebar()}
     else if(drag.moved&&(drag.mode==='move'||drag.mode==='resize')){fitZones(drag.o);save();if(sheetMode)renderSheet()}
@@ -1530,17 +1539,21 @@ $('#sunbar').addEventListener('input',e=>{if(e.target.id==='sb-h'){shade.hour=+e
 $('#sunbar').addEventListener('change',e=>{if(e.target.id==='sb-d'){shade.doy=+e.target.value;renderSunbar();renderPlan()}});
 function renderShapebar(){const el=$('#shapebar');el.hidden=!shapeEdit||tab!=='plan';$('#sunbar').hidden=!!shapeEdit||!shade.on||tab!=='plan';updateModeUI();if(el.hidden)return;
   const tp=terrainPts(),A=Math.abs(polyArea(tp))/1e4;
-  el.innerHTML=`<div class="row between"><b>Forme du terrain</b><span class="mono">${num(A)} m² · ${tp.length} côtés</span></div>
-  <span class="note">Glisse un côté pour l'écarter ou le rapprocher, un point rond pour déplacer un coin. Tire un point vert au milieu d'un côté pour créer un coin.</span>
-  <div class="row" style="flex-wrap:wrap;gap:6px"><span class="lbl">Tourner</span><button class="btn small" data-sh="r-15">−15°</button><button class="btn small" data-sh="r-1">−1°</button><button class="btn small" data-sh="r1">+1°</button><button class="btn small" data-sh="r15">+15°</button>
-  <label class="row" style="gap:6px;font-size:13px;flex-wrap:nowrap"><input type="checkbox" id="sh-all" ${shapeEdit.all?'checked':''}>avec tous les objets</label></div>
-  <div class="row" style="flex-wrap:wrap;gap:6px">${shapeEdit.sel!=null&&tp.length>3?'<button class="btn small danger" data-sh="del">Supprimer le point</button>':''}<button class="btn small" data-sh="rect">Rectangle</button><button class="btn small" data-sh="L">En L</button><button class="btn small" data-sh="trap">Trapèze</button><button class="btn small primary" data-sh="done">Terminer</button></div>`}
+  const r=rectInfo(G().shape),sm='min-height:32px;padding:0 10px;font-size:13px',inp='width:64px;min-height:32px;padding:0 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);color:var(--ink)';
+  el.innerHTML=`<div class="row between" style="flex-wrap:nowrap"><span><b>Forme du terrain</b> <span class="mono note">${num(A)} m² · ${tp.length} côtés</span></span><button class="btn small primary" data-sh="done">Terminer</button></div>
+  ${r?`<div class="row" style="gap:6px;flex-wrap:nowrap;font-size:13px"><label class="row" style="gap:4px;flex-wrap:nowrap">Larg.<input id="sh-w" type="number" inputmode="decimal" step="0.1" min="1" value="${Math.round(r.W)/100}" style="${inp}" aria-label="Largeur en mètres"></label><label class="row" style="gap:4px;flex-wrap:nowrap">Long.<input id="sh-l" type="number" inputmode="decimal" step="0.1" min="1" value="${Math.round(r.L)/100}" style="${inp}" aria-label="Longueur en mètres"></label><span class="note">m</span></div>`:''}
+  <div class="row" style="flex-wrap:wrap;gap:6px;align-items:center"><button class="btn small" style="${sm}" data-sh="r-15" aria-label="Tourner de 15° à gauche">↺15°</button><button class="btn small" style="${sm}" data-sh="r-1" aria-label="Tourner de 1° à gauche">↺1°</button><button class="btn small" style="${sm}" data-sh="r1" aria-label="Tourner de 1° à droite">↻1°</button><button class="btn small" style="${sm}" data-sh="r15" aria-label="Tourner de 15° à droite">↻15°</button>
+  <label class="row" style="gap:5px;font-size:12.5px;flex-wrap:nowrap"><input type="checkbox" id="sh-all" ${shapeEdit.all?'checked':''}>tout le plan</label></div>
+  <div class="row" style="flex-wrap:wrap;gap:6px">${shapeEdit.sel!=null&&tp.length>3?`<button class="btn small danger" style="${sm}" data-sh="del">Supprimer le point</button>`:''}<button class="btn small" style="${sm}" data-sh="rect">Rectangle</button><button class="btn small" style="${sm}" data-sh="L">En L</button><button class="btn small" style="${sm}" data-sh="trap">Trapèze</button></div>
+  <span class="note" style="font-size:12px">Coins : glisse les ronds · côtés : glisse le trait · appui long dans le terrain : le déplacer.</span>`}
 function enterSerre(id){shapeEdit=null;ctx=id;selId=null;sheetMode=null;G();renderSheet();fit();renderCtxbar();renderSunbar()}
 function exitSerre(){const id=ctx;ctx=null;selId=id;sheetMode=null;renderSheet();fit();renderCtxbar();renderSunbar()}
 function renderCtxbar(){const el=$('#ctxbar');const inS=!!ctx&&!!G()&&!!ctx&&tab==='plan';el.hidden=!inS;$('#compass').hidden=!!ctx;updateModeUI();svg.classList.toggle('inserre',!!ctx);
   if(!inS)return;const se=obj(ctx);el.innerHTML=`<button class="iconbtn" data-cx="back" aria-label="Retour au potager"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><div class="t"><b>${esc(se.name)}</b><span class="mono note">Serre · ${m2(se.w)} × ${m2(se.h)} m</span></div><button class="btn small" data-cx="props">Réglages</button>`}
 $('#ctxbar').addEventListener('click',e=>{const b=e.target.closest('[data-cx]');if(!b)return;if(b.dataset.cx==='back')exitSerre();else{setEdit(true);selId=ctx;sheetMode='obj';renderSheet();renderPlan()}});
 function startShapeEdit(){if(!G().shape){G().shape=rectPts();save()}shapeEdit={sel:null};selId=null;sheetMode=null;renderSheet();fit();renderShapebar()}
+$('#shapebar').addEventListener('change',e=>{if(e.target.id!=='sh-w'&&e.target.id!=='sh-l')return;const W=+String($('#sh-w').value).replace(',','.'),L=+String($('#sh-l').value).replace(',','.');
+  if(!(W>=1&&L>=1))return toast('Indique des dimensions en mètres');setRect(Math.round(W*100),Math.round(L*100));save();renderShapebar();renderPlan()});
 $('#shapebar').addEventListener('click',e=>{const b=e.target.closest('[data-sh]');if(!b)return;const a=b.dataset.sh,W=G().w,H=G().h;
   if(a==='done'){shapeEdit=null;renderShapebar();renderPlan();return}
   if(/^r-?\d+$/.test(a)){shapeEdit.all=$('#sh-all').checked;rotateTerrain(+a.slice(1),shapeEdit.all);shapeEdit.sel=null;save(true);renderShapebar();renderPlan();return}
