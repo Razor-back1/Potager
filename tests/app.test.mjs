@@ -83,6 +83,10 @@ test('plusieurs jardins : créer, changer, supprimer', async () => {
   await page.click('[data-act="gnew"]');
   assert.equal(await page.evaluate(() => GL.get().list.length), 3);   /* propriété + 2 potagers */
   assert.notEqual(await page.evaluate(() => GID), premier);
+  assert.deepEqual(await page.evaluate(() => [TOP, tab, parcels().some(o => o.gid === GID)]), ['potager', 'today', true], 'nouveau potager ouvert sur Aujourd\'hui et posé sur la propriété');
+  await page.click('#menuBtn');
+  assert.equal(await page.locator('.glist .grow').count(), 2, 'la propriété n\'est pas dans la liste des jardins');
+  assert.doesNotMatch(await page.textContent('.glist'), /Ma propriété/);
   const b = page.locator('[data-act="gdel"]');
   await b.click(); await b.click();
   assert.equal(await page.evaluate(() => GL.get().list.length), 2);

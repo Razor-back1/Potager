@@ -515,6 +515,7 @@ table.cmp tr:last-child td{border-bottom:0}
 svg.calib #layer,svg.calib #editL{pointer-events:none}
 .t-maison text,.t-terrasse text{fill:#3a3530!important;stroke:#f1ece4!important}
 .tabs button[hidden]{display:none}
+.gdot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:1px}
 /* ===== Styles d'interface — Menu › Style : Classique (d'origine), iOS, Verre sombre, Widgets ===== */
 .gpill,.thero,.tsum{display:none}
 :root:is([data-ui="ios"],[data-ui="glass"],[data-ui="widgets"]){
@@ -1424,12 +1425,18 @@ function newParcel(k,ex){const n=gardensOf(k).length+1;const st=ex?(k==='verger'
   if(!ex){st.w=k==='verger'?1500:1000;st.h=k==='verger'?1200:600}
   const id=addGarden(st,false);if(!id)return null;placeParcel(id);return id}
 /* poser un jardin sur le plan de la propriété (au centre, sans chevaucher si possible) */
-function placeParcel(id){const st=gState(id);if(!st)return;const wasProp=PROP();if(!wasProp)return;
-  const ps=S.objs.filter(o=>o.type==='parcelle');let x=S.w/2-st.w/2,y=S.h/2-st.h/2;
-  const hit=(x,y)=>ps.some(o=>x<o.x+o.w&&x+st.w>o.x&&y<o.y+o.h&&y+st.h>o.y);
-  for(let i=0;i<40&&hit(x,y);i++){x=200+((i*450)%Math.max(400,S.w-st.w-200));y=200+Math.floor(i*450/Math.max(400,S.w-st.w-200))*450}
-  S.objs.push({id:uid(),type:'parcelle',gid:id,name:st.name,x:Math.round(x),y:Math.round(y),w:st.w,h:st.h,rot:0,zones:[]});save()}
-function openParcel(id,t){const k=gKind(id);if(!k||k==='propriete')return;switchGarden(id);setLast(k,id);TOP=k;setTab(t||SUB[k]||'today')}
+function placeParcel(id){placeInProp(id)}
+/* pose un jardin sur la propriété, à l'endroit le plus dégagé, même si la propriété n'est pas ouverte */
+function placeInProp(id){const gs=gState(id);if(!gs)return;const st=PROP()?S:(()=>{const p=gState(PROP_ID);return p?JSON.parse(JSON.stringify(p)):null})();if(!st)return;
+  if(st.objs.some(o=>o.type==='parcelle'&&o.gid===id))return;const shape=st.shape&&st.shape.length>2?st.shape:[{x:0,y:0},{x:st.w,y:0},{x:st.w,y:st.h},{x:0,y:st.h}];
+  const c=freeSpot(shape,st.objs,Math.hypot(gs.w,gs.h)/2);
+  st.objs.push({id:uid(),type:'parcelle',gid:id,name:gs.name,x:Math.round(c.x-gs.w/2),y:Math.round(c.y-gs.h/2),w:gs.w,h:gs.h,rot:0,zones:[]});
+  if(PROP())return save();
+  try{localStorage.setItem(keyOf(PROP_ID),JSON.stringify(st));localStorage.setItem(keyAtOf(PROP_ID),String(Date.now()))}catch(e){}
+  try{if(relayOn())setTimeout(()=>syncPush(PROP_ID),300)}catch(e){}}
+/* nouveau jardin depuis le menu : posé sur la propriété et ouvert sur Aujourd'hui */
+function newGarden(st,msg){const id=addGarden(st,false);if(!id)return;placeInProp(id);sheetMode=null;selId=null;if(editMode)setEdit(false);openParcel(id);renderSheet();toast(msg)}
+function openParcel(id,t){const k=gKind(id);if(!k||k==='propriete')return;switchGarden(id);setLast(k,id);TOP=k;setTab(t||'today')}
 function renderProp(){const v=$('#v-prop');if(!PROP()){v.innerHTML='';return}syncParcels();
   const ps=parcels(),st=ps.map(o=>({o,k:gKind(o.gid),g:gState(o.gid),s:statOf(o.gid)}));
   const area=Math.abs(polyArea(terrainPts()))/1e4,nt=typeof wx!=='undefined'&&wx&&wx.night!=null?wx.night:null;
@@ -2006,9 +2013,9 @@ function renderSheet(){
     ${ps.on?`<div class="row"><button class="btn small" data-act="np-test">Envoyer un test</button><button class="btn small" data-act="np-now">Résumé maintenant</button><button class="btn small danger" data-act="np-off">Désactiver ici</button></div>`:''}
     <p class="note">Le relais vérifie toutes les 30 minutes : il faut le déclencheur Cron <code>*/30 * * * *</code> dans ton Worker (Settings → Trigger events). Les notifications portent sur tes potagers synchronisés, pas sur l'exemple.</p></div>`;
   }else if(sheetMode==='menu'){
-    const GLs=GL.get().list;
+    const GLs=GL.get().list.filter(g=>g.id!==PROP_ID);
     h+=`<div class="stack"><div class="row between"><h3>${PROP()?'Propriété':esc(KLBL[KIND()])}</h3><button class="btn small" data-act="close">Fermer</button></div>
-    <div><span class="lbl">Mes jardins</span><div class="glist">${GLs.map(g=>`<div class="grow${g.id===GID?' cur':''}"><span><b>${esc(g.id===GID?S.name:(g.name||'Potager'))}</b>${(g.id===GID?S.example:g.ex)?' <span class="note">· exemple</span>':''}</span>${g.id===GID?'<span class="note">ouvert</span>':`<button class="btn small" data-act="gopen" data-g="${g.id}">Ouvrir</button>`}</div>`).join('')}</div>
+    <div><span class="lbl">Mes jardins</span><div class="glist">${GLs.map(g=>`<div class="grow${g.id===GID?' cur':''}"><span><i class="gdot" style="background:${KCOL[g.id===GID?KIND():g.k||'potager']}"></i><b>${esc(g.id===GID?S.name:(g.name||'Potager'))}</b>${(g.id===GID?S.example:g.ex)?' <span class="note">· exemple</span>':''}</span>${g.id===GID?'<span class="note">ouvert</span>':`<button class="btn small" data-act="gopen" data-g="${g.id}">Ouvrir</button>`}</div>`).join('')}</div>
     ${PROP()?'':'<div class="row" style="margin-top:8px"><button class="btn small" data-act="gvar">Variante : même terrain, plan vide</button><button class="btn small" data-act="gdup">Dupliquer celui-ci</button></div>'}
     <div class="row" style="margin-top:8px"><button class="btn small" data-act="gnew">+ Potager</button><button class="btn small" data-act="gnewfl">+ Jardin de fleurs</button><button class="btn small" data-act="gnewvg">+ Verger</button><button class="btn small" data-act="gnewex">+ Exemple potager</button><button class="btn small" data-act="gnewexfl">+ Exemple fleurs</button><button class="btn small" data-act="gnewexvg">+ Exemple verger</button>${GLs.length>1&&!PROP()?'<button class="btn small danger" data-act="gdel">Supprimer celui-ci</button>':''}</div></div>
     <label class="field"><span class="lbl">Nom</span><input id="g-name" value="${esc(S.name)}"></label>
@@ -2159,14 +2166,14 @@ sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');
   if(a==='shape-edit')startShapeEdit();
   if(a==='shape-rect'){S.shape=null;save();renderSheet();renderPlan();toast('Terrain redevenu rectangulaire',true)}
   if(a==='reload'){S=sample();selId=null;sheetMode=null;save();fit();renderSheet();toast('Exemple remis à zéro',true)}
-  if(a==='gopen'){switchGarden(b.dataset.g);sheetMode='menu';renderSheet();return toast('Potager ouvert : '+S.name)}
-  if(a==='gnew'){const n=GL.get().list.length+1;addGarden(emptyGarden('Potager '+n));sheetMode='menu';renderSheet();return toast('Nouveau potager créé')}
-  if(a==='gnewfl'){const n=GL.get().list.length+1;addGarden(emptyGarden('Jardin de fleurs '+n,'fleurs'));sheetMode='menu';renderSheet();return toast('Nouveau jardin de fleurs créé')}
+  if(a==='gopen'){sheetMode=null;if(editMode)setEdit(false);openParcel(b.dataset.g);renderSheet();return toast('Ouvert : '+S.name)}
+  if(a==='gnew'){const n=gardensOf('potager').length+1;return newGarden(emptyGarden('Potager '+n),'Nouveau potager, posé sur la propriété')}
+  if(a==='gnewfl'){const n=gardensOf('fleurs').length+1;return newGarden(emptyGarden('Jardin de fleurs'+(n>1?' '+n:''),'fleurs'),'Nouveau jardin de fleurs, posé sur la propriété')}
   if(a==='gvar'||a==='gdup'){const c=gardenVariant(a==='gdup'),k=c.objs.length;addGarden(c);sheetMode='menu';renderSheet();return toast(a==='gdup'?'Copie créée : « '+c.name+' »':'« '+c.name+' » : terrain, '+k+' élément'+(k>1?'s':'')+' fixe'+(k>1?'s':'')+' (étang, arbres, haies, clôtures)')}
-  if(a==='gnewvg'){const n=GL.get().list.length+1;addGarden(emptyGarden('Verger '+n,'verger'));sheetMode='menu';renderSheet();return toast('Nouveau verger créé')}
-  if(a==='gnewexvg'){addGarden(sampleOrchard());sheetMode='menu';renderSheet();return toast('Exemple de verger ajouté')}
-  if(a==='gnewexfl'){addGarden(sampleFlowers());sheetMode='menu';renderSheet();return toast('Exemple de jardin de fleurs ajouté')}
-  if(a==='gnewex'){addGarden(sample());sheetMode='menu';renderSheet();return toast('Exemple ajouté')}
+  if(a==='gnewvg'){const n=gardensOf('verger').length+1;return newGarden(emptyGarden('Verger'+(n>1?' '+n:''),'verger'),'Nouveau verger, posé sur la propriété')}
+  if(a==='gnewexvg')return newGarden(sampleOrchard(),'Exemple de verger ajouté');
+  if(a==='gnewexfl')return newGarden(sampleFlowers(),'Exemple de jardin de fleurs ajouté');
+  if(a==='gnewex')return newGarden(sample(),'Exemple de potager ajouté');
   if(a==='gdel'){if(!b.classList.contains('armed')){b.classList.add('armed');b.textContent='Confirmer : supprimer « '+S.name+' »';return}const nm=S.name;deleteGarden(GID);sheetMode='menu';renderSheet();return toast('« '+nm+' » supprimé')}
   if(a==='export'&&!DL){const name=`potager-${iso(TODAY)}.json`,blob=new Blob([lastJSON],{type:'application/json'});
     try{const f=new File([blob],name,{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Sauvegarde du potager'});return toast('Sauvegarde exportée')}}catch(err){if(err&&err.name==='AbortError')return}

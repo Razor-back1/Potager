@@ -108,12 +108,18 @@ function newParcel(k,ex){const n=gardensOf(k).length+1;const st=ex?(k==='verger'
   if(!ex){st.w=k==='verger'?1500:1000;st.h=k==='verger'?1200:600}
   const id=addGarden(st,false);if(!id)return null;placeParcel(id);return id}
 /* poser un jardin sur le plan de la propriété (au centre, sans chevaucher si possible) */
-function placeParcel(id){const st=gState(id);if(!st)return;const wasProp=PROP();if(!wasProp)return;
-  const ps=S.objs.filter(o=>o.type==='parcelle');let x=S.w/2-st.w/2,y=S.h/2-st.h/2;
-  const hit=(x,y)=>ps.some(o=>x<o.x+o.w&&x+st.w>o.x&&y<o.y+o.h&&y+st.h>o.y);
-  for(let i=0;i<40&&hit(x,y);i++){x=200+((i*450)%Math.max(400,S.w-st.w-200));y=200+Math.floor(i*450/Math.max(400,S.w-st.w-200))*450}
-  S.objs.push({id:uid(),type:'parcelle',gid:id,name:st.name,x:Math.round(x),y:Math.round(y),w:st.w,h:st.h,rot:0,zones:[]});save()}
-function openParcel(id,t){const k=gKind(id);if(!k||k==='propriete')return;switchGarden(id);setLast(k,id);TOP=k;setTab(t||SUB[k]||'today')}
+function placeParcel(id){placeInProp(id)}
+/* pose un jardin sur la propriété, à l'endroit le plus dégagé, même si la propriété n'est pas ouverte */
+function placeInProp(id){const gs=gState(id);if(!gs)return;const st=PROP()?S:(()=>{const p=gState(PROP_ID);return p?JSON.parse(JSON.stringify(p)):null})();if(!st)return;
+  if(st.objs.some(o=>o.type==='parcelle'&&o.gid===id))return;const shape=st.shape&&st.shape.length>2?st.shape:[{x:0,y:0},{x:st.w,y:0},{x:st.w,y:st.h},{x:0,y:st.h}];
+  const c=freeSpot(shape,st.objs,Math.hypot(gs.w,gs.h)/2);
+  st.objs.push({id:uid(),type:'parcelle',gid:id,name:gs.name,x:Math.round(c.x-gs.w/2),y:Math.round(c.y-gs.h/2),w:gs.w,h:gs.h,rot:0,zones:[]});
+  if(PROP())return save();
+  try{localStorage.setItem(keyOf(PROP_ID),JSON.stringify(st));localStorage.setItem(keyAtOf(PROP_ID),String(Date.now()))}catch(e){}
+  try{if(relayOn())setTimeout(()=>syncPush(PROP_ID),300)}catch(e){}}
+/* nouveau jardin depuis le menu : posé sur la propriété et ouvert sur Aujourd'hui */
+function newGarden(st,msg){const id=addGarden(st,false);if(!id)return;placeInProp(id);sheetMode=null;selId=null;if(editMode)setEdit(false);openParcel(id);renderSheet();toast(msg)}
+function openParcel(id,t){const k=gKind(id);if(!k||k==='propriete')return;switchGarden(id);setLast(k,id);TOP=k;setTab(t||'today')}
 function renderProp(){const v=$('#v-prop');if(!PROP()){v.innerHTML='';return}syncParcels();
   const ps=parcels(),st=ps.map(o=>({o,k:gKind(o.gid),g:gState(o.gid),s:statOf(o.gid)}));
   const area=Math.abs(polyArea(terrainPts()))/1e4,nt=typeof wx!=='undefined'&&wx&&wx.night!=null?wx.night:null;
