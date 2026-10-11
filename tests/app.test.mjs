@@ -429,3 +429,21 @@ test('terrain : Rectangle puis rotation sans que le plan saute, dimensions au cm
   assert.deepEqual(erreurs, []);
   await ctx.close();
 });
+
+test('le rond de rotation tourne au degré près', async () => {
+  const { ctx, page, erreurs } = await ouvrir();
+  await page.click('.tabs [data-tab="plan"]');
+  if (await page.isVisible('#sheet [data-act="close"]')) await page.click('#sheet [data-act="close"]');
+  await page.click('#editBtn');
+  const id = await page.evaluate(() => { const o = S.objs.find(o => o.type === 'compost' || (o.type === 'planche' && !o.grp)); selId = o.id; renderPlan(); return o.id });
+  for (const cible of [37, 122]) {
+    const k = await page.locator('#editL g[data-rot] circle').boundingBox(), c = await page.evaluate(id => { const o = obj(id), r = svg.getBoundingClientRect(); return { x: r.left + r.width / 2 + (o.x + o.w / 2 - view.cx) * view.z, y: r.top + r.height / 2 + (o.y + o.h / 2 - view.cy) * view.z } }, id);
+    const R = Math.hypot(k.x + k.width / 2 - c.x, k.y + k.height / 2 - c.y), a = (cible - 90) * Math.PI / 180;
+    await page.mouse.move(k.x + k.width / 2, k.y + k.height / 2); await page.mouse.down();
+    await page.mouse.move(c.x + R * Math.cos(a), c.y + R * Math.sin(a), { steps: 12 }); await page.mouse.up();
+    const r = await page.evaluate(id => obj(id).rot, id);
+    assert.ok(Math.abs(r - cible) <= 1, `voulu ${cible}°, obtenu ${r}°`);
+  }
+  assert.deepEqual(erreurs, []);
+  await ctx.close();
+});

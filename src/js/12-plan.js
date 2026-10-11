@@ -134,7 +134,7 @@ svg.addEventListener('pointermove',e=>{
     for(const a of[pv,nx]){if(Math.abs(q.x-a.x)<thr)q.x=a.x;if(Math.abs(q.y-a.y)<thr)q.y=a.y}
     sh[drag.i]=q;showHint(`${m2(Math.hypot(q.x-pv.x,q.y-pv.y))} m · ${m2(Math.hypot(q.x-nx.x,q.y-nx.y))} m`)}
   else if(drag.mode==='rot'){let ang=Math.atan2(p.y-drag.c.y,p.x-drag.c.x)*180/Math.PI+90;ang=(ang%360+360)%360;
-    let r=Math.round(ang/5)*5;for(let k=0;k<=360;k+=45)if(Math.abs(ang-k)<4)r=k;if(drag.grp){rotateMembers(drag.grp,drag.c,r%360-drag.s.rot)}else o.rot=r%360;showHint(`Orientation ${o.rot}°${drag.grp?' · bloc':''}`)}
+    let r=Math.round(ang);for(let k=0;k<=360;k+=45)if(Math.abs(ang-k)<1.5)r=k;if(drag.grp){rotateMembers(drag.grp,drag.c,r%360-drag.s.rot)}else o.rot=r%360;showHint(`Orientation ${o.rot}°${drag.grp?' · bloc':''}`)}
   else if(drag.mode==='edge'){const[a,b]=drag.s,L=Math.hypot(b.x-a.x,b.y-a.y)||1,sg=Math.sign(polyArea(G().shape))||1,nx=(b.y-a.y)/L*sg,ny=-(b.x-a.x)/L*sg;
     const t=snap((p.x-drag.p0.x)*nx+(p.y-drag.p0.y)*ny,10),n=G().shape.length;
     G().shape[drag.i]={x:Math.round(a.x+nx*t),y:Math.round(a.y+ny*t)};G().shape[(drag.i+1)%n]={x:Math.round(b.x+nx*t),y:Math.round(b.y+ny*t)};
