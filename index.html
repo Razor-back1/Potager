@@ -1367,6 +1367,8 @@ function gState(id){if(id===GID)return S;let at='';try{at=localStorage.getItem(k
 function gKind(id){const g=GL.get().list.find(x=>x.id===id);if(g&&g.k)return g.k;const st=gState(id);return st?(st.kind||'potager'):null}
 /* les entrées de la liste retiennent leur sorte, pour ne pas relire chaque jardin */
 function fillKinds(){const g=GL.get();let ch=false;g.list.forEach(x=>{if(!x.k){const st=gState(x.id);if(st){x.k=st.kind||'potager';ch=true}}});if(ch)GL.set(g)}
+/* jardins « actifs » : ceux posés sur la propriété ; les autres (vieux jardins, variantes, exemples) attendent dans « Pas sur le plan » */
+const activeOf=k=>{const pl=new Set(parcels().map(o=>o.gid));return gardensOf(k).filter(g=>pl.has(g.id))};
 const gardensOf=k=>GL.get().list.filter(x=>x.id!==PROP_ID&&(x.id===GID?(PROP()?null:KIND()):gKind(x.id))===k);
 
 /* exécuter fn comme si le jardin id était ouvert (pour compter ce qu'il y a à faire ailleurs) */
@@ -1426,7 +1428,7 @@ function propSVG(W){const tp=terrainPts();let x0=Infinity,y0=Infinity,x1=-Infini
 const LASTKEY='atelier-potager-last';
 const lastOf=k=>{try{return(JSON.parse(localStorage.getItem(LASTKEY))||{})[k]}catch(e){return null}};
 const setLast=(k,id)=>{try{const v=JSON.parse(localStorage.getItem(LASTKEY))||{};v[k]=id;if(KINDS.includes(k))v.kind=k;localStorage.setItem(LASTKEY,JSON.stringify(v))}catch(e){}};
-function pickGarden(k){const gs=gardensOf(k);if(!gs.length)return null;const l=lastOf(k);if(l&&gs.some(g=>g.id===l))return l;
+function pickGarden(k){const gs=activeOf(k);if(!gs.length)return null;const l=lastOf(k);if(l&&gs.some(g=>g.id===l))return l;
   const placed=parcels().map(o=>o.gid);return(gs.find(g=>placed.includes(g.id))||gs.find(g=>!g.ex)||gs[0]).id}
 function setTop(k){if(!['prop','eau',...KINDS].includes(k))k='prop';TOP=k;saveNav();
   if(k==='prop'){if(GID!==PROP_ID)switchGarden(PROP_ID);syncParcels();return setTab('prop')}
@@ -1439,14 +1441,14 @@ function syncTop(){if(tab==='empty')return;if(tab==='weather'){TOP='eau';return}
 const SEGS={prop:[['prop',"Vue d'ensemble"],['plan','Plan']]};
 function renderTopNav(){syncTop();saveNav();
   document.querySelectorAll('.tabs [data-top]').forEach(b=>{if(b.dataset.top===TOP)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
-    const k=b.dataset.top,bd=b.querySelector('.tbadge');if(KINDS.includes(k))b.hidden=!gardensOf(k).length&&TOP!==k;if(!bd)return;let n=0;if(KINDS.includes(k))try{n=parcels().filter(o=>gKind(o.gid)===k).reduce((s,o)=>s+(statOf(o.gid).n||0),0)}catch(e){}
+    const k=b.dataset.top,bd=b.querySelector('.tbadge');if(KINDS.includes(k))b.hidden=!activeOf(k).length&&TOP!==k;if(!bd)return;let n=0;if(KINDS.includes(k))try{n=parcels().filter(o=>gKind(o.gid)===k).reduce((s,o)=>s+(statOf(o.gid).n||0),0)}catch(e){}
     bd.textContent=n>9?'9+':n;bd.hidden=!n});
   const el=$('#subnav');if(!el)return;let h='';
-  const chips=list=>list.length>1?`<div class="pchips">${list.map(g=>{const k=gKind(g.id),on=g.id===GID;return`<button class="pchip${on?' on':''}" data-g="${g.id}"${on?' aria-current="true"':''}><i style="background:${KCOL[k]||'var(--muted)'}"></i>${esc(g.id===GID?S.name:g.name||KLBL[k])}${g.ex?' <span class="note">exemple</span>':''}</button>`}).join('')}</div>`:'';
+  const chips=list=>list.length>1?`<div class="pchips">${list.map(g=>{const k=gKind(g.id),on=g.id===GID;return`<button class="pchip${on?' on':''}" data-g="${g.id}"${on?' aria-current="true"':''}><i style="background:${KCOL[k]||'var(--muted)'}"></i>${esc(g.id===GID?S.name:g.name||KLBL[k])}${g.ex?' <span class="note">exemple</span>':''}${parcels().some(o=>o.gid===g.id)?'':' <span class="note">hors plan</span>'}</button>`}).join('')}</div>`:'';
   const seg=items=>`<div class="subtabs" role="tablist">${items.map(([t,l])=>`<button role="tab" data-tab="${t}" aria-selected="${tab===t}">${l}</button>`).join('')}</div>`;
   if(TOP==='prop')h=seg(SEGS.prop);
-  else if(TOP==='eau')h=chips(GL.get().list.filter(x=>x.id!==PROP_ID));
-  else if(tab!=='empty'){const gs=gardensOf(TOP);h=chips(gs)+seg([['today',"Aujourd'hui"],['plan','Plan'],['harvest',FLW()?'Floraisons':'Récoltes'],['crops',FLW()?'Fleurs':VRG()?'Fruitiers':'Cultures']])}
+  else if(TOP==='eau'){const gs=KINDS.flatMap(activeOf);if(!gs.some(g=>g.id===GID)&&!PROP())gs.push(GL.get().list.find(g=>g.id===GID));h=chips(gs)}
+  else if(tab!=='empty'){const gs=activeOf(TOP);if(!gs.some(g=>g.id===GID)&&!PROP())gs.push(GL.get().list.find(g=>g.id===GID));h=chips(gs)+seg([['today',"Aujourd'hui"],['plan','Plan'],['harvest',FLW()?'Floraisons':'Récoltes'],['crops',FLW()?'Fleurs':VRG()?'Fruitiers':'Cultures']])}
   el.innerHTML=h;el.hidden=!h}
 $('#subnav').addEventListener('click',e=>{const t=e.target.closest('[data-tab]');if(t){if(t.dataset.tab===tab&&tab==='plan'){sheetMode=null;selId=null;shapeEdit=null;renderSheet();fit();return}return setTab(t.dataset.tab)}
   const g=e.target.closest('[data-g]');if(g&&g.dataset.g!==GID){switchGarden(g.dataset.g);if(TOP==='eau')setLast('eau',GID);else{setLast(KIND(),GID);if(tab==='empty')setTab('today')}renderTopNav()}});
@@ -1481,14 +1483,15 @@ function renderProp(){const v=$('#v-prop');if(!PROP()){v.innerHTML='';return}syn
   <div class="tcard pcard"><div class="row between"><h3>Plan</h3><button class="btn small" data-pplan="1">Modifier</button></div>${propSVG(700)}<div class="plegend">${KINDS.map(k=>`<span><i style="background:${KCOL[k]}"></i>${KLBL[k]}</span>`).join('')}<span class="note">Touche une parcelle</span></div></div>
   <div class="tcard"><h3>Parcelles</h3>${st.map(x=>prow(x.o.gid,x.k,x.o.name,desc(x),x.s.n?`<span class="pbadge">${x.s.n}</span>`:'<span class="note">›</span>')).join('')||'<p class="note">Aucune parcelle pour l\'instant.</p>'}
     <div class="row"><button class="btn small primary" data-pnew="potager">+ Potager</button><button class="btn small" data-pnew="fleurs">+ Jardin de fleurs</button><button class="btn small" data-pnew="verger">+ Verger</button></div></div>
-  ${loose.length?`<div class="tcard"><h3>Pas sur le plan</h3><span class="note">Exemples, variantes et jardins pas encore posés sur la propriété.</span>${loose.map(g=>{const k=gKind(g.id)||'potager';return`<div class="trow"><span class="pico" style="background:${KCOL[k]}"><svg viewBox="0 0 24 24">${ico[k]}</svg></span><span><b>${esc(g.name||KLBL[k])}</b>${g.ex?' <span class="note">· exemple</span>':''}</span><span class="row" style="gap:6px"><button class="btn small" data-pg="${g.id}">Ouvrir</button><button class="btn small" data-pplace="${g.id}">Poser</button></span></div>`}).join('')}</div>`:''}
+  ${loose.length?`<div class="tcard"><h3>Pas sur le plan</h3><span class="note">Ces jardins n'apparaissent pas dans les onglets du bas. Pose-les sur le plan pour t'en servir, ou supprime-les.</span>${loose.map(g=>{const k=gKind(g.id)||'potager';return`<div class="trow"><span class="pico" style="background:${KCOL[k]}"><svg viewBox="0 0 24 24">${ico[k]}</svg></span><span><b>${esc(g.name||KLBL[k])}</b>${g.ex?' <span class="note">· exemple</span>':''}</span><span class="row" style="gap:6px"><button class="btn small" data-pg="${g.id}">Ouvrir</button><button class="btn small" data-pplace="${g.id}">Poser</button><button class="btn small danger" data-pdel="${g.id}" aria-label="Supprimer ${esc(g.name||'')}">Supprimer</button></span></div>`}).join('')}</div>`:''}
   <div class="tcard"><h3>Plan depuis une capture</h3><span class="note">Fais une capture de Google Maps (vue satellite) avec la barre d'échelle, puis :</span>
     <div class="row"><button class="btn small primary" data-pbg="ask">1 · Copier la demande pour Claude</button><button class="btn small" data-pbg="paste">2 · Coller sa réponse</button></div>
     <span class="note">Envoie la demande et la capture à Claude (l'app Claude ou claude.ai), copie sa réponse et colle-la ici : contour, maison, étang, arbres… sont posés d'un coup. Tu corriges ensuite à la main.</span>
     <div class="row">${bgOf()?'<button class="btn small" data-pbg="calib">Capture : échelle et visibilité</button><button class="btn small danger" data-pbg="del">Retirer la capture</button>':'<button class="btn small" data-pbg="add">Mettre la capture en fond</button>'}</div>
     <span class="note">La capture en fond reste sur cet appareil. Si c'est la même que celle envoyée à Claude, elle se cale toute seule sur le plan.</span></div>
   <div class="row"><button class="btn small" data-pex="potager">+ Exemple potager</button><button class="btn small" data-pex="fleurs">+ Exemple fleurs</button><button class="btn small" data-pex="verger">+ Exemple verger</button></div></div>`}
-$('#v-prop').addEventListener('click',e=>{const t=e.target.closest('[data-pg],[data-pplan],[data-pnew],[data-pex],[data-pplace],[data-pbg]');if(!t)return;
+$('#v-prop').addEventListener('click',e=>{const t=e.target.closest('[data-pg],[data-pplan],[data-pnew],[data-pex],[data-pplace],[data-pbg],[data-pdel]');if(!t)return;
+  if(t.dataset.pdel){if(!t.classList.contains('armed')){t.classList.add('armed');t.textContent='Confirmer';return}const g=GL.get().list.find(x=>x.id===t.dataset.pdel),nm=g&&g.name||'Jardin';deleteGarden(t.dataset.pdel);GCACHE.delete(t.dataset.pdel);refresh();return toast('« '+nm+' » supprimé')}
   if(t.dataset.pg)return openParcel(t.dataset.pg);
   if(t.dataset.pplan){setTab('plan');setEdit(true);return}
   if(t.dataset.pnew||t.dataset.pex){const k=t.dataset.pnew||t.dataset.pex,id=newParcel(k,!!t.dataset.pex);if(!id)return;const o=S.objs.find(q=>q.gid===id);setTab('plan');setEdit(true);if(o){selId=o.id;fit();renderPlan()}return toast(t.dataset.pex?'Exemple posé : déplace-le où tu veux':'Parcelle créée : place-la sur le plan',true)}
@@ -1510,7 +1513,7 @@ function parcelSheet(o){const st=gState(o.gid),k=st?(st.kind||'potager'):'potage
 /* au démarrage : « Aujourd'hui » du dernier type de jardin ouvert (potager, fleurs ou verger), la propriété seulement s'il n'y a aucun jardin */
 function rawOpen(id){if(id===GID)return;persist();GID=id;const g0=GL.get();g0.cur=GID;GL.set(g0);
   try{localAt=+localStorage.getItem(keyAtOf(GID))||0}catch(e){localAt=0}S=load()||(id===PROP_ID?emptyGarden('Ma propriété','propriete'):sample());lastJSON=JSON.stringify(S);loadUndo()}
-{const k=[TOP,lastOf('kind'),...KINDS].find(k=>KINDS.includes(k)&&gardensOf(k).length);TOP=k||'prop';
+{const k=[TOP,lastOf('kind'),...KINDS].find(k=>KINDS.includes(k)&&activeOf(k).length);TOP=k||'prop';
   if(TOP==='prop'){if(GL.get().list.some(x=>x.id===PROP_ID))rawOpen(PROP_ID)}else{const id=pickGarden(TOP);if(id)rawOpen(id)}}
 /* ================= Synchronisation (compte Claude) ================= */
 let DOC=null,syncState='local',pushT=null,ASSETS=null,DL=null;
@@ -3724,7 +3727,7 @@ setTimeout(()=>syncStation(false),600);
 
 <script>
 setTimeout(()=>{const s=document.getElementById('splash');if(s){s.classList.add('out');setTimeout(()=>s.remove(),600)}},matchMedia('(display-mode: standalone)').matches||navigator.standalone?650:120);
-/* version ce890f03cc : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
+/* version ac21e754cf : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
 if('serviceWorker' in navigator&&location.protocol==='https:'){
   navigator.serviceWorker.register('sw.js').then(r=>r.update()).catch(()=>{});
   let reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!reloaded){reloaded=true;location.reload()}});

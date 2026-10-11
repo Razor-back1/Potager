@@ -531,19 +531,24 @@ test('mise à jour : la propriété est créée, les vrais jardins posés dessus
   await page.click('.tabs [data-top="prop"]');
   assert.deepEqual(await page.evaluate(() => S.objs.filter(o => o.type === 'parcelle').map(o => [o.gid, o.w, o.h, o.rot])), [['main', 1400, 900, 340]], 'seul le vrai potager est posé, tourné pour que son nord suive celui de la propriété');
   assert.equal(await page.isVisible('.tabs [data-top="fleurs"]'), false, 'pas de jardin de fleurs : pas d\'onglet Fleurs');
-  assert.equal(await page.isVisible('.tabs [data-top="verger"]'), true);
+  assert.equal(await page.isVisible('.tabs [data-top="verger"]'), false, 'l\'exemple de verger n\'est pas sur le plan : pas d\'onglet');
   const txt = await page.textContent('#v-prop');
   assert.match(txt, /Mon potager/); assert.match(txt, /Pas sur le plan/); assert.match(txt, /exemple/);
   /* toucher la parcelle ouvre le potager */
   await page.click('#v-prop .trow[data-pg="main"]');
   assert.deepEqual(await page.evaluate(() => [TOP, GID, tab]), ['potager', 'main', 'today']);
   assert.equal(await page.isVisible('.subtabs [data-tab="plan"]'), true);
-  /* l'onglet Verger ouvre l'exemple de verger, l'onglet Plan revient à la propriété */
-  await page.click('.tabs [data-top="verger"]');
+  /* « Ouvrir » dans « Pas sur le plan » ouvre l'exemple de verger dans son onglet, l'onglet Plan revient à la propriété */
+  await page.click('.tabs [data-top="prop"]');
+  await page.click('#v-prop button[data-pg="vx"]');
   assert.deepEqual(await page.evaluate(() => [TOP, GID, VRG()]), ['verger', 'vx', true]);
   assert.equal(await page.textContent('.subtabs [data-tab="crops"]'), 'Fruitiers');
   await page.click('.tabs [data-top="prop"]');
   assert.deepEqual(await page.evaluate(() => [TOP, GID, tab]), ['prop', 'prop', 'prop']);
+  /* supprimer un vieux jardin depuis « Pas sur le plan » (deux touches) */
+  await page.click('#v-prop [data-pdel="vx"]'); await page.click('#v-prop [data-pdel="vx"]');
+  assert.deepEqual(await page.evaluate(() => GL.get().list.map(x => x.id)), ['prop', 'main']);
+  assert.doesNotMatch(await page.textContent('#v-prop'), /Pas sur le plan/);
   /* au redémarrage, la propriété existante n'est pas recréée */
   await page.reload(); await page.waitForFunction(() => window.APP_PRETE === true);
   assert.equal(await page.evaluate(() => GL.get().list.filter(x => x.k === 'propriete').length), 1);
