@@ -79,13 +79,14 @@ function keepAboveSheet(o){if(innerWidth>=760)return;const r=svg.getBoundingClie
   if(sy>top-40||sy<60){view.cy=o.y+o.h/2-(Math.max(80,top*.5)-r.height/2)/view.z;renderPlan()}}
 function setEdit(on){editMode=on;if(!on){lifted=null}updateModeUI();renderPlan()}
 function updateModeUI(){renderWxLayer();const busy=!!sheetMode||!!shapeEdit;$('#fab').hidden=busy;$('#map').classList.toggle('editing',editMode&&!shapeEdit);
-  $('#modetag').hidden=!editMode||busy||tab!=='plan';$('#editBtn').hidden=editMode;if($('#noteBtnPlan'))$('#noteBtnPlan').hidden=editMode;$('#addBtn').hidden=!editMode;$('#doneBtn').hidden=!editMode;$('#sunBtn').hidden=editMode||!!ctx}
+  $('#modetag').hidden=!editMode||busy||tab!=='plan';$('#editBtn').hidden=editMode;if($('#noteBtnPlan'))$('#noteBtnPlan').hidden=editMode;$('#addBtn').hidden=!editMode;$('#shapeBtn').hidden=!editMode||!!ctx;$('#doneBtn').hidden=!editMode;$('#sunBtn').hidden=editMode||!!ctx}
 function renderSheet(){
   updateModeUI();sheet.hidden=!sheetMode;if(!sheetMode)return;
   let h='<div class="grab"></div>';
   if(sheetMode==='add'){
     h+=`<div class="stack"><div class="row between"><h3>Ajouter au potager</h3><button class="btn small" data-act="close">Fermer</button></div>
     <button class="btn primary" data-act="series">Série de planches avec allées</button>
+    ${ctx?'':'<button class="btn" data-act="shape-edit">Modifier la forme du terrain</button>'}
     <div class="typegrid">${Object.entries(TYPES).filter(([k])=>!(ctx&&(k==='serre'||k==='arbre'||k==='haie'||k==='etang'||k==='fruitier'))&&(k!=='fruitier'||VRG())).map(([k,t])=>`<button class="typebtn" data-act="add" data-type="${k}"><svg viewBox="0 0 46 30">${ICON[k]}</svg>${FLW()&&k==='planche'?'Massif ou planche':t.l}</button>`).join('')}</div>
     <p class="note">L'objet apparaît au centre de l'écran. Maintiens le doigt dessus pour le soulever et le déplacer. Tire la poignée jaune pour le redimensionner.</p></div>`;
   }else if(sheetMode==='series'){
@@ -365,6 +366,7 @@ sheet.addEventListener('change',e=>{const t=e.target,o=obj(selId),v=parseFloat(t
 $('#editBtn').onclick=()=>{setEdit(true);sheetMode=null;renderSheet();toast('Mode édition : maintiens un objet pour le déplacer')};
 $('#doneBtn').onclick=()=>{setEdit(false);sheetMode=null;selId=null;renderSheet();renderPlan()};
 $('#addBtn').onclick=()=>{sheetMode='add';selId=null;renderSheet();renderPlan()};
+$('#shapeBtn').onclick=()=>startShapeEdit();
 $('#fitBtn').onclick=fit;
 $('#menuBtn').onclick=()=>{setTab('plan');selId=null;sheetMode='menu';renderSheet();renderPlan()};
 

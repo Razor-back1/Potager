@@ -718,6 +718,7 @@ table.cmp tr:last-child td{border-bottom:0}
         <button class="btn" id="sunBtn" aria-label="Afficher les ombres"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
         <button class="btn" id="fitBtn" aria-label="Recentrer le plan"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
         <button class="btn" id="editBtn" aria-label="Modifier le plan" title="Modifier le plan"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/></svg></button>
+        <button class="btn" id="shapeBtn" aria-label="Modifier la forme du terrain" title="Forme du terrain" hidden><svg viewBox="0 0 24 24"><path d="M4 18L6 5l9 2 5 8-7 5z"/><circle cx="6" cy="5" r="1.6"/><circle cx="20" cy="15" r="1.6"/><circle cx="4" cy="18" r="1.6"/></svg></button>
         <button class="btn" id="addBtn" hidden><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Ajouter</button>
         <button class="btn primary" id="doneBtn" hidden>Terminer</button>
       </div>
@@ -1649,13 +1650,14 @@ function keepAboveSheet(o){if(innerWidth>=760)return;const r=svg.getBoundingClie
   if(sy>top-40||sy<60){view.cy=o.y+o.h/2-(Math.max(80,top*.5)-r.height/2)/view.z;renderPlan()}}
 function setEdit(on){editMode=on;if(!on){lifted=null}updateModeUI();renderPlan()}
 function updateModeUI(){renderWxLayer();const busy=!!sheetMode||!!shapeEdit;$('#fab').hidden=busy;$('#map').classList.toggle('editing',editMode&&!shapeEdit);
-  $('#modetag').hidden=!editMode||busy||tab!=='plan';$('#editBtn').hidden=editMode;if($('#noteBtnPlan'))$('#noteBtnPlan').hidden=editMode;$('#addBtn').hidden=!editMode;$('#doneBtn').hidden=!editMode;$('#sunBtn').hidden=editMode||!!ctx}
+  $('#modetag').hidden=!editMode||busy||tab!=='plan';$('#editBtn').hidden=editMode;if($('#noteBtnPlan'))$('#noteBtnPlan').hidden=editMode;$('#addBtn').hidden=!editMode;$('#shapeBtn').hidden=!editMode||!!ctx;$('#doneBtn').hidden=!editMode;$('#sunBtn').hidden=editMode||!!ctx}
 function renderSheet(){
   updateModeUI();sheet.hidden=!sheetMode;if(!sheetMode)return;
   let h='<div class="grab"></div>';
   if(sheetMode==='add'){
     h+=`<div class="stack"><div class="row between"><h3>Ajouter au potager</h3><button class="btn small" data-act="close">Fermer</button></div>
     <button class="btn primary" data-act="series">Série de planches avec allées</button>
+    ${ctx?'':'<button class="btn" data-act="shape-edit">Modifier la forme du terrain</button>'}
     <div class="typegrid">${Object.entries(TYPES).filter(([k])=>!(ctx&&(k==='serre'||k==='arbre'||k==='haie'||k==='etang'||k==='fruitier'))&&(k!=='fruitier'||VRG())).map(([k,t])=>`<button class="typebtn" data-act="add" data-type="${k}"><svg viewBox="0 0 46 30">${ICON[k]}</svg>${FLW()&&k==='planche'?'Massif ou planche':t.l}</button>`).join('')}</div>
     <p class="note">L'objet apparaît au centre de l'écran. Maintiens le doigt dessus pour le soulever et le déplacer. Tire la poignée jaune pour le redimensionner.</p></div>`;
   }else if(sheetMode==='series'){
@@ -1935,6 +1937,7 @@ sheet.addEventListener('change',e=>{const t=e.target,o=obj(selId),v=parseFloat(t
 $('#editBtn').onclick=()=>{setEdit(true);sheetMode=null;renderSheet();toast('Mode édition : maintiens un objet pour le déplacer')};
 $('#doneBtn').onclick=()=>{setEdit(false);sheetMode=null;selId=null;renderSheet();renderPlan()};
 $('#addBtn').onclick=()=>{sheetMode='add';selId=null;renderSheet();renderPlan()};
+$('#shapeBtn').onclick=()=>startShapeEdit();
 $('#fitBtn').onclick=fit;
 $('#menuBtn').onclick=()=>{setTab('plan');selId=null;sheetMode='menu';renderSheet();renderPlan()};
 
@@ -3342,7 +3345,7 @@ setTimeout(()=>syncStation(false),600);
 
 <script>
 setTimeout(()=>{const s=document.getElementById('splash');if(s){s.classList.add('out');setTimeout(()=>s.remove(),600)}},matchMedia('(display-mode: standalone)').matches||navigator.standalone?650:120);
-/* version 6efa3b7005 : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
+/* version a38c3de201 : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
 if('serviceWorker' in navigator&&location.protocol==='https:'){
   navigator.serviceWorker.register('sw.js').then(r=>r.update()).catch(()=>{});
   let reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!reloaded){reloaded=true;location.reload()}});

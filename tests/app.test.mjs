@@ -345,3 +345,20 @@ test('variante : même terrain et éléments fixes, plan vide ; copie complète'
   assert.deepEqual(erreurs, []);
   await ctx.close();
 });
+
+test('modifier la forme du terrain depuis le mode édition', async () => {
+  const { ctx, page, erreurs } = await ouvrir();
+  await page.click('.tabs [data-tab="plan"]');
+  if (await page.isVisible('#sheet [data-act="close"]')) await page.click('#sheet [data-act="close"]');
+  await page.click('#editBtn');
+  assert.ok(await page.isVisible('#shapeBtn'), 'bouton « forme du terrain » absent en mode édition');
+  await page.click('#shapeBtn');
+  assert.ok(await page.isVisible('#shapebar'));
+  const avant = await page.evaluate(() => JSON.stringify(S.shape));
+  const v = page.locator('#editL .vtx').first(), b = await v.boundingBox();
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down();
+  await page.mouse.move(b.x + 60, b.y + 50, { steps: 8 }); await page.mouse.up();
+  assert.notEqual(await page.evaluate(() => JSON.stringify(S.shape)), avant, 'le coin n\'a pas bougé');
+  assert.deepEqual(erreurs, []);
+  await ctx.close();
+});
