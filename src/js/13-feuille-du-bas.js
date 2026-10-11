@@ -1,5 +1,6 @@
 /* ================= Feuille du bas ================= */
 const sheet=$('#sheet');
+const PROP_TYPES=['maison','terrasse','piscine','allee','alleeo','arbre','haie','cloture','etang','ruisseau','abri','citerne','cuve','eau','compost','prise'];
 const ICON={planche:'<rect x="4" y="10" width="38" height="10" rx="2" fill="#8b6a48"/><circle cx="10" cy="15" r="2" fill="#78c258"/><circle cx="17" cy="15" r="2" fill="#78c258"/><circle cx="24" cy="15" r="2" fill="#78c258"/><circle cx="31" cy="15" r="2" fill="#78c258"/><circle cx="38" cy="15" r="2" fill="#78c258"/>',
  bac:'<rect x="10" y="5" width="26" height="20" fill="#8b6a48" stroke="#a3713f" stroke-width="3"/>',serre:'<rect x="6" y="5" width="34" height="20" rx="4" fill="#3a82b5" fill-opacity=".15" stroke="#3a82b5" stroke-dasharray="3 2"/>',
  allee:'<rect x="2" y="11" width="42" height="8" fill="#cdc6b5"/>',alleeo:'<ellipse cx="23" cy="15" rx="18" ry="11" fill="none" stroke="#cdc6b5" stroke-width="5"/>',cuve:'<circle cx="23" cy="15" r="11" fill="#3a82b5"/>',eau:'<circle cx="23" cy="15" r="9" fill="#3a82b5" fill-opacity=".3" stroke="#3a82b5"/><circle cx="23" cy="15" r="3.5" fill="#3a82b5"/>',
@@ -9,6 +10,9 @@ const ICON={planche:'<rect x="4" y="10" width="38" height="10" rx="2" fill="#8b6
  abri:'<rect x="8" y="4" width="30" height="22" fill="#a3713f"/><path d="M8 4l30 22M38 4L8 26" stroke="#5e4529"/>',
  citerne:'<circle cx="23" cy="15" r="11" fill="#3a82b5" fill-opacity=".25" stroke="#3a82b5" stroke-dasharray="3 2"/><path d="M17 15h12M23 9v12" stroke="#3a82b5"/>',
  ruisseau:'<path d="M3 20c8 0 9-10 18-10s10 10 22 8" fill="none" stroke="#3a82b5" stroke-width="5" stroke-linecap="round"/>',
+ maison:'<rect x="9" y="5" width="28" height="20" fill="#e7e1d8" stroke="#a39a8c"/><path d="M9 15h28" stroke="#a39a8c"/>',
+ terrasse:'<rect x="6" y="8" width="34" height="14" fill="#ece2cf" stroke="#c9b99a"/><path d="M12 8v14M18 8v14M24 8v14M30 8v14" stroke="#c9b99a"/>',
+ piscine:'<rect x="6" y="6" width="34" height="18" rx="3" fill="#ece2cf" stroke="#c9b99a"/><rect x="10" y="9" width="26" height="12" rx="2" fill="#7fcbe8" stroke="#3a9bc8"/>',
  etang:'<path d="M6 18c0-7 10-12 20-12s16 4 14 10-9 9-19 9S6 24 6 18z" fill="#3a82b5" fill-opacity=".55" stroke="#3a82b5"/>'};
 const alertsHTML=o=>{const cf=conflicts(o),ri=rotIssues(o);let h='';
   if(cf.length)h+=`<div class="alert">${cf.map(c=>`<span><b>${P[c.a].n}</b> et <b>${P[c.b].n}</b> se gênent ${esc(c.where)}.</span>`).join('')}</div>`;
@@ -39,7 +43,7 @@ function planStatus(o){/* un seul indicateur par planche, le plus utile d'abord 
   if(sunIssues(o).some(x=>x.lvl==='insuffisant'))return{c:'shade',t:'☀',l:'Pas assez de soleil'};
   if(rotIssues(o).length)return{c:'amber',t:'↻',l:'Rotation à revoir'};
   return null}
-function cultureSheet(o){if(o.type==='fruitier')return fruitSheet(o);const t=TYPES[o.type],inS=!!serreOf(o);
+function cultureSheet(o){if(o.type==='fruitier')return fruitSheet(o);if(o.type==='parcelle')return parcelSheet(o);const t=TYPES[o.type],inS=!!serreOf(o);
   let h=`<div class="stack"><div class="cs-head"><div style="min-width:0"><span class="lbl">${FLW()&&o.type==='planche'?'Massif':t.l}${inS?' · sous serre':''}</span><div class="nm">${esc(o.name)}</div></div><button class="iconbtn" data-act="close" aria-label="Fermer"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`;
   if(t.plant){
     const pl=plantings().filter(x=>x.o===o);
@@ -79,15 +83,21 @@ function keepAboveSheet(o){if(innerWidth>=760)return;const r=svg.getBoundingClie
   if(sy>top-40||sy<60){view.cy=o.y+o.h/2-(Math.max(80,top*.5)-r.height/2)/view.z;renderPlan()}}
 function setEdit(on){editMode=on;if(!on){lifted=null}updateModeUI();renderPlan()}
 function updateModeUI(){renderWxLayer();const busy=!!sheetMode||!!shapeEdit;$('#fab').hidden=busy;$('#map').classList.toggle('editing',editMode&&!shapeEdit);
-  $('#modetag').hidden=!editMode||busy||tab!=='plan';$('#editBtn').hidden=editMode;if($('#noteBtnPlan'))$('#noteBtnPlan').hidden=editMode;$('#addBtn').hidden=!editMode;$('#shapeBtn').hidden=!editMode||!!ctx;$('#doneBtn').hidden=!editMode;$('#sunBtn').hidden=editMode||!!ctx}
+  $('#modetag').hidden=!editMode||busy||tab!=='plan';$('#editBtn').hidden=editMode;if($('#noteBtnPlan'))$('#noteBtnPlan').hidden=editMode||PROP();$('#addBtn').hidden=!editMode;$('#shapeBtn').hidden=!editMode||!!ctx;$('#doneBtn').hidden=!editMode;$('#sunBtn').hidden=editMode||!!ctx}
 function renderSheet(){
   updateModeUI();sheet.hidden=!sheetMode;if(!sheetMode)return;
   let h='<div class="grab"></div>';
-  if(sheetMode==='add'){
-    h+=`<div class="stack"><div class="row between"><h3>Ajouter au potager</h3><button class="btn small" data-act="close">Fermer</button></div>
+  if(sheetMode==='calib'){h+=calibSheet()}
+  else if(sheetMode==='add'){
+    if(PROP())h+=`<div class="stack"><div class="row between"><h3>Ajouter à la propriété</h3><button class="btn small" data-act="close">Fermer</button></div>
+    <div class="row"><button class="btn primary" data-act="padd" data-k="potager">+ Potager</button><button class="btn" data-act="padd" data-k="fleurs">+ Jardin de fleurs</button><button class="btn" data-act="padd" data-k="verger">+ Verger</button></div>
+    <div class="row"><button class="btn" data-act="shape-edit">Forme du terrain</button><button class="btn" data-act="pbg">${typeof bgOf==='function'&&bgOf()?'Capture : échelle et visibilité':'Capture satellite en fond'}</button></div>
+    <div class="typegrid">${PROP_TYPES.map(k=>`<button class="typebtn" data-act="add" data-type="${k}"><svg viewBox="0 0 46 30">${ICON[k]}</svg>${TYPES[k].l}</button>`).join('')}</div>
+    <p class="note">Une parcelle est un potager, un jardin de fleurs ou un verger complet, avec ses propres planches : touche-la pour l'ouvrir.</p></div>`;
+    else h+=`<div class="stack"><div class="row between"><h3>Ajouter au potager</h3><button class="btn small" data-act="close">Fermer</button></div>
     <button class="btn primary" data-act="series">Série de planches avec allées</button>
     ${ctx?'':'<button class="btn" data-act="shape-edit">Modifier la forme du terrain</button>'}
-    <div class="typegrid">${Object.entries(TYPES).filter(([k])=>!(ctx&&(k==='serre'||k==='arbre'||k==='haie'||k==='etang'||k==='fruitier'))&&(k!=='fruitier'||VRG())).map(([k,t])=>`<button class="typebtn" data-act="add" data-type="${k}"><svg viewBox="0 0 46 30">${ICON[k]}</svg>${FLW()&&k==='planche'?'Massif ou planche':t.l}</button>`).join('')}</div>
+    <div class="typegrid">${Object.entries(TYPES).filter(([k])=>!TYPES[k].prop&&!(ctx&&(k==='serre'||k==='arbre'||k==='haie'||k==='etang'||k==='fruitier'))&&(k!=='fruitier'||VRG())).map(([k,t])=>`<button class="typebtn" data-act="add" data-type="${k}"><svg viewBox="0 0 46 30">${ICON[k]}</svg>${FLW()&&k==='planche'?'Massif ou planche':t.l}</button>`).join('')}</div>
     <p class="note">L'objet apparaît au centre de l'écran. Maintiens le doigt dessus pour le soulever et le déplacer. Tire la poignée jaune pour le redimensionner.</p></div>`;
   }else if(sheetMode==='series'){
     h+=`<div class="stack"><div class="row between"><h3>Série de planches</h3><button class="btn small" data-act="add-back">Retour</button></div>
@@ -185,10 +195,10 @@ function renderSheet(){
     <p class="note">Le relais vérifie toutes les 30 minutes : il faut le déclencheur Cron <code>*/30 * * * *</code> dans ton Worker (Settings → Trigger events). Les notifications portent sur tes potagers synchronisés, pas sur l'exemple.</p></div>`;
   }else if(sheetMode==='menu'){
     const GLs=GL.get().list;
-    h+=`<div class="stack"><div class="row between"><h3>Potager</h3><button class="btn small" data-act="close">Fermer</button></div>
-    <div><span class="lbl">Mes potagers</span><div class="glist">${GLs.map(g=>`<div class="grow${g.id===GID?' cur':''}"><span><b>${esc(g.id===GID?S.name:(g.name||'Potager'))}</b>${(g.id===GID?S.example:g.ex)?' <span class="note">· exemple</span>':''}</span>${g.id===GID?'<span class="note">ouvert</span>':`<button class="btn small" data-act="gopen" data-g="${g.id}">Ouvrir</button>`}</div>`).join('')}</div>
-    <div class="row" style="margin-top:8px"><button class="btn small" data-act="gvar">Variante : même terrain, plan vide</button><button class="btn small" data-act="gdup">Dupliquer celui-ci</button></div>
-    <div class="row" style="margin-top:8px"><button class="btn small" data-act="gnew">+ Potager</button><button class="btn small" data-act="gnewfl">+ Jardin de fleurs</button><button class="btn small" data-act="gnewvg">+ Verger</button><button class="btn small" data-act="gnewex">+ Exemple potager</button><button class="btn small" data-act="gnewexfl">+ Exemple fleurs</button><button class="btn small" data-act="gnewexvg">+ Exemple verger</button>${GLs.length>1?'<button class="btn small danger" data-act="gdel">Supprimer celui-ci</button>':''}</div></div>
+    h+=`<div class="stack"><div class="row between"><h3>${PROP()?'Propriété':esc(KLBL[KIND()])}</h3><button class="btn small" data-act="close">Fermer</button></div>
+    <div><span class="lbl">Mes jardins</span><div class="glist">${GLs.map(g=>`<div class="grow${g.id===GID?' cur':''}"><span><b>${esc(g.id===GID?S.name:(g.name||'Potager'))}</b>${(g.id===GID?S.example:g.ex)?' <span class="note">· exemple</span>':''}</span>${g.id===GID?'<span class="note">ouvert</span>':`<button class="btn small" data-act="gopen" data-g="${g.id}">Ouvrir</button>`}</div>`).join('')}</div>
+    ${PROP()?'':'<div class="row" style="margin-top:8px"><button class="btn small" data-act="gvar">Variante : même terrain, plan vide</button><button class="btn small" data-act="gdup">Dupliquer celui-ci</button></div>'}
+    <div class="row" style="margin-top:8px"><button class="btn small" data-act="gnew">+ Potager</button><button class="btn small" data-act="gnewfl">+ Jardin de fleurs</button><button class="btn small" data-act="gnewvg">+ Verger</button><button class="btn small" data-act="gnewex">+ Exemple potager</button><button class="btn small" data-act="gnewexfl">+ Exemple fleurs</button><button class="btn small" data-act="gnewexvg">+ Exemple verger</button>${GLs.length>1&&!PROP()?'<button class="btn small danger" data-act="gdel">Supprimer celui-ci</button>':''}</div></div>
     <label class="field"><span class="lbl">Nom</span><input id="g-name" value="${esc(S.name)}"></label>
     ${S.shape?`<div class="row between"><span><span class="lbl">Terrain</span><br><span class="mono">${num(Math.abs(polyArea(S.shape))/1e4)} m² · ${S.shape.length} côtés</span></span><span class="row"><button class="btn small" data-act="shape-rect">Revenir au rectangle</button></span></div>`:
     `<div class="grid2"><label class="field"><span class="lbl">Largeur du terrain (m)</span><input id="g-w" type="number" min="2" step="0.5" value="${S.w/100}"></label>
@@ -215,18 +225,20 @@ function renderSheet(){
     const o=obj(selId);if(!o){sheetMode=null;return renderSheet()}h+=cultureSheet(o);
   }else if(sheetMode==='obj'){
     const o=obj(selId);if(!o){sheetMode=null;return renderSheet()}const t=TYPES[o.type],L=o.locked?'disabled':'';
-    h+=`<div class="stack"><div class="row between" style="flex-wrap:nowrap"><div style="min-width:0;flex:1"><span class="lbl">${FLW()&&o.type==='planche'?'Massif':VRG()&&o.type==='planche'?'Rang':t.l}${o.locked?' · verrouillé':''}</span><input class="namein" id="o-name" value="${esc(o.name)}" aria-label="Nom"></div><button class="btn small" data-act="close">OK</button></div>`;
+    h+=`<div class="stack"><div class="row between" style="flex-wrap:nowrap"><div style="min-width:0;flex:1"><span class="lbl">${FLW()&&o.type==='planche'?'Massif':VRG()&&o.type==='planche'?'Rang':t.l}${o.locked?' · verrouillé':''}</span><input class="namein" id="o-name" value="${esc(o.name)}" aria-label="Nom" ${t.fixed?'disabled':''}></div><button class="btn small" data-act="close">OK</button></div>`;
+    if(o.type==='parcelle'){h+=`<p class="note">Sa taille, sa forme et son nom se changent dans la parcelle elle-même. Ici, tu la places et tu l'orientes.</p><div class="row"><button class="btn small primary" data-act="popenplan">Ouvrir son plan</button></div>`}
     if(o.type==='serre'&&!ctx){const n=(o.inner&&o.inner.objs||[]).filter(q=>TYPES[q.type].plant).length;h+=`<button class="btn primary" data-act="enterserre">Ouvrir la serre</button><p class="note">${n?n+' planche'+(n>1?'s':'')+' à l\'intérieur.':'Vide pour l\'instant.'} En mode culture, un tap sur la serre l'ouvre directement.</p>`}
-    if(o.type==='citerne')h+=`<label class="field" style="max-width:240px"><span class="lbl">Volume (L)</span><input id="o-vol" type="number" min="0" step="100" value="${Math.round(+o.vol||0)}" ${L}></label><p class="note">Citerne enterrée : seul son volume compte, elle s'ajoute à la réserve d'eau (Eau &amp; météo). Pas d'ombre.</p>`;
+    if(o.type==='parcelle'){}
+    else if(o.type==='citerne')h+=`<label class="field" style="max-width:240px"><span class="lbl">Volume (L)</span><input id="o-vol" type="number" min="0" step="100" value="${Math.round(+o.vol||0)}" ${L}></label><p class="note">Citerne enterrée : seul son volume compte, elle s'ajoute à la réserve d'eau (Eau &amp; météo). Pas d'ombre.</p>`;
     else h+=t.round?`<div class="grid2"><label class="field"><span class="lbl">Diamètre (cm)</span><input id="o-w" type="number" min="10" step="5" value="${Math.round(o.w)}" ${L}></label>`:
       `<div class="grid2"><label class="field"><span class="lbl">Largeur (cm)</span><input id="o-w" type="number" min="10" step="5" value="${Math.round(o.w)}" ${L}></label><label class="field"><span class="lbl">Longueur (cm)</span><input id="o-h" type="number" min="10" step="5" value="${Math.round(o.h)}" ${L}></label>`;
-    if(o.type!=='citerne')h+=(!['planche','allee','alleeo','eau','prise','etang','ruisseau'].includes(o.type))?`<label class="field"><span class="lbl">Hauteur (cm)</span><input id="o-ht" type="number" min="0" step="10" value="${Math.round(o.height||0)}"></label></div><p class="note">${o.type==='cuve'?`Contenance ≈ <b class="mono">${num(cuveL(o),0)} L</b>. `:''}La hauteur sert aussi à calculer l'ombre portée.</p>`:`</div>`;
+    if(o.type!=='citerne'&&o.type!=='parcelle')h+=(!['planche','allee','alleeo','eau','prise','etang','ruisseau'].includes(o.type))?`<label class="field"><span class="lbl">Hauteur (cm)</span><input id="o-ht" type="number" min="0" step="10" value="${Math.round(o.height||0)}"></label></div><p class="note">${o.type==='cuve'?`Contenance ≈ <b class="mono">${num(cuveL(o),0)} L</b>. `:''}La hauteur sert aussi à calculer l'ombre portée.</p>`:`</div>`;
     {const ms=grpMembers(o);if(ms){const np=ms.filter(q=>q.type==='planche').length,na=ms.length-np;h+=`<div class="grpinfo"><span><b>Dans un bloc</b> · ${np} planche${np>1?'s':''}${na?` et ${na} allée${na>1?'s':''}`:''}<span class="note" style="display:block">Maintenir pour déplacer tout le bloc, l'anneau le fait tourner d'un coup. La poignée ne change que cet objet.</span></span><div class="row"><button class="btn small" data-act="ungroup">Détacher du bloc</button><button class="btn small" data-act="ungroupall">Dissoudre le bloc</button></div></div>`}}
     if(o.type==='alleeo')h+=`<div class="grid2"><label class="field"><span class="lbl">Largeur de l'allée (cm)</span><input id="o-ring" type="number" min="10" step="5" value="${Math.round(+o.ring||70)}" ${L}></label><div class="field"><span class="lbl">Forme</span><button class="btn small" data-act="mkcircle" ${L}>Faire un cercle</button></div></div><p class="note">Largeur et longueur = dimensions extérieures. Si l'allée est plus large que la moitié, le rond devient plein (placette).</p>`;
     if(o.type==='ruisseau')h+=`<div class="grid2"><label class="field"><span class="lbl">Courbure (cm)</span><input id="o-bend" type="number" step="10" value="${Math.round(o.bend||0)}" ${L}></label><label class="field"><span class="lbl">Méandre (cm)</span><input id="o-wave" type="number" step="10" value="${Math.round(o.wave||0)}" ${L}></label></div><p class="note">Largeur = longueur du cours d'eau, longueur = largeur du lit. Courbure : il bombe d'un côté ; méandre : il ondule en S. L'eau s'écoule dans le sens des tirets ; « Inverser le sens » le retourne.</p><button class="btn small" data-act="flipflow" style="justify-self:start" ${L}>Inverser le sens</button>`;
     if(o.type==='haie')h+=`<label class="field" style="max-width:260px"><span class="lbl">Courbure (cm)</span><input id="o-bend" type="number" step="10" value="${Math.round(o.bend||0)}" ${L}></label><p class="note">0 = haie droite. La valeur est la flèche au milieu de la haie ; négative pour bomber de l'autre côté.</p>`;
     if(!t.round&&!o.locked)h+=`<div class="row"><span class="lbl">Orientation</span><input id="o-rot" class="mono" type="number" inputmode="decimal" step="1" value="${Math.round(o.rot*10)/10}" style="width:64px;min-height:34px;padding:0 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);color:var(--ink)" aria-label="Orientation en degrés"><button class="btn small" data-act="rot" data-d="-1" aria-label="Tourner de 1° à gauche">−1°</button><button class="btn small" data-act="rot" data-d="1" aria-label="Tourner de 1° à droite">+1°</button><button class="btn small" data-act="rot" data-d="90">+90°</button><button class="btn small" data-act="rot0">${terrainFrame().a?'Droit':'0°'}</button></div><p class="note">Réglage fin au degré près avec −1° / +1° ou en tapant l'angle. Le rond jaune autour de l'objet tourne aussi au degré près (léger aimant tous les 45°).</p>`;
-    h+=`<div class="row"><button class="btn small" data-act="lock">${o.locked?'Déverrouiller':'Verrouiller'}</button><button class="btn small" data-act="dup">Dupliquer</button>${o.locked?'':'<button class="btn small danger" data-act="del">Supprimer</button>'}</div>`;
+    h+=`<div class="row"><button class="btn small" data-act="lock">${o.locked?'Déverrouiller':'Verrouiller'}</button>${t.fixed?'':'<button class="btn small" data-act="dup">Dupliquer</button>'}${o.locked?'':`<button class="btn small danger" data-act="del">${o.type==='parcelle'?'Retirer du plan':'Supprimer'}</button>`}</div>${o.type==='parcelle'?'<p class="note">Retirer du plan garde le jardin : il reste dans « Pas sur le plan ».</p>':''}`;
     h+=o.locked?`<p class="note">Verrouillé : l'objet ne peut plus être déplacé, redimensionné ni supprimé.</p>`:`<p class="note">Maintiens le doigt sur l'objet pour le soulever, puis glisse-le.</p>`;
     h+=`</div>`;
   }
@@ -234,6 +246,9 @@ function renderSheet(){
 }
 sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,o=obj(selId);
   if(a==='close'){sheetMode=null;selId=null;renderSheet();renderPlan()}
+  if(a==='popen'||a==='popenplan'){if(o&&o.type==='parcelle'){const g=o.gid;sheetMode=null;selId=null;if(editMode)setEdit(false);openParcel(g,a==='popenplan'?'plan':undefined)}return}
+  if(a==='pbg'){sheetMode=null;return bgAction(bgOf()?'calib':'add')}
+  if(a==='padd'){const id=newParcel(b.dataset.k,false);if(!id)return;const p=S.objs.find(q=>q.gid===id);sheetMode='obj';selId=p&&p.id;renderSheet();renderPlan();return toast('Parcelle créée : place-la',true)}
   if(a==='add-back'){sheetMode='add';renderSheet()}
   if(a==='series'){sheetMode='series';renderSheet()}
   if(a==='series-align'){const tp=terrainPts();let best=null;tp.forEach((p,i)=>{const q=tp[(i+1)%tp.length],L=Math.hypot(q.x-p.x,q.y-p.y);if(!best||L>best.L)best={L,a:Math.atan2(q.y-p.y,q.x-p.x)*180/Math.PI}});

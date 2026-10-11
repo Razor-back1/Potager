@@ -36,7 +36,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 button:disabled{cursor:default}
 :focus-visible{outline:2px solid var(--sun);outline-offset:2px}
-.app{height:100%;display:grid;grid-template-rows:auto 1fr auto;grid-template-columns:minmax(0,1fr);max-width:1100px;margin:0 auto;position:relative}
+.app{height:100%;display:grid;grid-template-rows:auto auto 1fr auto;grid-template-columns:minmax(0,1fr);max-width:1100px;margin:0 auto;position:relative}
 
 .top{display:flex;align-items:center;gap:8px;padding-block:10px;padding-inline:16px;border-bottom:1px solid var(--line);background:var(--surface)}
 .top>div:first-child{min-width:0;flex:1 1 auto}
@@ -480,6 +480,40 @@ table.cmp tr:last-child td{border-bottom:0}
 .toast button{border:0;background:none;color:var(--sun);font-weight:700}
 @media (min-width:760px){ .sheet{left:auto;right:16px;bottom:16px;width:380px;border-radius:18px;border:1px solid var(--line);max-height:calc(100% - 32px)} .sunbar{right:auto;width:420px}}
 @media (prefers-reduced-motion:no-preference){ .sheet{animation:up .18s ease-out} @keyframes up{from{transform:translateY(16px);opacity:.6}} }
+
+/* ===== Propriété et navigation par parcelle ===== */
+.subnav{display:grid;gap:8px;padding:8px 16px 8px;background:var(--surface);border-bottom:1px solid var(--line)}
+.subnav[hidden]{display:none}
+.app>header.top{grid-row:1}.app>.subnav{grid-row:2}.app>main{grid-row:3}.app>.tabs{grid-row:4}
+.subtabs{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);background:var(--surface-2);border-radius:10px;padding:2px;border:1px solid var(--line)}
+.subtabs button{border:0;background:none;min-height:32px;border-radius:8px;font-size:13px;font-weight:600;color:var(--ink);padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.subtabs button[aria-selected="true"]{background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.14);color:var(--accent);font-weight:700}
+.pchips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-inline:-16px;padding-inline:16px}
+.pchips::-webkit-scrollbar{display:none}
+.pchip{display:inline-flex;align-items:center;gap:6px;flex:none;min-height:32px;padding:0 12px;border-radius:99px;border:1px solid var(--line);background:var(--surface-2);font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap}
+.pchip i{width:8px;height:8px;border-radius:50%;flex:none}
+.pchip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.pchip.on .note{color:inherit;opacity:.8}
+.tabs button{position:relative}
+.tbadge{position:absolute;top:3px;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 4px;box-sizing:border-box;border-radius:9px;background:#ff3b30;color:#fff;font-size:11px;font-weight:700;line-height:17px;text-align:center}
+.tbadge[hidden]{display:none}
+.propsvg{display:block;border-radius:12px;background:var(--surface-2);max-height:62vh}
+.propsvg .ppick{cursor:pointer}
+.plab{fill:var(--surface);fill-opacity:.94}
+.plegend{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:13px}
+.plegend span{display:inline-flex;align-items:center;gap:5px}
+.plegend i{width:9px;height:9px;border-radius:50%}
+.plegend .note{margin-left:auto}
+.pico{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff}
+.pico svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.pbadge{min-width:22px;height:22px;padding:0 7px;box-sizing:border-box;border-radius:11px;background:#ff3b30;color:#fff;font-size:13px;font-weight:700;line-height:22px;text-align:center}
+.s-house{fill:#e7e1d8;stroke:#a39a8c} .s-house-r{stroke:#a39a8c;fill:none}
+.s-deck{fill:#ece2cf;stroke:#c9b99a} .s-pool{fill:#7fcbe8;stroke:#3a9bc8}
+.bgimg{pointer-events:none}
+.calpt{fill:#ffd60a;fill-opacity:.35;stroke:#ffd60a;stroke-width:2.5}
+.calline{stroke:#ffd60a;stroke-width:2;stroke-dasharray:5 4}
+svg.calib #layer,svg.calib #editL{pointer-events:none}
+.t-maison text,.t-terrasse text{fill:#3a3530!important;stroke:#f1ece4!important}
 /* ===== Styles d'interface — Menu › Style : Classique (d'origine), iOS, Verre sombre, Widgets ===== */
 .gpill,.thero,.tsum{display:none}
 :root:is([data-ui="ios"],[data-ui="glass"],[data-ui="widgets"]){
@@ -655,6 +689,21 @@ table.cmp tr:last-child td{border-bottom:0}
 :root[data-ui="widgets"] .tabs button[aria-current="page"]{color:var(--accent)}
 :root[data-ui="widgets"] .notefab{background:var(--ink);color:#fff;box-shadow:0 8px 20px rgba(0,0,0,.18)}
 @media (min-width:760px){:root[data-ui="widgets"] .sheet{border-radius:26px}}
+/* navigation par parcelle dans les styles iOS, verre et widgets */
+:root[data-ui="ios"] .subnav{background:rgba(242,242,247,.92);border-bottom:0;padding-top:2px}
+:root[data-ui="ios"] .subtabs{background:#e3e3e8;border:0;border-radius:9px}
+:root[data-ui="ios"] .subtabs button[aria-selected="true"]{background:#fff;color:#000;border-radius:7px}
+:root[data-ui="ios"] .pchip{background:#e3e3e8;border:0}
+:root[data-ui="ios"] .pchip.on{background:var(--accent);color:#fff}
+:root[data-ui="glass"] .subnav{background:transparent;border-bottom:0;padding-top:0}
+:root[data-ui="glass"] .subtabs{background:var(--card);border:1px solid var(--card-line);border-radius:14px}
+:root[data-ui="glass"] .subtabs button{border-radius:11px;color:#c9d2cc}
+:root[data-ui="glass"] .subtabs button[aria-selected="true"]{background:rgba(255,255,255,.16);color:var(--accent);box-shadow:none}
+:root[data-ui="glass"] .pchip{background:var(--card);border-color:var(--card-line)}
+:root[data-ui="glass"] .propsvg{background:rgba(255,255,255,.04)}
+:root[data-ui="widgets"] .subnav{background:transparent;border-bottom:0;padding-top:0}
+:root[data-ui="widgets"] .subtabs{background:#e7e9e2;border:0;border-radius:12px}
+:root[data-ui="widgets"] .subtabs button[aria-selected="true"]{background:#fff;border-radius:10px}
 </style>
 
 <div class="app">
@@ -665,7 +714,10 @@ table.cmp tr:last-child td{border-bottom:0}
     <button class="iconbtn" id="redoBtnH" aria-label="Rétablir l'action" title="Rétablir l'action"><svg viewBox="0 0 24 24"><path d="M15 7l5 5-5 5"/><path d="M20 12H9a5 5 0 0 0 0 10h3"/></svg></button>
     <button class="iconbtn" id="menuBtn" aria-label="Menu du potager"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   </header>
+  <div class="subnav" id="subnav" hidden></div>
   <main>
+    <section class="view" id="v-prop" hidden></section>
+    <section class="view" id="v-empty" hidden></section>
     <section class="view" id="v-today" hidden></section>
     <section class="view" id="v-plan">
       <svg id="map" xmlns="http://www.w3.org/2000/svg">
@@ -707,11 +759,11 @@ table.cmp tr:last-child td{border-bottom:0}
     <div class="toast" id="toast" hidden></div>
   </main>
   <nav class="tabs">
-    <button data-tab="today"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>Aujourd'hui</button>
-    <button data-tab="plan" aria-current="page"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 3v18M14 3v18"/></svg>Plan</button>
-    <button data-tab="harvest"><svg viewBox="0 0 24 24"><path d="M4 9h16l-2 11H6z"/><path d="M8 9a4 4 0 0 1 8 0"/></svg>Récoltes</button>
-    <button data-tab="weather"><svg viewBox="0 0 24 24"><path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z"/></svg>Eau & météo</button>
-    <button data-tab="crops"><svg viewBox="0 0 24 24"><path d="M5 20c0-8 5-14 15-15-1 10-7 15-15 15zM5 20l7-7"/></svg>Cultures</button>
+    <button data-top="prop"><svg viewBox="0 0 24 24"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg>Plan</button>
+    <button data-top="potager"><svg viewBox="0 0 24 24"><path d="M5 20c0-8 5-14 15-15-1 10-7 15-15 15zM5 20l7-7"/></svg>Potager<span class="tbadge" hidden></span></button>
+    <button data-top="fleurs"><svg viewBox="0 0 24 24"><circle cx="12" cy="5.6" r="2.4"/><circle cx="15.4" cy="8.4" r="2.4"/><circle cx="14" cy="12.2" r="2.4"/><circle cx="10" cy="12.2" r="2.4"/><circle cx="8.6" cy="8.4" r="2.4"/><path d="M12 14.6V21M12 18.5c1.4-1.8 3.2-2.3 4.8-2"/></svg>Fleurs<span class="tbadge" hidden></span></button>
+    <button data-top="verger"><svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="6"/><path d="M12 15v6M9 21h6"/></svg>Verger<span class="tbadge" hidden></span></button>
+    <button data-top="eau"><svg viewBox="0 0 24 24"><path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z"/></svg>Eau</button>
   </nav>
   <input type="file" id="importIn" accept="application/json,.json" hidden>
 </div>
@@ -920,7 +972,7 @@ function setCatalog(){const f=FLW(),K=KIND();let ed={},vs=[];try{ed=S.cropEdits|
   mine.forEach(v=>{P[v.id]={...P[v.base],edited:false,...v,variety:true}});
   for(const k in P)if(P[k].hv&&P[k].y&&P[k].j!==Math.round(P[k].y*365))P[k]={...P[k],j:Math.round(P[k].y*365)};
   PLANTS=CATALOG[K].flatMap(p=>[P[p.id],...mine.filter(v=>v.base===p.id).map(v=>P[v.id])]);JT.recolte=f?'Coupe':'Récolte';
-  try{const h=document.querySelector('.tabs [data-tab="harvest"]'),c=document.querySelector('.tabs [data-tab="crops"]');if(h)h.lastChild.textContent=f?'Floraisons':'Récoltes';if(c)c.lastChild.textContent=f?'Fleurs':K==='verger'?'Fruitiers':'Cultures'}catch(e){}}
+}
 /* date de la première floraison : après le délai j, au premier mois de floraison */
 function bloomStart(d,p){let t=addD(d,p.j||60);for(let i=0;i<14;i++){if(p.fl.includes(t.getMonth()+1))return t;t=new Date(t.getFullYear(),t.getMonth()+1,1,12)}return addD(d,p.j||60)}
 function bloomEndMonth(p,mo){let m=mo;for(let i=0;i<12&&p.fl.includes(m%12+1);i++)m=m%12+1;return m}
@@ -972,6 +1024,11 @@ const TYPES={
  prise:{l:'Prise électrique',w:30,h:30},
  compost:{l:'Composteur',w:120,h:120,ht:100},
  abri:{l:'Abri de jardin',w:250,h:200,ht:250},
+ /* plan de la propriété */
+ maison:{l:'Maison',w:1000,h:800,ht:700,prop:true},
+ terrasse:{l:'Terrasse',w:600,h:300,ht:0,prop:true},
+ piscine:{l:'Piscine',w:800,h:400,ht:0,prop:true},
+ parcelle:{l:'Parcelle',w:1000,h:600,ht:0,prop:true,fixed:true},
 };
 const JT={arrosage:'Arrosage',semis:'Semis',amendement:'Amendement',traitement:'Traitement',maladie:'Maladie',recolte:'Récolte',note:'Note'};
 const MONTHS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
@@ -1177,15 +1234,15 @@ let undoT=null;function saveUndo(){clearTimeout(undoT);undoT=setTimeout(()=>{try
 addEventListener('pagehide',()=>{if(undoT){clearTimeout(undoT);try{localStorage.setItem(undoKey(),JSON.stringify({p:past.slice(-15),f:future.slice(-15),cur:lastJSON.length}))}catch(e){}}});
 function loadUndo(){try{const u=JSON.parse(localStorage.getItem(undoKey())),raw=localStorage.getItem(keyOf(GID))||'';if(u&&Array.isArray(u.p)&&u.cur===raw.length){past=u.p;future=u.f||[]}else{past=[];future=[]}}catch(e){past=[];future=[]}}
 function persist(){try{localStorage.setItem(keyOf(GID),lastJSON);localStorage.setItem(keyAtOf(GID),String(localAt))}catch(e){}
-  const g=GL.get(),it=g.list.find(x=>x.id===GID);if(it&&(it.name!==S.name||it.ex!==!!S.example)){it.name=S.name;it.ex=!!S.example;GL.set(g)}}
+  const g=GL.get(),it=g.list.find(x=>x.id===GID);const k=S.kind||'potager';if(it&&(it.name!==S.name||it.ex!==!!S.example||it.k!==k)){it.name=S.name;it.ex=!!S.example;it.k=k;GL.set(g)}}
 function switchGarden(id){if(id===GID)return;if(GID)persist();GID=id;const g=GL.get();g.cur=id;GL.set(g);
   try{localAt=+localStorage.getItem(keyAtOf(id))||0}catch(e){localAt=0}S=load()||sample();lastJSON=JSON.stringify(S);loadUndo();
   ctx=null;selId=null;sheetMode=null;editMode=false;shapeEdit=null;closeBed();closeInv();if(typeof closeAuto==='function')closeAuto();persist();
   if(typeof subscribeDoc==='function')subscribeDoc();fit();renderSheet();renderHeader();refresh();if(typeof updateModeUI==='function')updateModeUI()}
 function addGarden(state,open=true){const id=uid(),g=GL.get();try{localStorage.setItem(keyOf(id),JSON.stringify(state));localStorage.setItem(keyAtOf(id),String(Date.now()))}catch(e){toast('Mémoire de l\'appareil pleine');return null}
-  g.list.push({id,name:state.name,ex:!!state.example});GL.set(g);if(open)switchGarden(id);try{if(relayOn())setTimeout(()=>syncPush(id),300)}catch(e){}return id}
-function deleteGarden(id){const g=GL.get();if(g.list.length<2)return;g.list=g.list.filter(x=>x.id!==id);GL.set(g);
-  try{localStorage.removeItem(keyOf(id));localStorage.removeItem(keyAtOf(id))}catch(e){}try{if(relayOn())gReq('/garden?id='+encodeURIComponent(id),'DELETE').catch(()=>{})}catch(e){}if(id===GID){GID=null;switchGarden(g.list[0].id)}}
+  g.list.push({id,name:state.name,ex:!!state.example,k:state.kind||'potager'});GL.set(g);if(open)switchGarden(id);try{if(relayOn())setTimeout(()=>syncPush(id),300)}catch(e){}return id}
+function deleteGarden(id){const g=GL.get();if(g.list.length<2||id===PROP_ID)return;const dk=(g.list.find(x=>x.id===id)||{}).k;g.list=g.list.filter(x=>x.id!==id);GL.set(g);
+  try{localStorage.removeItem(keyOf(id));localStorage.removeItem(keyAtOf(id))}catch(e){}try{if(relayOn())gReq('/garden?id='+encodeURIComponent(id),'DELETE').catch(()=>{})}catch(e){}if(id===GID){GID=null;switchGarden((g.list.find(x=>x.k===dk&&x.id!==PROP_ID)||g.list[0]).id)}}
 /* variantes pour comparer des plans : même terrain (forme, orientation, lieu) et mêmes éléments fixes, ou copie complète */
 const FIXED_TYPES=new Set(['etang','arbre','haie','cloture']);
 function gardenVariant(full){const c=JSON.parse(JSON.stringify(S)),base=S.name.replace(/ · (variante|copie) \d+$/,'');
@@ -1222,7 +1279,7 @@ const homeOf=o=>{const s=serreOf(o);return s?s.inner:S};
 const fullName=o=>{const s=serreOf(o);return s?s.name+' › '+o.name:o.name};
 const obj=id=>allObjs().find(o=>o.id===id);
 /* hors mode édition, seuls ces objets se sélectionnent ; le reste laisse glisser la carte */
-const PICKABLE=new Set(['planche','bac','serre','abri','fruitier']);
+const PICKABLE=new Set(['planche','bac','serre','abri','fruitier','parcelle']);
 const plantables=()=>allObjs().filter(o=>TYPES[o.type]&&TYPES[o.type].plant);
 /* blocs : des objets qui bougent et tournent ensemble (série de planches et ses allées) */
 const grpOf=o=>o&&o.grp?G().objs.filter(q=>q.grp===o.grp):null;
@@ -1256,6 +1313,159 @@ function setRect(W,L){const r=rectInfo(G().shape);if(!r)return;const ux=Math.cos
 function rotateMembers(st,c,delta){const a=delta*Math.PI/180,co=Math.cos(a),si=Math.sin(a);
   st.forEach(({o,x,y,rot})=>{const ox=x+o.w/2-c.x,oy=y+o.h/2-c.y;o.x=Math.round(c.x+ox*co-oy*si-o.w/2);o.y=Math.round(c.y+ox*si+oy*co-o.h/2);o.rot=Math.round((((rot+delta)%360)+360)%360*10)/10})}
 
+/* ================= Propriété : le terrain entier (maison, piscine…) et ses parcelles ================= */
+/* La propriété est un jardin comme les autres (kind 'propriete', id 'prop') : même stockage, même synchronisation,
+   même éditeur de plan. Chaque parcelle posée dessus est un objet « parcelle » relié à un potager, un jardin de fleurs ou un verger. */
+const PROP_ID='prop',KINDS=['potager','fleurs','verger'];
+const KCOL={potager:'#3E8E41',fleurs:'#D45D9A',verger:'#E08A2E'};
+const KLBL={potager:'Potager',fleurs:'Jardin de fleurs',verger:'Verger'};
+const PROP=()=>{try{return!!S&&S.kind==='propriete'}catch(e){return false}};
+const TOPKEY='atelier-potager-top',SUBKEY='atelier-potager-sub';
+let TOP=(()=>{try{return localStorage.getItem(TOPKEY)||'prop'}catch(e){return'prop'}})();
+let SUB=(()=>{try{return JSON.parse(localStorage.getItem(SUBKEY))||{}}catch(e){return{}}})();
+const saveNav=()=>{try{localStorage.setItem(TOPKEY,TOP);localStorage.setItem(SUBKEY,JSON.stringify(SUB))}catch(e){}};
+const isVariant=n=>/ · (variante|copie) \d+$/.test(n||'');
+
+/* état d'un autre jardin (lu dans le stockage, mis en cache tant qu'il ne change pas) */
+const GCACHE=new Map();
+function gState(id){if(id===GID)return S;let at='';try{at=localStorage.getItem(keyAtOf(id))||''}catch(e){}
+  const c=GCACHE.get(id);if(c&&c.at===at)return c.st;let st=null;try{st=migrate(JSON.parse(localStorage.getItem(keyOf(id))))}catch(e){}
+  GCACHE.set(id,{at,st});return st}
+function gKind(id){const g=GL.get().list.find(x=>x.id===id);if(g&&g.k)return g.k;const st=gState(id);return st?(st.kind||'potager'):null}
+/* les entrées de la liste retiennent leur sorte, pour ne pas relire chaque jardin */
+function fillKinds(){const g=GL.get();let ch=false;g.list.forEach(x=>{if(!x.k){const st=gState(x.id);if(st){x.k=st.kind||'potager';ch=true}}});if(ch)GL.set(g)}
+const gardensOf=k=>GL.get().list.filter(x=>x.id!==PROP_ID&&(x.id===GID?(PROP()?null:KIND()):gKind(x.id))===k);
+
+/* exécuter fn comme si le jardin id était ouvert (pour compter ce qu'il y a à faire ailleurs) */
+function withGarden(id,fn){if(id===GID)return fn();const st=gState(id);if(!st)return null;const s0=S,c0=ctx;let r=null;
+  try{S=JSON.parse(JSON.stringify(st));ctx=null;setCatalog();r=fn()}catch(e){r=null}finally{S=s0;ctx=c0;setCatalog()}return r}
+const SCACHE=new Map();
+function statOf(id){const at=id===GID?String(localAt)+lastJSON.length:(()=>{try{return localStorage.getItem(keyAtOf(id))||''}catch(e){return''}})();
+  const k=iso(TODAY)+'|'+at+'|'+(typeof wx!=='undefined'&&wx?wx.at:0),c=SCACHE.get(id);if(c&&c.k===k)return c.v;
+  const v=withGarden(id,()=>renderToday(true))||{n:0,sens:0,rec:[],eau:0};SCACHE.set(id,{k,v});return v}
+
+/* première ouverture après la mise à jour : la propriété est créée et les jardins existants y sont posés côte à côte */
+function ensureProperty(){fillKinds();const g=GL.get();if(g.list.some(x=>x.id===PROP_ID))return;
+  if(GID&&!(()=>{try{return localStorage.getItem(keyOf(GID))}catch(e){return 1}})())persist();
+  const items=g.list.map(x=>({x,st:gState(x.id)})).filter(i=>i.st&&i.st.kind!=='propriete'&&!isVariant(i.st.name));
+  const real=items.filter(i=>!i.st.example),place=real.length?real:items;
+  const st=emptyGarden('Ma propriété','propriete');let x=400,hmax=0;
+  place.forEach(i=>{st.objs.push({id:uid(),type:'parcelle',gid:i.x.id,name:i.st.name,x,y:400,w:i.st.w,h:i.st.h,rot:((-(i.st.north||0))%360+360)%360,zones:[]});x+=i.st.w+400;hmax=Math.max(hmax,i.st.h)});
+  st.w=Math.max(3000,x);st.h=Math.max(2000,hmax+800);
+  try{localStorage.setItem(keyOf(PROP_ID),JSON.stringify(st));localStorage.setItem(keyAtOf(PROP_ID),'1')}catch(e){return}   /* daté « très ancien » : une propriété déjà synchronisée ailleurs l'emporte */
+  g.list.unshift({id:PROP_ID,name:st.name,k:'propriete'});GL.set(g)}
+ensureProperty();
+/* au démarrage, ouvrir directement la propriété si c'est l'onglet retenu */
+if(TOP==='prop'&&GID!==PROP_ID&&GL.get().list.some(x=>x.id===PROP_ID)){persist();GID=PROP_ID;const g0=GL.get();g0.cur=GID;GL.set(g0);
+  try{localAt=+localStorage.getItem(keyAtOf(GID))||0}catch(e){localAt=0}S=load()||emptyGarden('Ma propriété','propriete');lastJSON=JSON.stringify(S);loadUndo()}
+
+const propState=()=>gState(PROP_ID);
+/* parcelles posées sur la propriété (les jardins supprimés disparaissent du plan) */
+function parcels(){const st=propState();return st?st.objs.filter(o=>o.type==='parcelle'&&GL.get().list.some(x=>x.id===o.gid)):[]}
+/* garde la taille et le nom de chaque parcelle alignés sur son jardin (sans toucher à l'historique) */
+function syncParcels(){if(!PROP())return;const L=GL.get().list;let ch=false;
+  S.objs=S.objs.filter(o=>{if(o.type!=='parcelle')return true;if(!L.some(x=>x.id===o.gid)){ch=true;return false}return true});
+  S.objs.forEach(o=>{if(o.type!=='parcelle')return;const st=gState(o.gid);if(!st)return;
+    if(o.w!==st.w||o.h!==st.h){o.x+=(o.w-st.w)/2;o.y+=(o.h-st.h)/2;o.w=st.w;o.h=st.h;ch=true}if(o.name!==st.name){o.name=st.name;ch=true}});
+  if(ch){lastJSON=JSON.stringify(S);persist()}}
+
+/* ---- dessin réduit d'un jardin (dans sa parcelle) ---- */
+function miniGarden(st,c){const tp=st.shape&&st.shape.length>2?st.shape:[{x:0,y:0},{x:st.w,y:0},{x:st.w,y:st.h},{x:0,y:st.h}],ns='vector-effect="non-scaling-stroke"';
+  let s=`<polygon points="${tp.map(p=>p.x+','+p.y).join(' ')}" fill="${c}" fill-opacity=".16" stroke="${c}" stroke-width="2" ${ns}/>`;
+  (st.objs||[]).forEach(o=>{const t=o.type,T=TYPES[t]||{};if(t==='prise')return;
+    const f=t==='planche'||t==='bac'?`fill="${c}" fill-opacity=".5"`:t==='serre'?'class="s-serre"':/etang|eau|cuve|citerne|ruisseau/.test(t)?'class="s-water-l"':/arbre|fruitier|haie/.test(t)?'class="s-leaf"':/allee/.test(t)?'class="s-gravel"':'class="s-wood"';
+    const e=T.round||t==='alleeo'?`<ellipse rx="${o.w/2}" ry="${o.h/2}" ${f} stroke-width="1" ${ns}/>`:`<rect x="${-o.w/2}" y="${-o.h/2}" width="${o.w}" height="${o.h}" rx="${t==='etang'?Math.min(o.w,o.h)/2:Math.min(o.w,o.h)*.08}" ${f} stroke-width="1" ${ns}/>`;
+    s+=`<g transform="translate(${o.x+o.w/2} ${o.y+o.h/2}) rotate(${o.rot||0})">${e}</g>`});
+  return s}
+function parcelSVG(o){const st=gState(o.gid);if(!st)return`<rect x="${-o.w/2}" y="${-o.h/2}" width="${o.w}" height="${o.h}" fill="none" stroke="var(--muted)" stroke-dasharray="6 4" vector-effect="non-scaling-stroke"/>`;
+  return`<g transform="translate(${-o.w/2} ${-o.h/2})">${miniGarden(st,KCOL[st.kind||'potager'])}</g>`}
+
+/* ---- plan réduit de la propriété (vue d'ensemble) ---- */
+function propSVG(W){const tp=terrainPts();let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+  const add=(x,y)=>{x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y)};tp.forEach(p=>add(p.x,p.y));
+  S.objs.forEach(o=>{const r=Math.hypot(o.w,o.h)/2;add(o.x+o.w/2-r,o.y+o.h/2-r);add(o.x+o.w/2+r,o.y+o.h/2+r)});
+  const pad=Math.max(x1-x0,y1-y0)*.03;x0-=pad;y0-=pad;x1+=pad;y1+=pad;const bw=x1-x0,bh=y1-y0,z=W/bw,z0=view.z;view.z=z;
+  const order=['etang','ruisseau','alleeo','allee','terrasse','parcelle','piscine','maison','haie','cloture','serre','arbre','fruitier','abri','compost','cuve','eau','citerne','bac','planche','prise'];
+  const list=[...S.objs].sort((a,b)=>order.indexOf(a.type)-order.indexOf(b.type));let s='',labs='';
+  try{list.forEach(o=>{const pg=o.type==='parcelle';s+=`<g transform="translate(${o.x+o.w/2} ${o.y+o.h/2}) rotate(${o.rot||0})"${pg?` data-pg="${o.gid}" class="ppick"`:''}>${shapeSVG(o)}</g>`;
+    if(pg||o.type==='maison'||o.type==='piscine'){const fs=11/z,c=pg?(KCOL[(gState(o.gid)||{}).kind||'potager']):'var(--muted)',w=o.name.length*fs*.58+fs*1.2;
+      labs+=`<g${pg?` data-pg="${o.gid}" class="ppick"`:''} transform="translate(${o.x+o.w/2} ${o.y+o.h/2})"><rect x="${-w/2}" y="${-fs*.95}" width="${w}" height="${fs*1.9}" rx="${fs*.95}" class="plab"/><text text-anchor="middle" dominant-baseline="central" font-size="${fs}" font-weight="700" style="fill:${c}">${esc(o.name)}</text></g>`}})}finally{view.z=z0}
+  return`<svg class="propsvg" viewBox="${x0} ${y0} ${bw} ${bh}" width="100%" style="aspect-ratio:${bw}/${bh}" role="img" aria-label="Plan de la propriété"><polygon class="ground" points="${tp.map(p=>p.x+','+p.y).join(' ')}"/><polygon class="bound" points="${tp.map(p=>p.x+','+p.y).join(' ')}" stroke-dasharray="6 4" vector-effect="non-scaling-stroke"/>${s}${labs}</svg>`}
+
+/* ---- navigation : Plan · Potager · Fleurs · Verger · Eau ---- */
+const LASTKEY='atelier-potager-last';
+const lastOf=k=>{try{return(JSON.parse(localStorage.getItem(LASTKEY))||{})[k]}catch(e){return null}};
+const setLast=(k,id)=>{try{const v=JSON.parse(localStorage.getItem(LASTKEY))||{};v[k]=id;localStorage.setItem(LASTKEY,JSON.stringify(v))}catch(e){}};
+function pickGarden(k){const gs=gardensOf(k);if(!gs.length)return null;const l=lastOf(k);if(l&&gs.some(g=>g.id===l))return l;
+  const placed=parcels().map(o=>o.gid);return(gs.find(g=>placed.includes(g.id))||gs.find(g=>!g.ex)||gs[0]).id}
+function setTop(k){if(!['prop','eau',...KINDS].includes(k))k='prop';TOP=k;saveNav();
+  if(k==='prop'){if(GID!==PROP_ID)switchGarden(PROP_ID);syncParcels();return setTab(SUB.prop==='plan'?'plan':'prop')}
+  if(k==='eau'){if(PROP()){const id=lastOf('eau')||pickGarden('potager')||pickGarden('fleurs')||pickGarden('verger');if(id&&GL.get().list.some(x=>x.id===id))switchGarden(id)}return setTab('weather')}
+  if(PROP()||KIND()!==k){const id=pickGarden(k);if(!id){if(!PROP())switchGarden(PROP_ID);TOP=k;return setTab('empty')}switchGarden(id)}
+  setLast(k,GID);setTab(SUB[k]&&SUB[k]!=='prop'?SUB[k]:'today')}
+/* garde l'onglet du bas cohérent avec le jardin ouvert (après une synchro, un import, le menu…) */
+function syncTop(){if(tab==='empty')return;if(tab==='weather'){TOP='eau';return}
+  if(PROP()){if(TOP!=='prop')TOP='prop'}else if(TOP==='prop'||(TOP!=='eau'&&TOP!==KIND()))TOP=KIND()}
+const SEGS={prop:[['prop',"Vue d'ensemble"],['plan','Plan']]};
+function renderTopNav(){syncTop();saveNav();
+  document.querySelectorAll('.tabs [data-top]').forEach(b=>{if(b.dataset.top===TOP)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
+    const k=b.dataset.top,bd=b.querySelector('.tbadge');if(!bd)return;let n=0;if(KINDS.includes(k))try{n=parcels().filter(o=>gKind(o.gid)===k).reduce((s,o)=>s+(statOf(o.gid).n||0),0)}catch(e){}
+    bd.textContent=n>9?'9+':n;bd.hidden=!n});
+  const el=$('#subnav');if(!el)return;let h='';
+  const chips=list=>list.length>1?`<div class="pchips">${list.map(g=>{const k=gKind(g.id),on=g.id===GID;return`<button class="pchip${on?' on':''}" data-g="${g.id}"${on?' aria-current="true"':''}><i style="background:${KCOL[k]||'var(--muted)'}"></i>${esc(g.id===GID?S.name:g.name||KLBL[k])}${g.ex?' <span class="note">exemple</span>':''}</button>`}).join('')}</div>`:'';
+  const seg=items=>`<div class="subtabs" role="tablist">${items.map(([t,l])=>`<button role="tab" data-tab="${t}" aria-selected="${tab===t}">${l}</button>`).join('')}</div>`;
+  if(TOP==='prop')h=seg(SEGS.prop);
+  else if(TOP==='eau')h=chips(GL.get().list.filter(x=>x.id!==PROP_ID));
+  else if(tab!=='empty'){const gs=gardensOf(TOP);h=chips(gs)+seg([['today',"Aujourd'hui"],['plan','Plan'],['harvest',FLW()?'Floraisons':'Récoltes'],['crops',FLW()?'Fleurs':VRG()?'Fruitiers':'Cultures']])}
+  el.innerHTML=h;el.hidden=!h}
+$('#subnav').addEventListener('click',e=>{const t=e.target.closest('[data-tab]');if(t){if(t.dataset.tab===tab&&tab==='plan'){sheetMode=null;selId=null;shapeEdit=null;renderSheet();fit();return}return setTab(t.dataset.tab)}
+  const g=e.target.closest('[data-g]');if(g&&g.dataset.g!==GID){switchGarden(g.dataset.g);if(TOP==='eau')setLast('eau',GID);else{setLast(KIND(),GID);if(tab==='empty')setTab('today')}renderTopNav()}});
+
+/* ---- vue d'ensemble de la propriété ---- */
+function newParcel(k,ex){const n=gardensOf(k).length+1;const st=ex?(k==='verger'?sampleOrchard():k==='fleurs'?sampleFlowers():sample()):emptyGarden((k==='potager'?'Potager':k==='fleurs'?'Jardin de fleurs':'Verger')+(n>1?' '+n:''),k==='potager'?undefined:k);
+  if(!ex){st.w=k==='verger'?1500:1000;st.h=k==='verger'?1200:600}
+  const id=addGarden(st,false);if(!id)return null;placeParcel(id);return id}
+/* poser un jardin sur le plan de la propriété (au centre, sans chevaucher si possible) */
+function placeParcel(id){const st=gState(id);if(!st)return;const wasProp=PROP();if(!wasProp)return;
+  const ps=S.objs.filter(o=>o.type==='parcelle');let x=S.w/2-st.w/2,y=S.h/2-st.h/2;
+  const hit=(x,y)=>ps.some(o=>x<o.x+o.w&&x+st.w>o.x&&y<o.y+o.h&&y+st.h>o.y);
+  for(let i=0;i<40&&hit(x,y);i++){x=200+((i*450)%Math.max(400,S.w-st.w-200));y=200+Math.floor(i*450/Math.max(400,S.w-st.w-200))*450}
+  S.objs.push({id:uid(),type:'parcelle',gid:id,name:st.name,x:Math.round(x),y:Math.round(y),w:st.w,h:st.h,rot:0,zones:[]});save()}
+function openParcel(id,t){const k=gKind(id);if(!k||k==='propriete')return;switchGarden(id);setLast(k,id);TOP=k;setTab(t||SUB[k]||'today')}
+function renderProp(){const v=$('#v-prop');if(!PROP()){v.innerHTML='';return}syncParcels();
+  const ps=parcels(),st=ps.map(o=>({o,k:gKind(o.gid),g:gState(o.gid),s:statOf(o.gid)}));
+  const area=Math.abs(polyArea(terrainPts()))/1e4,nt=typeof wx!=='undefined'&&wx&&wx.night!=null?wx.night:null;
+  const placed=new Set(ps.map(o=>o.gid)),loose=GL.get().list.filter(x=>x.id!==PROP_ID&&!placed.has(x.id));
+  const sens=st.filter(x=>x.s.sens>0);
+  const ico={potager:'<path d="M5 19c0-8 5-14 15-14 0 10-6 15-14 15"/><path d="M5 19l7-7"/>',fleurs:'<circle cx="12" cy="8" r="3"/><path d="M12 11v10M12 17c2-2 4-2 5-1"/>',verger:'<circle cx="12" cy="9" r="6"/><path d="M12 15v6"/>'};
+  const prow=(id,k,name,sub,right)=>`<button class="trow" data-pg="${id}"><span class="pico" style="background:${KCOL[k]}"><svg viewBox="0 0 24 24">${ico[k]}</svg></span><span><b>${esc(name)}</b><span class="note" style="display:block">${sub}</span></span>${right}</button>`;
+  const desc=x=>{const g=x.g;if(!g)return'';const n=g.objs.filter(o=>TYPES[o.type]&&TYPES[o.type].plant).length;return`${x.k==='verger'?n+' arbre'+(n>1?'s':''):n+(x.k==='fleurs'?' massif':' planche')+(n>1?'s':'')} · ${num(Math.abs(polyArea(g.shape&&g.shape.length>2?g.shape:[{x:0,y:0},{x:g.w,y:0},{x:g.w,y:g.h},{x:0,y:g.h}]))/1e4,0)} m²`};
+  v.innerHTML=`<div class="page"><div class="ttitle"><h2>${esc(S.name)}</h2><span class="note">${ps.length} parcelle${ps.length>1?'s':''} · ${num(area,0)} m²</span></div>
+  ${nt!=null&&nt<=2&&sens.length?`<div class="tcard frost"><h3>Gel possible cette nuit · ${num(nt)} °C</h3><span>${sens.map(x=>`<b>${x.s.sens}</b> culture${x.s.sens>1?'s':''} sensible${x.s.sens>1?'s':''} : ${esc(x.o.name)}`).join(' · ')}</span><button class="btn small" data-pg="${sens[0].o.gid}" style="justify-self:start">Voir quoi couvrir</button></div>`:''}
+  <div class="tcard pcard"><div class="row between"><h3>Plan</h3><button class="btn small" data-pplan="1">Modifier</button></div>${propSVG(700)}<div class="plegend">${KINDS.map(k=>`<span><i style="background:${KCOL[k]}"></i>${KLBL[k]}</span>`).join('')}<span class="note">Touche une parcelle</span></div></div>
+  <div class="tcard"><h3>Parcelles</h3>${st.map(x=>prow(x.o.gid,x.k,x.o.name,desc(x),x.s.n?`<span class="pbadge">${x.s.n}</span>`:'<span class="note">›</span>')).join('')||'<p class="note">Aucune parcelle pour l\'instant.</p>'}
+    <div class="row"><button class="btn small primary" data-pnew="potager">+ Potager</button><button class="btn small" data-pnew="fleurs">+ Jardin de fleurs</button><button class="btn small" data-pnew="verger">+ Verger</button></div></div>
+  ${loose.length?`<div class="tcard"><h3>Pas sur le plan</h3><span class="note">Exemples, variantes et jardins pas encore posés sur la propriété.</span>${loose.map(g=>{const k=gKind(g.id)||'potager';return`<div class="trow"><span class="pico" style="background:${KCOL[k]}"><svg viewBox="0 0 24 24">${ico[k]}</svg></span><span><b>${esc(g.name||KLBL[k])}</b>${g.ex?' <span class="note">· exemple</span>':''}</span><span class="row" style="gap:6px"><button class="btn small" data-pg="${g.id}">Ouvrir</button><button class="btn small" data-pplace="${g.id}">Poser</button></span></div>`}).join('')}</div>`:''}
+  <div class="tcard"><h3>Fond de plan</h3><span class="note">Importe une capture satellite de ton terrain (Google Maps, vue satellite), mets-la à l'échelle et décalque la maison, la piscine, les arbres… Elle reste sur cet appareil.</span><div class="row">${bgOf()?'<button class="btn small" data-pbg="calib">Mettre à l\'échelle</button><button class="btn small danger" data-pbg="del">Retirer la capture</button>':'<button class="btn small primary" data-pbg="add">Importer une capture</button>'}</div></div>
+  <div class="row"><button class="btn small" data-pex="potager">+ Exemple potager</button><button class="btn small" data-pex="fleurs">+ Exemple fleurs</button><button class="btn small" data-pex="verger">+ Exemple verger</button></div></div>`}
+$('#v-prop').addEventListener('click',e=>{const t=e.target.closest('[data-pg],[data-pplan],[data-pnew],[data-pex],[data-pplace],[data-pbg]');if(!t)return;
+  if(t.dataset.pg)return openParcel(t.dataset.pg);
+  if(t.dataset.pplan){setTab('plan');setEdit(true);return}
+  if(t.dataset.pnew||t.dataset.pex){const k=t.dataset.pnew||t.dataset.pex,id=newParcel(k,!!t.dataset.pex);if(!id)return;const o=S.objs.find(q=>q.gid===id);setTab('plan');setEdit(true);if(o){selId=o.id;fit();renderPlan()}return toast(t.dataset.pex?'Exemple posé : déplace-le où tu veux':'Parcelle créée : place-la sur le plan',true)}
+  if(t.dataset.pplace){placeParcel(t.dataset.pplace);const o=S.objs.find(q=>q.gid===t.dataset.pplace);setTab('plan');setEdit(true);if(o){selId=o.id;renderPlan()}return toast('Parcelle posée : place-la où il faut',true)}
+  if(t.dataset.pbg)return bgAction(t.dataset.pbg)});
+/* onglet d'une sorte de jardin qui n'existe pas encore */
+function renderEmpty(){const k=TOP;$('#v-empty').innerHTML=`<div class="page"><div class="tcard"><h3>Pas encore de ${k==='fleurs'?'jardin de fleurs':k==='verger'?'verger':'potager'}</h3><span class="note">Crée une parcelle : elle apparaît sur le plan de la propriété, où tu pourras la déplacer.</span><div class="row"><button class="btn primary" data-enew="${k}">Créer ${k==='fleurs'?'un jardin de fleurs':k==='verger'?'un verger':'un potager'}</button><button class="btn" data-eex="${k}">Essayer l'exemple</button></div></div></div>`}
+$('#v-empty').addEventListener('click',e=>{const b=e.target.closest('[data-enew],[data-eex]');if(!b)return;const k=b.dataset.enew||b.dataset.eex,ex=!!b.dataset.eex;
+  const pid=GID;if(!PROP())switchGarden(PROP_ID);const id=newParcel(k,ex);if(!id){switchGarden(pid);return}openParcel(id,ex?'today':'plan');if(!ex)setEdit(true);toast(ex?'Exemple ajouté à la propriété':'Créé et posé sur la propriété',true)});
+
+/* fiche d'une parcelle sur le plan de la propriété */
+function parcelSheet(o){const st=gState(o.gid),k=st?(st.kind||'potager'):'potager',s=statOf(o.gid);
+  return`<div class="stack"><div class="cs-head"><div style="min-width:0"><span class="lbl">${KLBL[k]}</span><div class="nm">${esc(o.name)}</div></div><button class="iconbtn" data-act="close" aria-label="Fermer"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="info"><div class="kv"><span class="k">Taille</span><span class="mono">${m2(o.w)} × ${m2(o.h)} m</span></div><div class="kv"><span class="k">À faire aujourd'hui</span><span>${s.n||'rien d\'urgent'}</span></div></div>
+  <div class="row"><button class="btn primary" data-act="popen">Ouvrir</button><button class="btn" data-act="popenplan">Plan de la parcelle</button></div>
+  <p class="note">La taille et la forme se changent dans le plan de la parcelle (crayon, puis « Forme du terrain »).</p>
+  <button class="linkbtn" data-act="toedit">Déplacer ou tourner sur la propriété</button></div>`}
 /* ================= Synchronisation (compte Claude) ================= */
 let DOC=null,syncState='local',pushT=null,ASSETS=null,DL=null;
 function schedulePush(){if(!DOC)return;clearTimeout(pushT);pushT=setTimeout(pushRemote,1200)}
@@ -1355,20 +1565,28 @@ function renderHeader(){setCatalog();$('#gInfo').textContent=`${S.name} · ${m2(
   $('#needle').setAttribute('transform',`rotate(${S.north})`)}
 $('#undoBtnH').onclick=undo;$('#redoBtnH').onclick=redo;
 addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)){e.preventDefault();e.shiftKey?redo():undo()}});
-/* toucher l'onglet déjà ouvert : ferme la planche ou l'abri ouvert, sinon remonte en haut (ou recentre le plan) */
-document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{const t=b.dataset.tab;
-  if(t!==tab)return setTab(t);
+/* barre du bas : Plan (propriété) · Potager · Fleurs · Verger · Eau.
+   Toucher l'onglet déjà ouvert : ferme la planche ou l'abri ouvert, sinon remonte en haut (ou recentre le plan) */
+document.querySelectorAll('.tabs [data-top]').forEach(b=>b.onclick=()=>{const k=b.dataset.top;
+  if(k!==TOP)return setTop(k);
   if(inv||bed||auto){closeInv();closeBed();closeAuto();refresh();return}
-  if(t==='plan'){sheetMode=null;selId=null;shapeEdit=null;if(ctx){ctx=null;renderCtxbar();renderSunbar()}renderSheet();renderShapebar();fit();return}
-  const v=$('#v-'+t);if(v)v.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})});
-function setTab(t){tab=t;closeBed();closeInv();closeAuto();if(q)closeQ();setTimeout(updateNoteBtn);document.querySelectorAll('.tabs button').forEach(b=>{if(b.dataset.tab===t)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
-  ['today','plan','harvest','weather','crops'].forEach(v=>$('#v-'+v).hidden=v!==t);refresh()}
+  if(k==='prop'&&tab==='plan'){if(calib)endCalib();if(editMode)setEdit(false);sheetMode=null;selId=null;shapeEdit=null;renderShapebar();return setTab('prop')}
+  if(tab==='plan'){sheetMode=null;selId=null;shapeEdit=null;if(ctx){ctx=null;renderCtxbar();renderSunbar()}renderSheet();renderShapebar();fit();return}
+  const v=$('#v-'+tab);if(v)v.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})});
+const VIEWS=['today','plan','harvest','weather','crops','prop','empty'];
+function setTab(t){
+  if(t==='weather')TOP='eau';else if(t==='prop')TOP='prop';
+  else if(t!=='empty'&&(TOP==='eau'||TOP==='prop'&&(t!=='plan'||!PROP())))TOP=PROP()?'prop':KIND();
+  if(TOP==='prop')SUB.prop=t;else if(KINDS.includes(TOP)&&t!=='empty')SUB[TOP]=t;
+  if(t==='plan'&&PROP())syncParcels();
+  tab=t;closeBed();closeInv();closeAuto();if(q)closeQ();setTimeout(updateNoteBtn);
+  VIEWS.forEach(v=>$('#v-'+v).hidden=v!==t);if(t==='plan'&&fitPending)fit();refresh()}
 let toastT;
 function toast(msg,canUndo){clearTimeout(toastT);const el=$('#toast');
   el.innerHTML=`${canUndo?'<svg class="tchk" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7 12.5l3.3 3.3L17 9"/></svg>':''}<span>${esc(msg)}</span>${canUndo?'<button id="undoBtn">Annuler</button>':''}`;el.hidden=false;el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');
   if(canUndo)$('#undoBtn').onclick=()=>{el.hidden=true;undo()};
   toastT=setTimeout(()=>el.hidden=true,4500);}
-function refresh(){setCatalog();if(inv)renderInv();if(bed)renderBed();if(tab==='plan'){renderPlan();renderSheet();renderSunbar();renderShapebar();renderCtxbar()}else{$('#shapebar').hidden=true;$('#ctxbar').hidden=true}if(tab==='harvest')renderHarvest();if(tab==='weather')renderWeather();if(tab==='crops')renderCrops();if(tab==='today')renderToday()}
+function refresh(){setCatalog();renderTopNav();if(tab==='prop')renderProp();if(tab==='empty')renderEmpty();if(inv)renderInv();if(bed)renderBed();if(tab==='plan'){renderPlan();renderSheet();renderSunbar();renderShapebar();renderCtxbar()}else{$('#shapebar').hidden=true;$('#ctxbar').hidden=true}if(tab==='harvest')renderHarvest();if(tab==='weather')renderWeather();if(tab==='crops')renderCrops();if(tab==='today')renderToday()}
 
 /* ================= Plan ================= */
 const svg=$('#map');
@@ -1405,6 +1623,10 @@ function shapeSVG(o){
     case 'cloture':{let s=`<rect x="${x}" y="${y}" width="${w}" height="${h}" class="s-fence"/>`;const L=Math.max(w,h),n=Math.floor(L/200);for(let i=0;i<=n;i++){const t=-L/2+i*(L/Math.max(n,1));s+=w>=h?`<rect x="${t-6}" y="${-Math.max(h,12)/2-2}" width="12" height="${Math.max(h,12)+4}" class="s-wood-solid"/>`:`<rect y="${t-6}" x="${-Math.max(w,12)/2-2}" height="12" width="${Math.max(w,12)+4}" class="s-wood-solid"/>`}return s}
     case 'prise':return`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" class="s-plug" stroke-width="1" ${ns}/><circle cx="${-w*.18}" r="${w*.09}" style="fill:var(--ink)"/><circle cx="${w*.18}" r="${w*.09}" style="fill:var(--ink)"/>`;
     case 'compost':return`<rect x="${x}" y="${y}" width="${w}" height="${h}" class="s-wood-solid" stroke-width="1" ${ns}/><path d="M${x} ${y+h/3}H${-x}M${x} ${y+2*h/3}H${-x}" class="s-roof" stroke-width="1" ${ns}/>`;
+    case 'maison':{const L=w>=h;return`<rect x="${x}" y="${y}" width="${w}" height="${h}" class="s-house" stroke-width="1.5" ${ns}/><path d="${L?`M${x} 0H${-x}`:`M0 ${y}V${-y}`}" class="s-house-r" stroke-width="1.2" ${ns}/>`}
+    case 'terrasse':return`<rect x="${x}" y="${y}" width="${w}" height="${h}" class="s-deck" stroke-width="1" ${ns}/>`;
+    case 'piscine':{const m=Math.min(w,h)*.12;return`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${Math.min(w,h)*.1}" class="s-deck" stroke-width="1" ${ns}/><rect x="${x+m}" y="${y+m}" width="${w-2*m}" height="${h-2*m}" rx="${Math.min(w,h)*.06}" class="s-pool" stroke-width="1.5" ${ns}/>`}
+    case 'parcelle':return parcelSVG(o);
     case 'abri':return`<rect x="${x}" y="${y}" width="${w}" height="${h}" class="s-wood-solid" stroke-width="1.5" ${ns}/><path d="M${x} ${y}L${-x} ${-y}M${-x} ${y}L${x} ${-y}" class="s-roof" stroke-width="1" ${ns}/>`;
   }return'';
 }
@@ -1413,8 +1635,8 @@ function objSVG(o){
   const vert=o.h>o.w*1.4,span=(vert?o.h:o.w)*view.z,thick=Math.min(o.w,o.h)*view.z;
   if(span>o.name.length*6.5&&thick>13&&o.type!=='prise')lab=`<text text-anchor="middle" dominant-baseline="central" font-size="${fs}" transform="${vert?'rotate(-90)':''}">${esc(o.name)}</text>`;
   let badge='';const st=planStatus(o);if(st){const r=10/view.z;badge=`<g class="badge ${st.c}" transform="translate(${o.w/2} ${-o.h/2})"><title>${st.l}</title><circle r="${r}" vector-effect="non-scaling-stroke"/><text text-anchor="middle" dominant-baseline="central" font-size="${(st.c==='blue'?9:11)/view.z}" transform="rotate(${-o.rot})">${st.t}</text></g>`}
-  let selS='';if(sel){const p=6/view.z,bd=o.type==='haie'&&o.bend?o.bend:0;selS=`<rect class="selbox${o.locked?' locked':''}" x="${-o.w/2-p}" y="${-o.h/2-p-Math.max(0,bd)}" width="${o.w+2*p}" height="${o.h+2*p+Math.abs(bd)}" vector-effect="non-scaling-stroke"/>`+(o.locked||!editMode?'':`<circle class="handle" data-handle="1" cx="${o.w/2+p}" cy="${o.h/2+p}" r="${11/view.z}" vector-effect="non-scaling-stroke"/>`)}
-  return`<g data-id="${o.id}" class="obj${o.id===lifted||liftGrp&&o.grp===liftGrp?' lift':''}${!editMode&&!PICKABLE.has(o.type)?' nopick':''}" transform="translate(${o.x+o.w/2} ${o.y+o.h/2}) rotate(${o.rot})">${shapeSVG(o)}${lab}${badge}${selS}</g>`;
+  let selS='';if(sel){const p=6/view.z,bd=o.type==='haie'&&o.bend?o.bend:0;selS=`<rect class="selbox${o.locked?' locked':''}" x="${-o.w/2-p}" y="${-o.h/2-p-Math.max(0,bd)}" width="${o.w+2*p}" height="${o.h+2*p+Math.abs(bd)}" vector-effect="non-scaling-stroke"/>`+(o.locked||!editMode||TYPES[o.type].fixed?'':`<circle class="handle" data-handle="1" cx="${o.w/2+p}" cy="${o.h/2+p}" r="${11/view.z}" vector-effect="non-scaling-stroke"/>`)}
+  return`<g data-id="${o.id}" class="obj t-${o.type}${o.id===lifted||liftGrp&&o.grp===liftGrp?' lift':''}${!editMode&&!PICKABLE.has(o.type)?' nopick':''}" transform="translate(${o.x+o.w/2} ${o.y+o.h/2}) rotate(${o.rot})">${shapeSVG(o)}${lab}${badge}${selS}</g>`;
 }
 function renderPlan(){
   const r=svg.getBoundingClientRect(),W=r.width||360,H=r.height||500;
@@ -1425,7 +1647,7 @@ function renderPlan(){
     edges+=`<text class="${shapeEdit?'edgetxt':'dimtxt'}" x="${(a.x+b.x)/2+nx*o}" y="${(a.y+b.y)/2+ny*o}" text-anchor="middle" dominant-baseline="central" font-size="${fs}">${m2(L)} m</text>`});
   const sur=!ctx&&S.surround;
   {const f=terrainFrame(),tr=f.a?`translate(${f.o.x} ${f.o.y}) rotate(${f.a})`:'';['g1','g5'].forEach(k=>{const el=document.getElementById(k);if(!el)return;if(tr)el.setAttribute('patternTransform',tr);else el.removeAttribute('patternTransform')})}
-  $('#groundL').innerHTML=`${sur?`<rect class="surround" x="${sur.x}" y="${sur.y}" width="${sur.w}" height="${sur.h}" vector-effect="non-scaling-stroke"/>`:''}<clipPath id="tclip"><polygon points="${pts}"/></clipPath><g clip-path="url(#tclip)"><rect class="ground" width="${G().w}" height="${G().h}"/><rect width="${G().w}" height="${G().h}" fill="url(#g1)"/><rect width="${G().w}" height="${G().h}" fill="url(#g5)"/></g><polygon class="bound" points="${pts}" vector-effect="non-scaling-stroke"/>${edges}`;
+  $('#groundL').innerHTML=`${sur?`<rect class="surround" x="${sur.x}" y="${sur.y}" width="${sur.w}" height="${sur.h}" vector-effect="non-scaling-stroke"/>`:''}<clipPath id="tclip"><polygon points="${pts}"/></clipPath><g clip-path="url(#tclip)"><rect class="ground" width="${G().w}" height="${G().h}"/><rect width="${G().w}" height="${G().h}" fill="url(#g1)"/><rect width="${G().w}" height="${G().h}" fill="url(#g5)"/></g>${typeof bgSVG==='function'?bgSVG():''}<polygon class="bound" points="${pts}" vector-effect="non-scaling-stroke"/>${edges}`;
   let ed='';if(shapeEdit){const r=11/view.z;tp.forEach((a,i)=>{const b=tp[(i+1)%tp.length];ed+=`<line class="edgehit" data-edge="${i}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" vector-effect="non-scaling-stroke"/>`});tp.forEach((a,i)=>{const b=tp[(i+1)%tp.length];ed+=`<circle class="mid" data-mid="${i}" cx="${(a.x+b.x)/2}" cy="${(a.y+b.y)/2}" r="${r*.7}"/>`});
     tp.forEach((a,i)=>ed+=`<circle class="vtx${shapeEdit.sel===i?' sel':''}" data-vtx="${i}" cx="${a.x}" cy="${a.y}" r="${r}" vector-effect="non-scaling-stroke"/>`)}
   /* anneau de rotation autour de l'objet sélectionné (mode édition) */
@@ -1437,7 +1659,7 @@ function renderPlan(){
     <line class="rotline" x1="${cx}" y1="${cy}" x2="${kx}" y2="${ky}" vector-effect="non-scaling-stroke"/><g data-rot="1" transform="translate(${kx} ${ky})"><circle class="rotknob" r="${14/view.z}" vector-effect="non-scaling-stroke"/><text class="rotknobt" text-anchor="middle" dominant-baseline="central" font-size="${12/view.z}">${ro.rot}°</text></g>`}
   $('#editL').innerHTML=ed;
   renderWxLayer();
-  const order=['etang','ruisseau','citerne','alleeo','allee','haie','cloture','serre','arbre','fruitier','abri','compost','cuve','eau','bac','planche','prise'];
+  const order=['etang','ruisseau','citerne','alleeo','allee','terrasse','parcelle','piscine','maison','haie','cloture','serre','arbre','fruitier','abri','compost','cuve','eau','bac','planche','prise'];
   const list=[...G().objs].sort((a,b)=>(a.id===selId)-(b.id===selId)||order.indexOf(a.type)-order.indexOf(b.type));
   $('#layer').innerHTML=list.map(objSVG).join('');
   let sh='';const lv=!shade.on&&liveWx()&&!ctx&&wx.cur&&wx.cur.isDay&&['clear','partly'].includes(wxKind(wx.cur.code));
@@ -1445,9 +1667,11 @@ function renderPlan(){
   if(shade.on&&!ctx){const sp=sunPos(shade.doy,shade.hour);if(sp.alt>=.04)G().objs.forEach(o=>shadowPolys(o,sp).forEach(p=>{sh+=`<polygon class="shadepoly" points="${p.map(q=>q.x.toFixed(1)+','+q.y.toFixed(1)).join(' ')}"/>`}))}
   $('#shadeL').innerHTML=sh;
   let ov='';if(guides){guides.forEach(g=>ov+=`<line class="guide" x1="${g[0]}" y1="${g[1]}" x2="${g[2]}" y2="${g[3]}" vector-effect="non-scaling-stroke"/>`)}
+  if(typeof bgOverlay==='function')ov+=bgOverlay();
   $('#overL').innerHTML=ov;
 }
-function fit(){const r=svg.getBoundingClientRect();const sh=sheetMode&&innerWidth<760?r.height*.45:0;view.z=Math.min((r.width-90)/G().w,(r.height-sh-90)/G().h);view.cx=G().w/2;view.cy=G().h/2+sh/2/view.z-20/view.z;renderPlan()}
+let fitPending=false;
+function fit(){const r=svg.getBoundingClientRect();if(!r.width||!r.height){fitPending=true;return}fitPending=false;const sh=sheetMode&&innerWidth<760?r.height*.45:0;view.z=Math.min((r.width-90)/G().w,(r.height-sh-90)/G().h);view.cx=G().w/2;view.cy=G().h/2+sh/2/view.z-20/view.z;renderPlan()}
 
 /* guides d'alignement */
 function alignSnap(o){   /* calage sur les bords et les centres des autres objets et du terrain, dans le repère du terrain (incliné ou non) */
@@ -1476,7 +1700,7 @@ svg.addEventListener('pointerdown',e=>{
   svg.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(ptrs.size===2){const[a,b]=[...ptrs.values()];pinch={d0:Math.hypot(a.x-b.x,a.y-b.y),z0:view.z,m:world((a.x+b.x)/2,(a.y+b.y)/2)};clearTimeout(holdT);if(drag&&drag.mode==='move'){drag.o.x=drag.s.x;drag.o.y=drag.s.y;(drag.grp||[]).forEach(m=>{m.o.x=m.x;m.o.y=m.y})}liftGrp=null;drag=null;lifted=null;guides=null;return}
   /* la poignée de taille passe avant l'anneau de rotation quand les deux se chevauchent */
-  if(selId&&editMode&&!shapeEdit){const o=obj(selId);if(o&&!o.locked&&G().objs.includes(o)){const pd=6/view.z,ang=o.rot*Math.PI/180,lx=o.w/2+pd,ly=o.h/2+pd,hx=o.x+o.w/2+lx*Math.cos(ang)-ly*Math.sin(ang),hy=o.y+o.h/2+lx*Math.sin(ang)+ly*Math.cos(ang),pw=world(e.clientX,e.clientY);
+  if(selId&&editMode&&!shapeEdit){const o=obj(selId);if(o&&!o.locked&&!TYPES[o.type].fixed&&G().objs.includes(o)){const pd=6/view.z,ang=o.rot*Math.PI/180,lx=o.w/2+pd,ly=o.h/2+pd,hx=o.x+o.w/2+lx*Math.cos(ang)-ly*Math.sin(ang),hy=o.y+o.h/2+lx*Math.sin(ang)+ly*Math.cos(ang),pw=world(e.clientX,e.clientY);
     if(Math.hypot(pw.x-hx,pw.y-hy)*view.z<26){drag={mode:'resize',o,p0:pw,s:{...o},sx:e.clientX,sy:e.clientY};return}}}
   const rh=e.target.closest('[data-rot]');if(rh&&selId&&editMode&&!shapeEdit){const o=obj(selId),ms=grpMembers(o),f=ms?grpFrame(ms,o.rot):null;drag={mode:'rot',o,s:{rot:o.rot},sx:e.clientX,sy:e.clientY,c:f?{x:f.cx,y:f.cy}:{x:o.x+o.w/2,y:o.y+o.h/2},grp:ms?ms.map(q=>({o:q,x:q.x,y:q.y,rot:q.rot})):null};return}
   if(shapeEdit){if(!G().shape)G().shape=rectPts();const v=e.target.closest('[data-vtx]'),m=e.target.closest('[data-mid]');
@@ -1488,7 +1712,7 @@ svg.addEventListener('pointerdown',e=>{
       holdT=setTimeout(()=>{if(!drag||drag.mode!=='shold')return;drag.mode='smove';drag.moved=false;if(navigator.vibrate)navigator.vibrate(12);showHint('Glisse pour déplacer le terrain')},380);return}
     drag={mode:'pan',sx:e.clientX,sy:e.clientY,c0:{x:view.cx,y:view.cy}};return}
   const h=e.target.closest('[data-handle]'),g0=e.target.closest('[data-id]'),g=g0&&(editMode||PICKABLE.has((obj(g0.dataset.id)||{}).type))?g0:null,p=world(e.clientX,e.clientY);
-  if(h&&selId){const o=obj(selId);drag={mode:'resize',o,p0:p,s:{...o},sx:e.clientX,sy:e.clientY}}
+  if(h&&selId&&!TYPES[(obj(selId)||{}).type||'planche'].fixed){const o=obj(selId);drag={mode:'resize',o,p0:p,s:{...o},sx:e.clientX,sy:e.clientY}}
   else if(g&&!editMode){const o=obj(g.dataset.id);selId=o.id;drag={mode:'hold',o,p0:p,s:{x:o.x,y:o.y},sx:e.clientX,sy:e.clientY,c0:{x:view.cx,y:view.cy}};renderPlan()}
   else if(g){const o=obj(g.dataset.id);selId=o.id;
     drag={mode:'hold',o,p0:p,s:{x:o.x,y:o.y},sx:e.clientX,sy:e.clientY,c0:{x:view.cx,y:view.cy}};renderPlan();
@@ -1531,7 +1755,7 @@ function endPtr(e){ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;clearTimeo
   if(drag&&ptrs.size===0){
     if(drag.mode==='hold'){if(!editMode&&drag.o.type==='abri'){openInv()}else if(!ctx&&drag.o.type==='serre'&&!editMode){enterSerre(drag.o.id)}else{sheetMode='obj';renderSheet();keepAboveSheet(drag.o)}}
     else if(drag.mode==='smove'&&drag.moved){normalizeShape();updateBox();save();renderShapebar()}
-    else if((drag.mode==='pan'||drag.mode==='shold'||drag.mode==='smove')&&!drag.moved){if(shapeEdit){shapeEdit.sel=null;renderShapebar()}else{selId=null;sheetMode=null;renderSheet()}renderPlan()}
+    else if((drag.mode==='pan'||drag.mode==='shold'||drag.mode==='smove')&&!drag.moved){if(shapeEdit){shapeEdit.sel=null;renderShapebar()}else if(!calib){selId=null;sheetMode=null;renderSheet()}renderPlan()}
     else if(drag.mode==='rot'&&drag.moved){save();if(sheetMode)renderSheet()}
     else if((drag.mode==='vtx'&&(drag.moved||drag.inserted))||(drag.mode==='edge'&&drag.moved)){normalizeShape();updateBox();save();renderShapebar()}
     else if(drag.moved&&(drag.mode==='move'||drag.mode==='resize')){fitZones(drag.o);save();if(sheetMode)renderSheet()}
@@ -1580,6 +1804,7 @@ $('#compass').onclick=()=>{selId=null;sheetMode='menu';renderSheet();renderPlan(
 
 /* ================= Feuille du bas ================= */
 const sheet=$('#sheet');
+const PROP_TYPES=['maison','terrasse','piscine','allee','alleeo','arbre','haie','cloture','etang','ruisseau','abri','citerne','cuve','eau','compost','prise'];
 const ICON={planche:'<rect x="4" y="10" width="38" height="10" rx="2" fill="#8b6a48"/><circle cx="10" cy="15" r="2" fill="#78c258"/><circle cx="17" cy="15" r="2" fill="#78c258"/><circle cx="24" cy="15" r="2" fill="#78c258"/><circle cx="31" cy="15" r="2" fill="#78c258"/><circle cx="38" cy="15" r="2" fill="#78c258"/>',
  bac:'<rect x="10" y="5" width="26" height="20" fill="#8b6a48" stroke="#a3713f" stroke-width="3"/>',serre:'<rect x="6" y="5" width="34" height="20" rx="4" fill="#3a82b5" fill-opacity=".15" stroke="#3a82b5" stroke-dasharray="3 2"/>',
  allee:'<rect x="2" y="11" width="42" height="8" fill="#cdc6b5"/>',alleeo:'<ellipse cx="23" cy="15" rx="18" ry="11" fill="none" stroke="#cdc6b5" stroke-width="5"/>',cuve:'<circle cx="23" cy="15" r="11" fill="#3a82b5"/>',eau:'<circle cx="23" cy="15" r="9" fill="#3a82b5" fill-opacity=".3" stroke="#3a82b5"/><circle cx="23" cy="15" r="3.5" fill="#3a82b5"/>',
@@ -1589,6 +1814,9 @@ const ICON={planche:'<rect x="4" y="10" width="38" height="10" rx="2" fill="#8b6
  abri:'<rect x="8" y="4" width="30" height="22" fill="#a3713f"/><path d="M8 4l30 22M38 4L8 26" stroke="#5e4529"/>',
  citerne:'<circle cx="23" cy="15" r="11" fill="#3a82b5" fill-opacity=".25" stroke="#3a82b5" stroke-dasharray="3 2"/><path d="M17 15h12M23 9v12" stroke="#3a82b5"/>',
  ruisseau:'<path d="M3 20c8 0 9-10 18-10s10 10 22 8" fill="none" stroke="#3a82b5" stroke-width="5" stroke-linecap="round"/>',
+ maison:'<rect x="9" y="5" width="28" height="20" fill="#e7e1d8" stroke="#a39a8c"/><path d="M9 15h28" stroke="#a39a8c"/>',
+ terrasse:'<rect x="6" y="8" width="34" height="14" fill="#ece2cf" stroke="#c9b99a"/><path d="M12 8v14M18 8v14M24 8v14M30 8v14" stroke="#c9b99a"/>',
+ piscine:'<rect x="6" y="6" width="34" height="18" rx="3" fill="#ece2cf" stroke="#c9b99a"/><rect x="10" y="9" width="26" height="12" rx="2" fill="#7fcbe8" stroke="#3a9bc8"/>',
  etang:'<path d="M6 18c0-7 10-12 20-12s16 4 14 10-9 9-19 9S6 24 6 18z" fill="#3a82b5" fill-opacity=".55" stroke="#3a82b5"/>'};
 const alertsHTML=o=>{const cf=conflicts(o),ri=rotIssues(o);let h='';
   if(cf.length)h+=`<div class="alert">${cf.map(c=>`<span><b>${P[c.a].n}</b> et <b>${P[c.b].n}</b> se gênent ${esc(c.where)}.</span>`).join('')}</div>`;
@@ -1619,7 +1847,7 @@ function planStatus(o){/* un seul indicateur par planche, le plus utile d'abord 
   if(sunIssues(o).some(x=>x.lvl==='insuffisant'))return{c:'shade',t:'☀',l:'Pas assez de soleil'};
   if(rotIssues(o).length)return{c:'amber',t:'↻',l:'Rotation à revoir'};
   return null}
-function cultureSheet(o){if(o.type==='fruitier')return fruitSheet(o);const t=TYPES[o.type],inS=!!serreOf(o);
+function cultureSheet(o){if(o.type==='fruitier')return fruitSheet(o);if(o.type==='parcelle')return parcelSheet(o);const t=TYPES[o.type],inS=!!serreOf(o);
   let h=`<div class="stack"><div class="cs-head"><div style="min-width:0"><span class="lbl">${FLW()&&o.type==='planche'?'Massif':t.l}${inS?' · sous serre':''}</span><div class="nm">${esc(o.name)}</div></div><button class="iconbtn" data-act="close" aria-label="Fermer"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`;
   if(t.plant){
     const pl=plantings().filter(x=>x.o===o);
@@ -1659,15 +1887,21 @@ function keepAboveSheet(o){if(innerWidth>=760)return;const r=svg.getBoundingClie
   if(sy>top-40||sy<60){view.cy=o.y+o.h/2-(Math.max(80,top*.5)-r.height/2)/view.z;renderPlan()}}
 function setEdit(on){editMode=on;if(!on){lifted=null}updateModeUI();renderPlan()}
 function updateModeUI(){renderWxLayer();const busy=!!sheetMode||!!shapeEdit;$('#fab').hidden=busy;$('#map').classList.toggle('editing',editMode&&!shapeEdit);
-  $('#modetag').hidden=!editMode||busy||tab!=='plan';$('#editBtn').hidden=editMode;if($('#noteBtnPlan'))$('#noteBtnPlan').hidden=editMode;$('#addBtn').hidden=!editMode;$('#shapeBtn').hidden=!editMode||!!ctx;$('#doneBtn').hidden=!editMode;$('#sunBtn').hidden=editMode||!!ctx}
+  $('#modetag').hidden=!editMode||busy||tab!=='plan';$('#editBtn').hidden=editMode;if($('#noteBtnPlan'))$('#noteBtnPlan').hidden=editMode||PROP();$('#addBtn').hidden=!editMode;$('#shapeBtn').hidden=!editMode||!!ctx;$('#doneBtn').hidden=!editMode;$('#sunBtn').hidden=editMode||!!ctx}
 function renderSheet(){
   updateModeUI();sheet.hidden=!sheetMode;if(!sheetMode)return;
   let h='<div class="grab"></div>';
-  if(sheetMode==='add'){
-    h+=`<div class="stack"><div class="row between"><h3>Ajouter au potager</h3><button class="btn small" data-act="close">Fermer</button></div>
+  if(sheetMode==='calib'){h+=calibSheet()}
+  else if(sheetMode==='add'){
+    if(PROP())h+=`<div class="stack"><div class="row between"><h3>Ajouter à la propriété</h3><button class="btn small" data-act="close">Fermer</button></div>
+    <div class="row"><button class="btn primary" data-act="padd" data-k="potager">+ Potager</button><button class="btn" data-act="padd" data-k="fleurs">+ Jardin de fleurs</button><button class="btn" data-act="padd" data-k="verger">+ Verger</button></div>
+    <div class="row"><button class="btn" data-act="shape-edit">Forme du terrain</button><button class="btn" data-act="pbg">${typeof bgOf==='function'&&bgOf()?'Capture : échelle et visibilité':'Capture satellite en fond'}</button></div>
+    <div class="typegrid">${PROP_TYPES.map(k=>`<button class="typebtn" data-act="add" data-type="${k}"><svg viewBox="0 0 46 30">${ICON[k]}</svg>${TYPES[k].l}</button>`).join('')}</div>
+    <p class="note">Une parcelle est un potager, un jardin de fleurs ou un verger complet, avec ses propres planches : touche-la pour l'ouvrir.</p></div>`;
+    else h+=`<div class="stack"><div class="row between"><h3>Ajouter au potager</h3><button class="btn small" data-act="close">Fermer</button></div>
     <button class="btn primary" data-act="series">Série de planches avec allées</button>
     ${ctx?'':'<button class="btn" data-act="shape-edit">Modifier la forme du terrain</button>'}
-    <div class="typegrid">${Object.entries(TYPES).filter(([k])=>!(ctx&&(k==='serre'||k==='arbre'||k==='haie'||k==='etang'||k==='fruitier'))&&(k!=='fruitier'||VRG())).map(([k,t])=>`<button class="typebtn" data-act="add" data-type="${k}"><svg viewBox="0 0 46 30">${ICON[k]}</svg>${FLW()&&k==='planche'?'Massif ou planche':t.l}</button>`).join('')}</div>
+    <div class="typegrid">${Object.entries(TYPES).filter(([k])=>!TYPES[k].prop&&!(ctx&&(k==='serre'||k==='arbre'||k==='haie'||k==='etang'||k==='fruitier'))&&(k!=='fruitier'||VRG())).map(([k,t])=>`<button class="typebtn" data-act="add" data-type="${k}"><svg viewBox="0 0 46 30">${ICON[k]}</svg>${FLW()&&k==='planche'?'Massif ou planche':t.l}</button>`).join('')}</div>
     <p class="note">L'objet apparaît au centre de l'écran. Maintiens le doigt dessus pour le soulever et le déplacer. Tire la poignée jaune pour le redimensionner.</p></div>`;
   }else if(sheetMode==='series'){
     h+=`<div class="stack"><div class="row between"><h3>Série de planches</h3><button class="btn small" data-act="add-back">Retour</button></div>
@@ -1765,10 +1999,10 @@ function renderSheet(){
     <p class="note">Le relais vérifie toutes les 30 minutes : il faut le déclencheur Cron <code>*/30 * * * *</code> dans ton Worker (Settings → Trigger events). Les notifications portent sur tes potagers synchronisés, pas sur l'exemple.</p></div>`;
   }else if(sheetMode==='menu'){
     const GLs=GL.get().list;
-    h+=`<div class="stack"><div class="row between"><h3>Potager</h3><button class="btn small" data-act="close">Fermer</button></div>
-    <div><span class="lbl">Mes potagers</span><div class="glist">${GLs.map(g=>`<div class="grow${g.id===GID?' cur':''}"><span><b>${esc(g.id===GID?S.name:(g.name||'Potager'))}</b>${(g.id===GID?S.example:g.ex)?' <span class="note">· exemple</span>':''}</span>${g.id===GID?'<span class="note">ouvert</span>':`<button class="btn small" data-act="gopen" data-g="${g.id}">Ouvrir</button>`}</div>`).join('')}</div>
-    <div class="row" style="margin-top:8px"><button class="btn small" data-act="gvar">Variante : même terrain, plan vide</button><button class="btn small" data-act="gdup">Dupliquer celui-ci</button></div>
-    <div class="row" style="margin-top:8px"><button class="btn small" data-act="gnew">+ Potager</button><button class="btn small" data-act="gnewfl">+ Jardin de fleurs</button><button class="btn small" data-act="gnewvg">+ Verger</button><button class="btn small" data-act="gnewex">+ Exemple potager</button><button class="btn small" data-act="gnewexfl">+ Exemple fleurs</button><button class="btn small" data-act="gnewexvg">+ Exemple verger</button>${GLs.length>1?'<button class="btn small danger" data-act="gdel">Supprimer celui-ci</button>':''}</div></div>
+    h+=`<div class="stack"><div class="row between"><h3>${PROP()?'Propriété':esc(KLBL[KIND()])}</h3><button class="btn small" data-act="close">Fermer</button></div>
+    <div><span class="lbl">Mes jardins</span><div class="glist">${GLs.map(g=>`<div class="grow${g.id===GID?' cur':''}"><span><b>${esc(g.id===GID?S.name:(g.name||'Potager'))}</b>${(g.id===GID?S.example:g.ex)?' <span class="note">· exemple</span>':''}</span>${g.id===GID?'<span class="note">ouvert</span>':`<button class="btn small" data-act="gopen" data-g="${g.id}">Ouvrir</button>`}</div>`).join('')}</div>
+    ${PROP()?'':'<div class="row" style="margin-top:8px"><button class="btn small" data-act="gvar">Variante : même terrain, plan vide</button><button class="btn small" data-act="gdup">Dupliquer celui-ci</button></div>'}
+    <div class="row" style="margin-top:8px"><button class="btn small" data-act="gnew">+ Potager</button><button class="btn small" data-act="gnewfl">+ Jardin de fleurs</button><button class="btn small" data-act="gnewvg">+ Verger</button><button class="btn small" data-act="gnewex">+ Exemple potager</button><button class="btn small" data-act="gnewexfl">+ Exemple fleurs</button><button class="btn small" data-act="gnewexvg">+ Exemple verger</button>${GLs.length>1&&!PROP()?'<button class="btn small danger" data-act="gdel">Supprimer celui-ci</button>':''}</div></div>
     <label class="field"><span class="lbl">Nom</span><input id="g-name" value="${esc(S.name)}"></label>
     ${S.shape?`<div class="row between"><span><span class="lbl">Terrain</span><br><span class="mono">${num(Math.abs(polyArea(S.shape))/1e4)} m² · ${S.shape.length} côtés</span></span><span class="row"><button class="btn small" data-act="shape-rect">Revenir au rectangle</button></span></div>`:
     `<div class="grid2"><label class="field"><span class="lbl">Largeur du terrain (m)</span><input id="g-w" type="number" min="2" step="0.5" value="${S.w/100}"></label>
@@ -1795,18 +2029,20 @@ function renderSheet(){
     const o=obj(selId);if(!o){sheetMode=null;return renderSheet()}h+=cultureSheet(o);
   }else if(sheetMode==='obj'){
     const o=obj(selId);if(!o){sheetMode=null;return renderSheet()}const t=TYPES[o.type],L=o.locked?'disabled':'';
-    h+=`<div class="stack"><div class="row between" style="flex-wrap:nowrap"><div style="min-width:0;flex:1"><span class="lbl">${FLW()&&o.type==='planche'?'Massif':VRG()&&o.type==='planche'?'Rang':t.l}${o.locked?' · verrouillé':''}</span><input class="namein" id="o-name" value="${esc(o.name)}" aria-label="Nom"></div><button class="btn small" data-act="close">OK</button></div>`;
+    h+=`<div class="stack"><div class="row between" style="flex-wrap:nowrap"><div style="min-width:0;flex:1"><span class="lbl">${FLW()&&o.type==='planche'?'Massif':VRG()&&o.type==='planche'?'Rang':t.l}${o.locked?' · verrouillé':''}</span><input class="namein" id="o-name" value="${esc(o.name)}" aria-label="Nom" ${t.fixed?'disabled':''}></div><button class="btn small" data-act="close">OK</button></div>`;
+    if(o.type==='parcelle'){h+=`<p class="note">Sa taille, sa forme et son nom se changent dans la parcelle elle-même. Ici, tu la places et tu l'orientes.</p><div class="row"><button class="btn small primary" data-act="popenplan">Ouvrir son plan</button></div>`}
     if(o.type==='serre'&&!ctx){const n=(o.inner&&o.inner.objs||[]).filter(q=>TYPES[q.type].plant).length;h+=`<button class="btn primary" data-act="enterserre">Ouvrir la serre</button><p class="note">${n?n+' planche'+(n>1?'s':'')+' à l\'intérieur.':'Vide pour l\'instant.'} En mode culture, un tap sur la serre l'ouvre directement.</p>`}
-    if(o.type==='citerne')h+=`<label class="field" style="max-width:240px"><span class="lbl">Volume (L)</span><input id="o-vol" type="number" min="0" step="100" value="${Math.round(+o.vol||0)}" ${L}></label><p class="note">Citerne enterrée : seul son volume compte, elle s'ajoute à la réserve d'eau (Eau &amp; météo). Pas d'ombre.</p>`;
+    if(o.type==='parcelle'){}
+    else if(o.type==='citerne')h+=`<label class="field" style="max-width:240px"><span class="lbl">Volume (L)</span><input id="o-vol" type="number" min="0" step="100" value="${Math.round(+o.vol||0)}" ${L}></label><p class="note">Citerne enterrée : seul son volume compte, elle s'ajoute à la réserve d'eau (Eau &amp; météo). Pas d'ombre.</p>`;
     else h+=t.round?`<div class="grid2"><label class="field"><span class="lbl">Diamètre (cm)</span><input id="o-w" type="number" min="10" step="5" value="${Math.round(o.w)}" ${L}></label>`:
       `<div class="grid2"><label class="field"><span class="lbl">Largeur (cm)</span><input id="o-w" type="number" min="10" step="5" value="${Math.round(o.w)}" ${L}></label><label class="field"><span class="lbl">Longueur (cm)</span><input id="o-h" type="number" min="10" step="5" value="${Math.round(o.h)}" ${L}></label>`;
-    if(o.type!=='citerne')h+=(!['planche','allee','alleeo','eau','prise','etang','ruisseau'].includes(o.type))?`<label class="field"><span class="lbl">Hauteur (cm)</span><input id="o-ht" type="number" min="0" step="10" value="${Math.round(o.height||0)}"></label></div><p class="note">${o.type==='cuve'?`Contenance ≈ <b class="mono">${num(cuveL(o),0)} L</b>. `:''}La hauteur sert aussi à calculer l'ombre portée.</p>`:`</div>`;
+    if(o.type!=='citerne'&&o.type!=='parcelle')h+=(!['planche','allee','alleeo','eau','prise','etang','ruisseau'].includes(o.type))?`<label class="field"><span class="lbl">Hauteur (cm)</span><input id="o-ht" type="number" min="0" step="10" value="${Math.round(o.height||0)}"></label></div><p class="note">${o.type==='cuve'?`Contenance ≈ <b class="mono">${num(cuveL(o),0)} L</b>. `:''}La hauteur sert aussi à calculer l'ombre portée.</p>`:`</div>`;
     {const ms=grpMembers(o);if(ms){const np=ms.filter(q=>q.type==='planche').length,na=ms.length-np;h+=`<div class="grpinfo"><span><b>Dans un bloc</b> · ${np} planche${np>1?'s':''}${na?` et ${na} allée${na>1?'s':''}`:''}<span class="note" style="display:block">Maintenir pour déplacer tout le bloc, l'anneau le fait tourner d'un coup. La poignée ne change que cet objet.</span></span><div class="row"><button class="btn small" data-act="ungroup">Détacher du bloc</button><button class="btn small" data-act="ungroupall">Dissoudre le bloc</button></div></div>`}}
     if(o.type==='alleeo')h+=`<div class="grid2"><label class="field"><span class="lbl">Largeur de l'allée (cm)</span><input id="o-ring" type="number" min="10" step="5" value="${Math.round(+o.ring||70)}" ${L}></label><div class="field"><span class="lbl">Forme</span><button class="btn small" data-act="mkcircle" ${L}>Faire un cercle</button></div></div><p class="note">Largeur et longueur = dimensions extérieures. Si l'allée est plus large que la moitié, le rond devient plein (placette).</p>`;
     if(o.type==='ruisseau')h+=`<div class="grid2"><label class="field"><span class="lbl">Courbure (cm)</span><input id="o-bend" type="number" step="10" value="${Math.round(o.bend||0)}" ${L}></label><label class="field"><span class="lbl">Méandre (cm)</span><input id="o-wave" type="number" step="10" value="${Math.round(o.wave||0)}" ${L}></label></div><p class="note">Largeur = longueur du cours d'eau, longueur = largeur du lit. Courbure : il bombe d'un côté ; méandre : il ondule en S. L'eau s'écoule dans le sens des tirets ; « Inverser le sens » le retourne.</p><button class="btn small" data-act="flipflow" style="justify-self:start" ${L}>Inverser le sens</button>`;
     if(o.type==='haie')h+=`<label class="field" style="max-width:260px"><span class="lbl">Courbure (cm)</span><input id="o-bend" type="number" step="10" value="${Math.round(o.bend||0)}" ${L}></label><p class="note">0 = haie droite. La valeur est la flèche au milieu de la haie ; négative pour bomber de l'autre côté.</p>`;
     if(!t.round&&!o.locked)h+=`<div class="row"><span class="lbl">Orientation</span><input id="o-rot" class="mono" type="number" inputmode="decimal" step="1" value="${Math.round(o.rot*10)/10}" style="width:64px;min-height:34px;padding:0 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);color:var(--ink)" aria-label="Orientation en degrés"><button class="btn small" data-act="rot" data-d="-1" aria-label="Tourner de 1° à gauche">−1°</button><button class="btn small" data-act="rot" data-d="1" aria-label="Tourner de 1° à droite">+1°</button><button class="btn small" data-act="rot" data-d="90">+90°</button><button class="btn small" data-act="rot0">${terrainFrame().a?'Droit':'0°'}</button></div><p class="note">Réglage fin au degré près avec −1° / +1° ou en tapant l'angle. Le rond jaune autour de l'objet tourne aussi au degré près (léger aimant tous les 45°).</p>`;
-    h+=`<div class="row"><button class="btn small" data-act="lock">${o.locked?'Déverrouiller':'Verrouiller'}</button><button class="btn small" data-act="dup">Dupliquer</button>${o.locked?'':'<button class="btn small danger" data-act="del">Supprimer</button>'}</div>`;
+    h+=`<div class="row"><button class="btn small" data-act="lock">${o.locked?'Déverrouiller':'Verrouiller'}</button>${t.fixed?'':'<button class="btn small" data-act="dup">Dupliquer</button>'}${o.locked?'':`<button class="btn small danger" data-act="del">${o.type==='parcelle'?'Retirer du plan':'Supprimer'}</button>`}</div>${o.type==='parcelle'?'<p class="note">Retirer du plan garde le jardin : il reste dans « Pas sur le plan ».</p>':''}`;
     h+=o.locked?`<p class="note">Verrouillé : l'objet ne peut plus être déplacé, redimensionné ni supprimé.</p>`:`<p class="note">Maintiens le doigt sur l'objet pour le soulever, puis glisse-le.</p>`;
     h+=`</div>`;
   }
@@ -1814,6 +2050,9 @@ function renderSheet(){
 }
 sheet.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,o=obj(selId);
   if(a==='close'){sheetMode=null;selId=null;renderSheet();renderPlan()}
+  if(a==='popen'||a==='popenplan'){if(o&&o.type==='parcelle'){const g=o.gid;sheetMode=null;selId=null;if(editMode)setEdit(false);openParcel(g,a==='popenplan'?'plan':undefined)}return}
+  if(a==='pbg'){sheetMode=null;return bgAction(bgOf()?'calib':'add')}
+  if(a==='padd'){const id=newParcel(b.dataset.k,false);if(!id)return;const p=S.objs.find(q=>q.gid===id);sheetMode='obj';selId=p&&p.id;renderSheet();renderPlan();return toast('Parcelle créée : place-la',true)}
   if(a==='add-back'){sheetMode='add';renderSheet()}
   if(a==='series'){sheetMode='series';renderSheet()}
   if(a==='series-align'){const tp=terrainPts();let best=null;tp.forEach((p,i)=>{const q=tp[(i+1)%tp.length],L=Math.hypot(q.x-p.x,q.y-p.y);if(!best||L>best.L)best={L,a:Math.atan2(q.y-p.y,q.x-p.x)*180/Math.PI}});
@@ -1951,6 +2190,51 @@ $('#shapeBtn').onclick=()=>startShapeEdit();
 $('#fitBtn').onclick=fit;
 $('#menuBtn').onclick=()=>{setTab('plan');selId=null;sheetMode='menu';renderSheet();renderPlan()};
 
+/* ================= Fond de plan : capture satellite de la propriété, mise à l'échelle ================= */
+/* L'image reste sur cet appareil (trop lourde pour la synchronisation) ; ce qu'on décalque dessus, lui, se synchronise. */
+const BGKEY='atelier-potager-fond';
+let BG=(()=>{try{return JSON.parse(localStorage.getItem(BGKEY))}catch(e){return null}})(),calib=null;
+const bgOf=()=>BG&&BG.src?BG:null;
+function bgSave(){try{if(BG)localStorage.setItem(BGKEY,JSON.stringify(BG));else localStorage.removeItem(BGKEY)}catch(e){toast('Mémoire de l\'appareil pleine : capture non gardée')}}
+/* image dans le plan (au-dessus du sol, sous les objets) */
+function bgSVG(){if(!PROP()||ctx||!bgOf())return'';return`<image class="bgimg" href="${BG.src}" x="${BG.x}" y="${BG.y}" width="${BG.w}" height="${BG.h}" opacity="${BG.op??.7}" preserveAspectRatio="none"/>`}
+function bgOverlay(){if(!calib)return'';const r=12/view.z;let s='';
+  if(calib.pts.length===2){const[a,b]=calib.pts;s+=`<line class="calline" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" vector-effect="non-scaling-stroke"/>`}
+  calib.pts.forEach(p=>s+=`<circle class="calpt" cx="${p.x}" cy="${p.y}" r="${r}" vector-effect="non-scaling-stroke"/><circle cx="${p.x}" cy="${p.y}" r="${r*.18}" fill="#ffd60a"/>`);return s}
+/* réduit la photo (1600 px max) pour tenir dans la mémoire de l'appareil */
+function readImage(file){return new Promise((ok,ko)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{const k=Math.min(1,1600/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
+  c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);ok({src:c.toDataURL('image/jpeg',.78),iw:c.width,ih:c.height})};im.onerror=()=>{URL.revokeObjectURL(u);ko(new Error('Image illisible'))};im.src=u})}
+function pickImage(){return new Promise(ok=>{const i=document.createElement('input');i.type='file';i.accept='image/*';i.onchange=()=>ok(i.files&&i.files[0]||null);i.click()})}
+async function bgAction(a){
+  if(a==='del'){BG=null;bgSave();refresh();return toast('Capture retirée')}
+  if(a==='add'){const f=await pickImage();if(!f)return;let im;try{im=await readImage(f)}catch(e){return toast(e.message)}
+    if(!PROP())setTop('prop');const W=Math.max(S.w,S.h*im.iw/im.ih);BG={src:im.src,x:0,y:0,w:W,h:W*im.ih/im.iw,op:.7};bgSave();
+    try{localStorage.setItem('potager-capture','1')}catch(e){}}
+  if(!bgOf())return;if(!PROP())setTop('prop');setTab('plan');if(editMode)setEdit(false);startCalib()}
+function startCalib(){calib={pts:[]};selId=null;sheetMode='calib';svg.classList.add('calib');renderSheet();fit2bg();renderPlan()}
+function endCalib(){calib=null;svg.classList.remove('calib');sheetMode=null;renderSheet();renderPlan()}
+function fit2bg(){if(!bgOf())return fit();const r=svg.getBoundingClientRect(),sh=innerWidth<760?r.height*.4:0;view.z=Math.min((r.width-40)/BG.w,(r.height-sh-40)/BG.h);view.cx=BG.x+BG.w/2;view.cy=BG.y+BG.h/2+sh/2/view.z}
+function calibSheet(){const n=calib?calib.pts.length:0,L=n===2?Math.hypot(calib.pts[1].x-calib.pts[0].x,calib.pts[1].y-calib.pts[0].y):0;
+  return`<div class="stack"><div class="row between"><h3>Mettre la capture à l'échelle</h3><button class="btn small" data-bg="done">Terminer</button></div>
+  <p class="note" style="color:var(--ink)">${n<2?`Touche les deux bouts de la barre d'échelle de la capture (en bas, « 20 m » par exemple), ou deux points dont tu connais la distance. <b>${n} / 2</b>`:'Indique la distance réelle entre les deux points.'}</p>
+  ${n===2?`<div class="row"><label class="field" style="max-width:150px"><span class="lbl">Distance (m)</span><input id="bg-d" type="number" inputmode="decimal" min="0.5" step="0.5" value="20"></label><button class="btn primary" data-bg="apply">Appliquer</button><button class="btn small" data-bg="redo">Recommencer</button></div><p class="note">Sur le plan actuel : ${m2(L)} m.</p>`:''}
+  <label class="field"><span class="lbl">Visibilité de la capture</span><input id="bg-op" type="range" min="0.15" max="1" step="0.05" value="${BG?BG.op??.7:.7}"></label>
+  <p class="note">Ensuite, décalque : crayon, puis « Ajouter » pour la maison, la piscine, les arbres ; « Forme du terrain » pour les limites ; et pose tes parcelles au bon endroit.</p></div>`}
+/* un tap (sans glisser) pose un point ; glisser et pincer restent libres pour cadrer */
+let calDown=null;
+svg.addEventListener('pointerdown',e=>{if(calib)calDown={x:e.clientX,y:e.clientY,n:ptrs.size}},true);
+svg.addEventListener('pointerup',e=>{if(!calib||!calDown)return;const d=Math.hypot(e.clientX-calDown.x,e.clientY-calDown.y),many=calDown.n>0;calDown=null;if(d>8||many||calib.pts.length>=2)return;
+  calib.pts.push(world(e.clientX,e.clientY));renderSheet();renderPlan();if(calib.pts.length===2)setTimeout(()=>{const i=$('#bg-d');if(i)i.select()},50)},true);
+sheet.addEventListener('click',e=>{const b=e.target.closest('[data-bg]');if(!b)return;const a=b.dataset.bg;
+  if(a==='done')return endCalib();
+  if(a==='redo'){calib.pts=[];renderSheet();renderPlan();return}
+  if(a==='apply'){const d=parseFloat(String($('#bg-d').value).replace(',','.'));if(!(d>0))return toast('Indique une distance en mètres');const[p,q]=calib.pts,L=Math.hypot(q.x-p.x,q.y-p.y);if(L<1)return;
+    const f=d*100/L;BG.x=p.x+(BG.x-p.x)*f;BG.y=p.y+(BG.y-p.y)*f;BG.w*=f;BG.h*=f;
+    /* la capture commence au coin du terrain si elle est plus petite que lui, sinon on agrandit le terrain pour la contenir */
+    const dx=-Math.min(0,BG.x),dy=-Math.min(0,BG.y);BG.x+=dx;BG.y+=dy;bgSave();
+    if(!S.shape&&(S.w<BG.x+BG.w||S.h<BG.y+BG.h)){S.w=Math.ceil((BG.x+BG.w)/100)*100;S.h=Math.ceil((BG.y+BG.h)/100)*100;save()}
+    calib.pts=[];endCalib();fit2bg();renderPlan();return toast(`Capture à l'échelle : ${num(BG.w/100,0)} × ${num(BG.h/100,0)} m`)}});
+sheet.addEventListener('input',e=>{if(e.target.id!=='bg-op'||!BG)return;BG.op=+e.target.value;bgSave();renderPlan()});
 /* ================= Planche : grille, rotation, journal ================= */
 function openBed(id,zi=0,jk='arrosage',toJournal=false){bed={id,zi,cell:null,jk,photo:null};$('#bedView').hidden=false;updateNoteBtn();renderBed();$('#bedView').scrollTop=0;if(toJournal){const j=$('#jpanel');if(j)j.scrollIntoView({block:'start'})}}
 function closeBed(){bed=null;$('#bedView').hidden=true;if(typeof updateNoteBtn==='function')updateNoteBtn()}
@@ -2471,7 +2755,8 @@ const MABR=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.',
 const mRange=ms=>{const a=Math.min(...ms),b=Math.max(...ms);return MABR[a-1]+(a!==b?'–'+MABR[b-1]:'')};
 
 /* ================= Aujourd'hui ================= */
-function renderToday(){
+let TSTAT=null;
+function renderToday(dry){
   const mo=TODAY.getMonth()+1,pl=plantings(),fp=frostPeriod(TODAY);
   const fr=S.frost&&S.frost.d===iso(TODAY)?+S.frost.t:null;
   const pests=pestsNow(),nr=nurseryReady(),act=nurseryActive(),lows=(S.stock||[]).filter(isLow);
@@ -2535,6 +2820,7 @@ function renderToday(){
     tile('t-rec','<path d="M5 9h14l-1.5 10.5a2 2 0 0 1-2 1.5h-7a2 2 0 0 1-2-1.5z"/><path d="M9 9l3-5 3 5"/>',FLW()?'À couper':'Récolter',T.rec.length,pl2(recU)||'rien de prêt',j0)}${
     tile('t-eau','<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>','Arrosage',T.eau,T.eau?(T.eau>1?'planches':'planche')+' à arroser':wR?'pluie suffisante':'rien à arroser','data-tgo="weather"')}${
     tile('t-pest','<ellipse cx="12" cy="14" rx="5" ry="6"/><path d="M12 8V5M7 12H4M20 12h-3M7 16H4M20 16h-3"/>','Surveiller',T.pest.size,pl2([...T.pest])||'rien à signaler',j0)}</div>`;
+  TSTAT={n:nAct,sens:T.sens,rec:recU,eau:T.eau,pest:T.pest.size};if(dry)return TSTAT;
   $('#v-today').innerHTML=`<div class="ptr" id="ptr"><span class="spin"></span><span id="ptrt">Tire pour actualiser la météo</span></div><div class="page"><div class="ttitle"><h2>Aujourd'hui</h2><span class="note">${TODAY.toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'})} · ${nAct?nAct+' chose'+(nAct>1?'s':'')+' à faire':'rien d\'urgent'}</span></div>
   ${tsum}
   <div class="bednav">${secs.map(x=>`<button data-tj="${x.L.key}">${esc(x.L.t)}</button>`).join('')}${semis.length?'<button data-tj="semis">Semis</button>':''}<button data-tj="gen">Stock et saison</button></div>
@@ -3255,7 +3541,7 @@ function renderWxLayer(){const el=$('#wxlayer');if(!el)return;
 
 /* ================= Bouton « + Noter » ================= */
 let q=null;
-function updateNoteBtn(){const b=$('#noteBtn');if(b)b.hidden=tab==='plan'||!!bed||!!inv||!!q||!!auto||!!cs}
+function updateNoteBtn(){const b=$('#noteBtn');if(b)b.hidden=tab==='plan'||tab==='prop'||tab==='empty'||PROP()||!!bed||!!inv||!!q||!!auto||!!cs}
 function openQ(step='menu'){q={step,photo:null};$('#qback').hidden=false;$('#qsheet').hidden=false;renderQ();updateNoteBtn()}
 function closeQ(){q=null;$('#qback').hidden=true;$('#qsheet').hidden=true;$('#qsheet').innerHTML='';updateNoteBtn()}
 const qPlanches=()=>plantables().filter(o=>o.zones.some(z=>z.crop));
@@ -3348,7 +3634,7 @@ function applyTheme(){let u=uiPref();if(!['classic','ios','glass','widgets'].inc
 applyTheme();
 let seenHelp=false;try{seenHelp=!!localStorage.getItem('potager-aide-vue');localStorage.setItem('potager-aide-vue','1')}catch(e){}
 if(!seenHelp)sheetMode='help';
-renderHeader();requestAnimationFrame(()=>{fit();renderSheet();setTab('today')});
+renderHeader();requestAnimationFrame(()=>{fit();renderSheet();setTop(TOP);window.APP_PRETE=true});
 initCaps();
 setTimeout(()=>syncStation(false),600);
 </script>

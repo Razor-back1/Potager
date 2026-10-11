@@ -9,6 +9,6 @@ function applyTheme(){let u=uiPref();if(!['classic','ios','glass','widgets'].inc
 applyTheme();
 let seenHelp=false;try{seenHelp=!!localStorage.getItem('potager-aide-vue');localStorage.setItem('potager-aide-vue','1')}catch(e){}
 if(!seenHelp)sheetMode='help';
-renderHeader();requestAnimationFrame(()=>{fit();renderSheet();setTab('today')});
+renderHeader();requestAnimationFrame(()=>{fit();renderSheet();setTop(TOP);window.APP_PRETE=true});
 initCaps();
 setTimeout(()=>syncStation(false),600);

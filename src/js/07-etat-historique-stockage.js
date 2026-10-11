@@ -13,15 +13,15 @@ let undoT=null;function saveUndo(){clearTimeout(undoT);undoT=setTimeout(()=>{try
 addEventListener('pagehide',()=>{if(undoT){clearTimeout(undoT);try{localStorage.setItem(undoKey(),JSON.stringify({p:past.slice(-15),f:future.slice(-15),cur:lastJSON.length}))}catch(e){}}});
 function loadUndo(){try{const u=JSON.parse(localStorage.getItem(undoKey())),raw=localStorage.getItem(keyOf(GID))||'';if(u&&Array.isArray(u.p)&&u.cur===raw.length){past=u.p;future=u.f||[]}else{past=[];future=[]}}catch(e){past=[];future=[]}}
 function persist(){try{localStorage.setItem(keyOf(GID),lastJSON);localStorage.setItem(keyAtOf(GID),String(localAt))}catch(e){}
-  const g=GL.get(),it=g.list.find(x=>x.id===GID);if(it&&(it.name!==S.name||it.ex!==!!S.example)){it.name=S.name;it.ex=!!S.example;GL.set(g)}}
+  const g=GL.get(),it=g.list.find(x=>x.id===GID);const k=S.kind||'potager';if(it&&(it.name!==S.name||it.ex!==!!S.example||it.k!==k)){it.name=S.name;it.ex=!!S.example;it.k=k;GL.set(g)}}
 function switchGarden(id){if(id===GID)return;if(GID)persist();GID=id;const g=GL.get();g.cur=id;GL.set(g);
   try{localAt=+localStorage.getItem(keyAtOf(id))||0}catch(e){localAt=0}S=load()||sample();lastJSON=JSON.stringify(S);loadUndo();
   ctx=null;selId=null;sheetMode=null;editMode=false;shapeEdit=null;closeBed();closeInv();if(typeof closeAuto==='function')closeAuto();persist();
   if(typeof subscribeDoc==='function')subscribeDoc();fit();renderSheet();renderHeader();refresh();if(typeof updateModeUI==='function')updateModeUI()}
 function addGarden(state,open=true){const id=uid(),g=GL.get();try{localStorage.setItem(keyOf(id),JSON.stringify(state));localStorage.setItem(keyAtOf(id),String(Date.now()))}catch(e){toast('Mémoire de l\'appareil pleine');return null}
-  g.list.push({id,name:state.name,ex:!!state.example});GL.set(g);if(open)switchGarden(id);try{if(relayOn())setTimeout(()=>syncPush(id),300)}catch(e){}return id}
-function deleteGarden(id){const g=GL.get();if(g.list.length<2)return;g.list=g.list.filter(x=>x.id!==id);GL.set(g);
-  try{localStorage.removeItem(keyOf(id));localStorage.removeItem(keyAtOf(id))}catch(e){}try{if(relayOn())gReq('/garden?id='+encodeURIComponent(id),'DELETE').catch(()=>{})}catch(e){}if(id===GID){GID=null;switchGarden(g.list[0].id)}}
+  g.list.push({id,name:state.name,ex:!!state.example,k:state.kind||'potager'});GL.set(g);if(open)switchGarden(id);try{if(relayOn())setTimeout(()=>syncPush(id),300)}catch(e){}return id}
+function deleteGarden(id){const g=GL.get();if(g.list.length<2||id===PROP_ID)return;const dk=(g.list.find(x=>x.id===id)||{}).k;g.list=g.list.filter(x=>x.id!==id);GL.set(g);
+  try{localStorage.removeItem(keyOf(id));localStorage.removeItem(keyAtOf(id))}catch(e){}try{if(relayOn())gReq('/garden?id='+encodeURIComponent(id),'DELETE').catch(()=>{})}catch(e){}if(id===GID){GID=null;switchGarden((g.list.find(x=>x.k===dk&&x.id!==PROP_ID)||g.list[0]).id)}}
 /* variantes pour comparer des plans : même terrain (forme, orientation, lieu) et mêmes éléments fixes, ou copie complète */
 const FIXED_TYPES=new Set(['etang','arbre','haie','cloture']);
 function gardenVariant(full){const c=JSON.parse(JSON.stringify(S)),base=S.name.replace(/ · (variante|copie) \d+$/,'');
@@ -58,7 +58,7 @@ const homeOf=o=>{const s=serreOf(o);return s?s.inner:S};
 const fullName=o=>{const s=serreOf(o);return s?s.name+' › '+o.name:o.name};
 const obj=id=>allObjs().find(o=>o.id===id);
 /* hors mode édition, seuls ces objets se sélectionnent ; le reste laisse glisser la carte */
-const PICKABLE=new Set(['planche','bac','serre','abri','fruitier']);
+const PICKABLE=new Set(['planche','bac','serre','abri','fruitier','parcelle']);
 const plantables=()=>allObjs().filter(o=>TYPES[o.type]&&TYPES[o.type].plant);
 /* blocs : des objets qui bougent et tournent ensemble (série de planches et ses allées) */
 const grpOf=o=>o&&o.grp?G().objs.filter(q=>q.grp===o.grp):null;

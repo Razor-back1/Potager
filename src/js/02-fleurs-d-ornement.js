@@ -99,7 +99,7 @@ function setCatalog(){const f=FLW(),K=KIND();let ed={},vs=[];try{ed=S.cropEdits|
   mine.forEach(v=>{P[v.id]={...P[v.base],edited:false,...v,variety:true}});
   for(const k in P)if(P[k].hv&&P[k].y&&P[k].j!==Math.round(P[k].y*365))P[k]={...P[k],j:Math.round(P[k].y*365)};
   PLANTS=CATALOG[K].flatMap(p=>[P[p.id],...mine.filter(v=>v.base===p.id).map(v=>P[v.id])]);JT.recolte=f?'Coupe':'Récolte';
-  try{const h=document.querySelector('.tabs [data-tab="harvest"]'),c=document.querySelector('.tabs [data-tab="crops"]');if(h)h.lastChild.textContent=f?'Floraisons':'Récoltes';if(c)c.lastChild.textContent=f?'Fleurs':K==='verger'?'Fruitiers':'Cultures'}catch(e){}}
+}
 /* date de la première floraison : après le délai j, au premier mois de floraison */
 function bloomStart(d,p){let t=addD(d,p.j||60);for(let i=0;i<14;i++){if(p.fl.includes(t.getMonth()+1))return t;t=new Date(t.getFullYear(),t.getMonth()+1,1,12)}return addD(d,p.j||60)}
 function bloomEndMonth(p,mo){let m=mo;for(let i=0;i<12&&p.fl.includes(m%12+1);i++)m=m%12+1;return m}
@@ -151,6 +151,11 @@ const TYPES={
  prise:{l:'Prise électrique',w:30,h:30},
  compost:{l:'Composteur',w:120,h:120,ht:100},
  abri:{l:'Abri de jardin',w:250,h:200,ht:250},
+ /* plan de la propriété */
+ maison:{l:'Maison',w:1000,h:800,ht:700,prop:true},
+ terrasse:{l:'Terrasse',w:600,h:300,ht:0,prop:true},
+ piscine:{l:'Piscine',w:800,h:400,ht:0,prop:true},
+ parcelle:{l:'Parcelle',w:1000,h:600,ht:0,prop:true,fixed:true},
 };
 const JT={arrosage:'Arrosage',semis:'Semis',amendement:'Amendement',traitement:'Traitement',maladie:'Maladie',recolte:'Récolte',note:'Note'};
 const MONTHS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];

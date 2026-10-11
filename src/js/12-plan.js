@@ -33,6 +33,10 @@ function shapeSVG(o){
     case 'cloture':{let s=`<rect x="${x}" y="${y}" width="${w}" height="${h}" class="s-fence"/>`;const L=Math.max(w,h),n=Math.floor(L/200);for(let i=0;i<=n;i++){const t=-L/2+i*(L/Math.max(n,1));s+=w>=h?`<rect x="${t-6}" y="${-Math.max(h,12)/2-2}" width="12" height="${Math.max(h,12)+4}" class="s-wood-solid"/>`:`<rect y="${t-6}" x="${-Math.max(w,12)/2-2}" height="12" width="${Math.max(w,12)+4}" class="s-wood-solid"/>`}return s}
     case 'prise':return`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" class="s-plug" stroke-width="1" ${ns}/><circle cx="${-w*.18}" r="${w*.09}" style="fill:var(--ink)"/><circle cx="${w*.18}" r="${w*.09}" style="fill:var(--ink)"/>`;
     case 'compost':return`<rect x="${x}" y="${y}" width="${w}" height="${h}" class="s-wood-solid" stroke-width="1" ${ns}/><path d="M${x} ${y+h/3}H${-x}M${x} ${y+2*h/3}H${-x}" class="s-roof" stroke-width="1" ${ns}/>`;
+    case 'maison':{const L=w>=h;return`<rect x="${x}" y="${y}" width="${w}" height="${h}" class="s-house" stroke-width="1.5" ${ns}/><path d="${L?`M${x} 0H${-x}`:`M0 ${y}V${-y}`}" class="s-house-r" stroke-width="1.2" ${ns}/>`}
+    case 'terrasse':return`<rect x="${x}" y="${y}" width="${w}" height="${h}" class="s-deck" stroke-width="1" ${ns}/>`;
+    case 'piscine':{const m=Math.min(w,h)*.12;return`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${Math.min(w,h)*.1}" class="s-deck" stroke-width="1" ${ns}/><rect x="${x+m}" y="${y+m}" width="${w-2*m}" height="${h-2*m}" rx="${Math.min(w,h)*.06}" class="s-pool" stroke-width="1.5" ${ns}/>`}
+    case 'parcelle':return parcelSVG(o);
     case 'abri':return`<rect x="${x}" y="${y}" width="${w}" height="${h}" class="s-wood-solid" stroke-width="1.5" ${ns}/><path d="M${x} ${y}L${-x} ${-y}M${-x} ${y}L${x} ${-y}" class="s-roof" stroke-width="1" ${ns}/>`;
   }return'';
 }
@@ -41,8 +45,8 @@ function objSVG(o){
   const vert=o.h>o.w*1.4,span=(vert?o.h:o.w)*view.z,thick=Math.min(o.w,o.h)*view.z;
   if(span>o.name.length*6.5&&thick>13&&o.type!=='prise')lab=`<text text-anchor="middle" dominant-baseline="central" font-size="${fs}" transform="${vert?'rotate(-90)':''}">${esc(o.name)}</text>`;
   let badge='';const st=planStatus(o);if(st){const r=10/view.z;badge=`<g class="badge ${st.c}" transform="translate(${o.w/2} ${-o.h/2})"><title>${st.l}</title><circle r="${r}" vector-effect="non-scaling-stroke"/><text text-anchor="middle" dominant-baseline="central" font-size="${(st.c==='blue'?9:11)/view.z}" transform="rotate(${-o.rot})">${st.t}</text></g>`}
-  let selS='';if(sel){const p=6/view.z,bd=o.type==='haie'&&o.bend?o.bend:0;selS=`<rect class="selbox${o.locked?' locked':''}" x="${-o.w/2-p}" y="${-o.h/2-p-Math.max(0,bd)}" width="${o.w+2*p}" height="${o.h+2*p+Math.abs(bd)}" vector-effect="non-scaling-stroke"/>`+(o.locked||!editMode?'':`<circle class="handle" data-handle="1" cx="${o.w/2+p}" cy="${o.h/2+p}" r="${11/view.z}" vector-effect="non-scaling-stroke"/>`)}
-  return`<g data-id="${o.id}" class="obj${o.id===lifted||liftGrp&&o.grp===liftGrp?' lift':''}${!editMode&&!PICKABLE.has(o.type)?' nopick':''}" transform="translate(${o.x+o.w/2} ${o.y+o.h/2}) rotate(${o.rot})">${shapeSVG(o)}${lab}${badge}${selS}</g>`;
+  let selS='';if(sel){const p=6/view.z,bd=o.type==='haie'&&o.bend?o.bend:0;selS=`<rect class="selbox${o.locked?' locked':''}" x="${-o.w/2-p}" y="${-o.h/2-p-Math.max(0,bd)}" width="${o.w+2*p}" height="${o.h+2*p+Math.abs(bd)}" vector-effect="non-scaling-stroke"/>`+(o.locked||!editMode||TYPES[o.type].fixed?'':`<circle class="handle" data-handle="1" cx="${o.w/2+p}" cy="${o.h/2+p}" r="${11/view.z}" vector-effect="non-scaling-stroke"/>`)}
+  return`<g data-id="${o.id}" class="obj t-${o.type}${o.id===lifted||liftGrp&&o.grp===liftGrp?' lift':''}${!editMode&&!PICKABLE.has(o.type)?' nopick':''}" transform="translate(${o.x+o.w/2} ${o.y+o.h/2}) rotate(${o.rot})">${shapeSVG(o)}${lab}${badge}${selS}</g>`;
 }
 function renderPlan(){
   const r=svg.getBoundingClientRect(),W=r.width||360,H=r.height||500;
@@ -53,7 +57,7 @@ function renderPlan(){
     edges+=`<text class="${shapeEdit?'edgetxt':'dimtxt'}" x="${(a.x+b.x)/2+nx*o}" y="${(a.y+b.y)/2+ny*o}" text-anchor="middle" dominant-baseline="central" font-size="${fs}">${m2(L)} m</text>`});
   const sur=!ctx&&S.surround;
   {const f=terrainFrame(),tr=f.a?`translate(${f.o.x} ${f.o.y}) rotate(${f.a})`:'';['g1','g5'].forEach(k=>{const el=document.getElementById(k);if(!el)return;if(tr)el.setAttribute('patternTransform',tr);else el.removeAttribute('patternTransform')})}
-  $('#groundL').innerHTML=`${sur?`<rect class="surround" x="${sur.x}" y="${sur.y}" width="${sur.w}" height="${sur.h}" vector-effect="non-scaling-stroke"/>`:''}<clipPath id="tclip"><polygon points="${pts}"/></clipPath><g clip-path="url(#tclip)"><rect class="ground" width="${G().w}" height="${G().h}"/><rect width="${G().w}" height="${G().h}" fill="url(#g1)"/><rect width="${G().w}" height="${G().h}" fill="url(#g5)"/></g><polygon class="bound" points="${pts}" vector-effect="non-scaling-stroke"/>${edges}`;
+  $('#groundL').innerHTML=`${sur?`<rect class="surround" x="${sur.x}" y="${sur.y}" width="${sur.w}" height="${sur.h}" vector-effect="non-scaling-stroke"/>`:''}<clipPath id="tclip"><polygon points="${pts}"/></clipPath><g clip-path="url(#tclip)"><rect class="ground" width="${G().w}" height="${G().h}"/><rect width="${G().w}" height="${G().h}" fill="url(#g1)"/><rect width="${G().w}" height="${G().h}" fill="url(#g5)"/></g>${typeof bgSVG==='function'?bgSVG():''}<polygon class="bound" points="${pts}" vector-effect="non-scaling-stroke"/>${edges}`;
   let ed='';if(shapeEdit){const r=11/view.z;tp.forEach((a,i)=>{const b=tp[(i+1)%tp.length];ed+=`<line class="edgehit" data-edge="${i}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" vector-effect="non-scaling-stroke"/>`});tp.forEach((a,i)=>{const b=tp[(i+1)%tp.length];ed+=`<circle class="mid" data-mid="${i}" cx="${(a.x+b.x)/2}" cy="${(a.y+b.y)/2}" r="${r*.7}"/>`});
     tp.forEach((a,i)=>ed+=`<circle class="vtx${shapeEdit.sel===i?' sel':''}" data-vtx="${i}" cx="${a.x}" cy="${a.y}" r="${r}" vector-effect="non-scaling-stroke"/>`)}
   /* anneau de rotation autour de l'objet sélectionné (mode édition) */
@@ -65,7 +69,7 @@ function renderPlan(){
     <line class="rotline" x1="${cx}" y1="${cy}" x2="${kx}" y2="${ky}" vector-effect="non-scaling-stroke"/><g data-rot="1" transform="translate(${kx} ${ky})"><circle class="rotknob" r="${14/view.z}" vector-effect="non-scaling-stroke"/><text class="rotknobt" text-anchor="middle" dominant-baseline="central" font-size="${12/view.z}">${ro.rot}°</text></g>`}
   $('#editL').innerHTML=ed;
   renderWxLayer();
-  const order=['etang','ruisseau','citerne','alleeo','allee','haie','cloture','serre','arbre','fruitier','abri','compost','cuve','eau','bac','planche','prise'];
+  const order=['etang','ruisseau','citerne','alleeo','allee','terrasse','parcelle','piscine','maison','haie','cloture','serre','arbre','fruitier','abri','compost','cuve','eau','bac','planche','prise'];
   const list=[...G().objs].sort((a,b)=>(a.id===selId)-(b.id===selId)||order.indexOf(a.type)-order.indexOf(b.type));
   $('#layer').innerHTML=list.map(objSVG).join('');
   let sh='';const lv=!shade.on&&liveWx()&&!ctx&&wx.cur&&wx.cur.isDay&&['clear','partly'].includes(wxKind(wx.cur.code));
@@ -73,9 +77,11 @@ function renderPlan(){
   if(shade.on&&!ctx){const sp=sunPos(shade.doy,shade.hour);if(sp.alt>=.04)G().objs.forEach(o=>shadowPolys(o,sp).forEach(p=>{sh+=`<polygon class="shadepoly" points="${p.map(q=>q.x.toFixed(1)+','+q.y.toFixed(1)).join(' ')}"/>`}))}
   $('#shadeL').innerHTML=sh;
   let ov='';if(guides){guides.forEach(g=>ov+=`<line class="guide" x1="${g[0]}" y1="${g[1]}" x2="${g[2]}" y2="${g[3]}" vector-effect="non-scaling-stroke"/>`)}
+  if(typeof bgOverlay==='function')ov+=bgOverlay();
   $('#overL').innerHTML=ov;
 }
-function fit(){const r=svg.getBoundingClientRect();const sh=sheetMode&&innerWidth<760?r.height*.45:0;view.z=Math.min((r.width-90)/G().w,(r.height-sh-90)/G().h);view.cx=G().w/2;view.cy=G().h/2+sh/2/view.z-20/view.z;renderPlan()}
+let fitPending=false;
+function fit(){const r=svg.getBoundingClientRect();if(!r.width||!r.height){fitPending=true;return}fitPending=false;const sh=sheetMode&&innerWidth<760?r.height*.45:0;view.z=Math.min((r.width-90)/G().w,(r.height-sh-90)/G().h);view.cx=G().w/2;view.cy=G().h/2+sh/2/view.z-20/view.z;renderPlan()}
 
 /* guides d'alignement */
 function alignSnap(o){   /* calage sur les bords et les centres des autres objets et du terrain, dans le repère du terrain (incliné ou non) */
@@ -104,7 +110,7 @@ svg.addEventListener('pointerdown',e=>{
   svg.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(ptrs.size===2){const[a,b]=[...ptrs.values()];pinch={d0:Math.hypot(a.x-b.x,a.y-b.y),z0:view.z,m:world((a.x+b.x)/2,(a.y+b.y)/2)};clearTimeout(holdT);if(drag&&drag.mode==='move'){drag.o.x=drag.s.x;drag.o.y=drag.s.y;(drag.grp||[]).forEach(m=>{m.o.x=m.x;m.o.y=m.y})}liftGrp=null;drag=null;lifted=null;guides=null;return}
   /* la poignée de taille passe avant l'anneau de rotation quand les deux se chevauchent */
-  if(selId&&editMode&&!shapeEdit){const o=obj(selId);if(o&&!o.locked&&G().objs.includes(o)){const pd=6/view.z,ang=o.rot*Math.PI/180,lx=o.w/2+pd,ly=o.h/2+pd,hx=o.x+o.w/2+lx*Math.cos(ang)-ly*Math.sin(ang),hy=o.y+o.h/2+lx*Math.sin(ang)+ly*Math.cos(ang),pw=world(e.clientX,e.clientY);
+  if(selId&&editMode&&!shapeEdit){const o=obj(selId);if(o&&!o.locked&&!TYPES[o.type].fixed&&G().objs.includes(o)){const pd=6/view.z,ang=o.rot*Math.PI/180,lx=o.w/2+pd,ly=o.h/2+pd,hx=o.x+o.w/2+lx*Math.cos(ang)-ly*Math.sin(ang),hy=o.y+o.h/2+lx*Math.sin(ang)+ly*Math.cos(ang),pw=world(e.clientX,e.clientY);
     if(Math.hypot(pw.x-hx,pw.y-hy)*view.z<26){drag={mode:'resize',o,p0:pw,s:{...o},sx:e.clientX,sy:e.clientY};return}}}
   const rh=e.target.closest('[data-rot]');if(rh&&selId&&editMode&&!shapeEdit){const o=obj(selId),ms=grpMembers(o),f=ms?grpFrame(ms,o.rot):null;drag={mode:'rot',o,s:{rot:o.rot},sx:e.clientX,sy:e.clientY,c:f?{x:f.cx,y:f.cy}:{x:o.x+o.w/2,y:o.y+o.h/2},grp:ms?ms.map(q=>({o:q,x:q.x,y:q.y,rot:q.rot})):null};return}
   if(shapeEdit){if(!G().shape)G().shape=rectPts();const v=e.target.closest('[data-vtx]'),m=e.target.closest('[data-mid]');
@@ -116,7 +122,7 @@ svg.addEventListener('pointerdown',e=>{
       holdT=setTimeout(()=>{if(!drag||drag.mode!=='shold')return;drag.mode='smove';drag.moved=false;if(navigator.vibrate)navigator.vibrate(12);showHint('Glisse pour déplacer le terrain')},380);return}
     drag={mode:'pan',sx:e.clientX,sy:e.clientY,c0:{x:view.cx,y:view.cy}};return}
   const h=e.target.closest('[data-handle]'),g0=e.target.closest('[data-id]'),g=g0&&(editMode||PICKABLE.has((obj(g0.dataset.id)||{}).type))?g0:null,p=world(e.clientX,e.clientY);
-  if(h&&selId){const o=obj(selId);drag={mode:'resize',o,p0:p,s:{...o},sx:e.clientX,sy:e.clientY}}
+  if(h&&selId&&!TYPES[(obj(selId)||{}).type||'planche'].fixed){const o=obj(selId);drag={mode:'resize',o,p0:p,s:{...o},sx:e.clientX,sy:e.clientY}}
   else if(g&&!editMode){const o=obj(g.dataset.id);selId=o.id;drag={mode:'hold',o,p0:p,s:{x:o.x,y:o.y},sx:e.clientX,sy:e.clientY,c0:{x:view.cx,y:view.cy}};renderPlan()}
   else if(g){const o=obj(g.dataset.id);selId=o.id;
     drag={mode:'hold',o,p0:p,s:{x:o.x,y:o.y},sx:e.clientX,sy:e.clientY,c0:{x:view.cx,y:view.cy}};renderPlan();
@@ -159,7 +165,7 @@ function endPtr(e){ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;clearTimeo
   if(drag&&ptrs.size===0){
     if(drag.mode==='hold'){if(!editMode&&drag.o.type==='abri'){openInv()}else if(!ctx&&drag.o.type==='serre'&&!editMode){enterSerre(drag.o.id)}else{sheetMode='obj';renderSheet();keepAboveSheet(drag.o)}}
     else if(drag.mode==='smove'&&drag.moved){normalizeShape();updateBox();save();renderShapebar()}
-    else if((drag.mode==='pan'||drag.mode==='shold'||drag.mode==='smove')&&!drag.moved){if(shapeEdit){shapeEdit.sel=null;renderShapebar()}else{selId=null;sheetMode=null;renderSheet()}renderPlan()}
+    else if((drag.mode==='pan'||drag.mode==='shold'||drag.mode==='smove')&&!drag.moved){if(shapeEdit){shapeEdit.sel=null;renderShapebar()}else if(!calib){selId=null;sheetMode=null;renderSheet()}renderPlan()}
     else if(drag.mode==='rot'&&drag.moved){save();if(sheetMode)renderSheet()}
     else if((drag.mode==='vtx'&&(drag.moved||drag.inserted))||(drag.mode==='edge'&&drag.moved)){normalizeShape();updateBox();save();renderShapebar()}
     else if(drag.moved&&(drag.mode==='move'||drag.mode==='resize')){fitZones(drag.o);save();if(sheetMode)renderSheet()}

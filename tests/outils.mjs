@@ -46,7 +46,7 @@ export async function relais() {
 }
 
 /* un iPhone (ou iPad) simulé : réseau extérieur coupé, relais branché sur le relais simulé */
-export async function appareil(nav, adresse, { style = 'classic', modele = 'iPhone 13', relais: R = null, cle = null, date = null } = {}) {
+export async function appareil(nav, adresse, { style = 'classic', modele = 'iPhone 13', relais: R = null, cle = null, date = null, debut = 'potager' } = {}) {
   const ctx = await nav.newContext({ ...devices[modele], serviceWorkers: 'block', acceptDownloads: true });
   if (date) await ctx.clock.setFixedTime(new Date(date));   /* « aujourd'hui » imposé, pour tester une saison */
   await ctx.route('**/*', r => { const u = r.request().url(); return u.startsWith('http://127.0.0.1') ? r.continue() : r.abort() });
@@ -64,8 +64,17 @@ export async function appareil(nav, adresse, { style = 'classic', modele = 'iPho
   const erreurs = [];
   page.on('pageerror', e => erreurs.push(e.message));
   await page.goto(adresse);
-  await page.waitForFunction(() => typeof S === 'object' && document.querySelector('.tabs'));
+  await page.waitForFunction(() => window.APP_PRETE === true);
+  /* l'app s'ouvre sur la propriété ; la plupart des tests travaillent dans le potager */
+  if (debut && debut !== 'prop') await page.click(`.tabs [data-top="${debut}"]`);
   return { ctx, page, erreurs };
 }
 
 export const lancer = () => chromium.launch();
+
+/* ouvre un sous-onglet (Aujourd'hui, Plan, Récoltes, Cultures) du jardin ouvert, ou l'onglet Eau pour « weather » */
+export async function onglet(page, t) {
+  if (t === 'weather') return page.click('.tabs [data-top="eau"]');
+  if (await page.evaluate(() => TOP === 'prop' || TOP === 'eau')) await page.click(`.tabs [data-top="${await page.evaluate(() => PROP() ? 'potager' : KIND())}"]`);
+  return page.click(`.subtabs [data-tab="${t}"]`);
+}

@@ -1,5 +1,6 @@
 /* ================= Aujourd'hui ================= */
-function renderToday(){
+let TSTAT=null;
+function renderToday(dry){
   const mo=TODAY.getMonth()+1,pl=plantings(),fp=frostPeriod(TODAY);
   const fr=S.frost&&S.frost.d===iso(TODAY)?+S.frost.t:null;
   const pests=pestsNow(),nr=nurseryReady(),act=nurseryActive(),lows=(S.stock||[]).filter(isLow);
@@ -63,6 +64,7 @@ function renderToday(){
     tile('t-rec','<path d="M5 9h14l-1.5 10.5a2 2 0 0 1-2 1.5h-7a2 2 0 0 1-2-1.5z"/><path d="M9 9l3-5 3 5"/>',FLW()?'À couper':'Récolter',T.rec.length,pl2(recU)||'rien de prêt',j0)}${
     tile('t-eau','<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>','Arrosage',T.eau,T.eau?(T.eau>1?'planches':'planche')+' à arroser':wR?'pluie suffisante':'rien à arroser','data-tgo="weather"')}${
     tile('t-pest','<ellipse cx="12" cy="14" rx="5" ry="6"/><path d="M12 8V5M7 12H4M20 12h-3M7 16H4M20 16h-3"/>','Surveiller',T.pest.size,pl2([...T.pest])||'rien à signaler',j0)}</div>`;
+  TSTAT={n:nAct,sens:T.sens,rec:recU,eau:T.eau,pest:T.pest.size};if(dry)return TSTAT;
   $('#v-today').innerHTML=`<div class="ptr" id="ptr"><span class="spin"></span><span id="ptrt">Tire pour actualiser la météo</span></div><div class="page"><div class="ttitle"><h2>Aujourd'hui</h2><span class="note">${TODAY.toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long'})} · ${nAct?nAct+' chose'+(nAct>1?'s':'')+' à faire':'rien d\'urgent'}</span></div>
   ${tsum}
   <div class="bednav">${secs.map(x=>`<button data-tj="${x.L.key}">${esc(x.L.t)}</button>`).join('')}${semis.length?'<button data-tj="semis">Semis</button>':''}<button data-tj="gen">Stock et saison</button></div>
