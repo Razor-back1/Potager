@@ -173,18 +173,3 @@
 :root[data-ui="widgets"] .tabs button[aria-current="page"]{color:var(--accent)}
 :root[data-ui="widgets"] .notefab{background:var(--ink);color:#fff;box-shadow:0 8px 20px rgba(0,0,0,.18)}
 @media (min-width:760px){:root[data-ui="widgets"] .sheet{border-radius:26px}}
-/* navigation par parcelle dans les styles iOS, verre et widgets */
-:root[data-ui="ios"] .subnav{background:rgba(242,242,247,.92);border-bottom:0;padding-top:2px}
-:root[data-ui="ios"] .subtabs{background:#e3e3e8;border:0;border-radius:9px}
-:root[data-ui="ios"] .subtabs button[aria-selected="true"]{background:#fff;color:#000;border-radius:7px}
-:root[data-ui="ios"] .pchip{background:#e3e3e8;border:0}
-:root[data-ui="ios"] .pchip.on{background:var(--accent);color:#fff}
-:root[data-ui="glass"] .subnav{background:transparent;border-bottom:0;padding-top:0}
-:root[data-ui="glass"] .subtabs{background:var(--card);border:1px solid var(--card-line);border-radius:14px}
-:root[data-ui="glass"] .subtabs button{border-radius:11px;color:#c9d2cc}
-:root[data-ui="glass"] .subtabs button[aria-selected="true"]{background:rgba(255,255,255,.16);color:var(--accent);box-shadow:none}
-:root[data-ui="glass"] .pchip{background:var(--card);border-color:var(--card-line)}
-:root[data-ui="glass"] .propsvg{background:rgba(255,255,255,.04)}
-:root[data-ui="widgets"] .subnav{background:transparent;border-bottom:0;padding-top:0}
-:root[data-ui="widgets"] .subtabs{background:#e7e9e2;border:0;border-radius:12px}
-:root[data-ui="widgets"] .subtabs button[aria-selected="true"]{background:#fff;border-radius:10px}

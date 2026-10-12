@@ -226,7 +226,7 @@ async function syncPush(id){if(!relayOn())return;if(id===GID&&allObjs().some(o=>
 async function syncPull(manual){if(!relayOn()||syncBusy)return;syncBusy=true;
   try{const r=await gReq('/gardens'),c=GDN.get();if(c.gardena!==!!r.gardena||r.me&&(c.role!==r.me.role||c.name!==r.me.name))GDN.set({...c,gardena:!!r.gardena,...(r.me?{role:r.me.role,name:r.me.name}:{})});
     const reg=GL.get();let regCh=false,curCh=false;
-    for(const g of r.list){const loc=reg.list.find(x=>x.id===g.id);
+    for(const g of r.list){if(g.id===OLD_PROP){if(!g.del)gReq('/garden?id='+OLD_PROP,'DELETE').catch(()=>{});continue}const loc=reg.list.find(x=>x.id===g.id);
       if(g.del){if(loc&&reg.list.length>1){reg.list=reg.list.filter(x=>x.id!==g.id);regCh=true;try{localStorage.removeItem(keyOf(g.id));localStorage.removeItem(keyAtOf(g.id))}catch(e){}if(g.id===GID)curCh='gone'}continue}
       if(g.at>localAtOf(g.id)){const d=await gReq('/garden?id='+encodeURIComponent(g.id));if(!d||!d.state)continue;
         if(g.id===GID){past.push(lastJSON);if(past.length>80)past.shift();future=[];S=migrate(d.state);lastJSON=JSON.stringify(S);localAt=d.at;persist();curCh=true}

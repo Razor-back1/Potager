@@ -1,7 +1,7 @@
 /* L'app dans un iPhone simulé : les parcours qui ont déjà cassé ou qui comptent le plus. */
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { serveur, lancer, appareil, relais, onglet } from './outils.mjs';
+import { serveur, lancer, appareil, relais } from './outils.mjs';
 
 let srv, nav;
 before(async () => { srv = await serveur(); nav = await lancer() });
@@ -15,7 +15,7 @@ for (const style of ['classic', 'ios', 'glass', 'widgets']) {
     const { ctx, page, erreurs } = await ouvrir({ style });
     assert.equal(await page.evaluate(() => document.documentElement.dataset.ui), style);
     for (const t of ONGLETS) {
-      await onglet(page, t);
+      await page.click(`.tabs [data-tab="${t}"]`);
       const vue = await page.evaluate(t => { const v = document.querySelector('#v-' + t); return v && !v.hidden ? v.innerHTML.length : -1 }, t);
       assert.ok(vue > 50, `onglet ${t} vide`);
     }
@@ -40,7 +40,7 @@ test('changer de style dans le menu, puis revenir au Classique', async () => {
 
 test('placer une série de planches, annuler puis rétablir', async () => {
   const { ctx, page, erreurs } = await ouvrir();
-  await onglet(page, 'plan');
+  await page.click('.tabs [data-tab="plan"]');
   if (await page.isVisible('#sheet [data-act="close"]')) await page.click('#sheet [data-act="close"]');   /* aide du premier lancement */
   const avant = await page.evaluate(() => S.objs.length);
   await page.click('#editBtn');
@@ -81,15 +81,11 @@ test('plusieurs jardins : créer, changer, supprimer', async () => {
   const premier = await page.evaluate(() => GID);
   await page.click('#menuBtn');
   await page.click('[data-act="gnew"]');
-  assert.equal(await page.evaluate(() => GL.get().list.length), 3);   /* propriété + 2 potagers */
+  assert.equal(await page.evaluate(() => GL.get().list.length), 2);
   assert.notEqual(await page.evaluate(() => GID), premier);
-  assert.deepEqual(await page.evaluate(() => [TOP, tab, parcels().some(o => o.gid === GID)]), ['potager', 'today', true], 'nouveau potager ouvert sur Aujourd\'hui et posé sur la propriété');
-  await page.click('#menuBtn');
-  assert.equal(await page.locator('.glist .grow').count(), 2, 'la propriété n\'est pas dans la liste des jardins');
-  assert.doesNotMatch(await page.textContent('.glist'), /Ma propriété/);
   const b = page.locator('[data-act="gdel"]');
   await b.click(); await b.click();
-  assert.equal(await page.evaluate(() => GL.get().list.length), 2);
+  assert.equal(await page.evaluate(() => GL.get().list.length), 1);
   assert.equal(await page.evaluate(() => GID), premier);
   assert.deepEqual(erreurs, []);
   await ctx.close();
@@ -101,8 +97,8 @@ test('jardin de fleurs : base de fleurs et carnet de coupes', async () => {
   await page.click('[data-act="gnewexfl"]');
   assert.equal(await page.evaluate(() => FLW()), true);
   assert.ok(await page.evaluate(() => PLANTS.every(p => p.id.startsWith('f_'))));
-  for (const t of ONGLETS) await onglet(page, t);
-  await onglet(page, 'harvest');
+  for (const t of ONGLETS) await page.click(`.tabs [data-tab="${t}"]`);
+  await page.click('.tabs [data-tab="harvest"]');
   assert.match(await page.textContent('#v-harvest'), /arnet/);
   assert.deepEqual(erreurs, []);
   await ctx.close();
@@ -121,7 +117,7 @@ test('semis échelonnés et fichier calendrier (.ics) valide', async () => {
   assert.equal(lignes.at(-2), 'END:VCALENDAR');
   assert.equal(lignes.filter(l => l === 'BEGIN:VEVENT').length, lignes.filter(l => l === 'END:VEVENT').length);
   for (const l of lignes) assert.ok(Buffer.byteLength(l) <= 75, 'ligne ICS trop longue : ' + l);
-  await onglet(page, 'today');
+  await page.click('.tabs [data-tab="today"]');
   assert.match(await page.textContent('#v-today'), /Semis échelonnés/);
   assert.deepEqual(erreurs, []);
   await ctx.close();
@@ -165,7 +161,7 @@ test('synchro iPhone → iPad et calendrier abonné, via le vrai code du relais'
 
 test('modifier une culture puis revenir aux valeurs d\'origine', async () => {
   const { ctx, page, erreurs } = await ouvrir();
-  await onglet(page, 'crops');
+  await page.click('.tabs [data-tab="crops"]');
   await page.click('[data-cact="edit"][data-crop="tomate"]');
   await page.fill('#ce-j', '60');
   await page.click('[data-c="save"]');
@@ -190,7 +186,7 @@ test('modifier une culture puis revenir aux valeurs d\'origine', async () => {
 
 test('variété : hérite de sa culture, se plante, se supprime proprement', async () => {
   const { ctx, page, erreurs } = await ouvrir();
-  await onglet(page, 'crops');
+  await page.click('.tabs [data-tab="crops"]');
   await page.click('[data-cact="variety"][data-crop="tomate"]');
   await page.fill('#ce-n', 'Tomate cerise');
   await page.fill('#ce-j', '55');
@@ -208,7 +204,7 @@ test('variété : hérite de sa culture, se plante, se supprime proprement', asy
   /* un jardin de fleurs ne la montre pas */
   assert.ok(await page.evaluate(id => { S.kind = 'fleurs'; setCatalog(); const ok = !PLANTS.some(p => p.id === id); S.kind = 'potager'; setCatalog(); return ok }, v.id));
   /* suppression : la zone repasse en tomate */
-  await onglet(page, 'crops');
+  await page.click('.tabs [data-tab="crops"]');
   const del = page.locator(`[data-cact="edit"][data-crop="${v.id}"]`);
   await del.click();
   await page.click('[data-c="delvar"]'); await page.click('[data-c="delvar"]');
@@ -220,7 +216,7 @@ test('variété : hérite de sa culture, se plante, se supprime proprement', asy
 
 test('objectif de récolte : 3 salades par semaine → quand et combien semer', async () => {
   const { ctx, page, erreurs } = await ouvrir();
-  await onglet(page, 'crops');
+  await page.click('.tabs [data-tab="crops"]');
   await page.click('[data-cact="goal"][data-crop="laitue"]');
   await page.fill('#cg-w', '3');
   /* 3 salades × 14 j / 7 = 6, + 25 % de marge = 8 plants tous les 14 jours */
@@ -255,10 +251,10 @@ for (const style of ['classic', 'glass']) {
     assert.equal(await page.evaluate(() => VRG()), true);
     assert.ok(await page.evaluate(() => PLANTS.length > 15 && PLANTS.every(p => p.hv)));
     for (const t of ONGLETS) {
-      await onglet(page, t);
+      await page.click(`.tabs [data-tab="${t}"]`);
       assert.ok(await page.evaluate(t => document.querySelector('#v-' + t).innerHTML.length, t) > 50, t);
     }
-    assert.equal(await page.textContent('.subtabs [data-tab="crops"]'), 'Fruitiers');
+    assert.equal(await page.textContent('.tabs [data-tab="crops"]'), 'Fruitiers');
     assert.match(await page.textContent('#v-crops'), /Dans ton verger/);
     assert.deepEqual(erreurs, []);
     await ctx.close();
@@ -276,7 +272,7 @@ test('fruitier : récolte chaque année, pas avant la mise à fruit, pollinisati
   assert.ok(r.pom <= 0, 'le pommier devrait être en récolte en octobre');
   assert.ok(r.cerAn >= r.cerPlant + 5 && [6, 7].includes(r.cerMois), `cerisier : ${r.cerMois}/${r.cerAn}`);
   assert.deepEqual(r.poll, ['fr_cerisier', 'fr_poirier'], 'seuls le poirier et le cerisier manquent de partenaire');
-  await onglet(page, 'today');
+  await page.click('.tabs [data-tab="today"]');
   const txt = await page.textContent('#v-today');
   assert.match(txt, /Pollinisation/); assert.match(txt, /en récolte/); assert.match(txt, /Travaux du mois/);
   assert.deepEqual(erreurs, []);
@@ -285,7 +281,7 @@ test('fruitier : récolte chaque année, pas avant la mise à fruit, pollinisati
 
 test('gel annoncé en pleine floraison : alerte sur les fleurs', async () => {
   const { ctx, page, erreurs } = await verger({ date: '2027-04-15T10:00:00' });
-  await onglet(page, 'today');
+  await page.click('.tabs [data-tab="today"]');
   await page.evaluate(() => { wx = { cur: { t: 9, code: 0, isDay: true }, night: -3, now: null, fc: null, hours: [] }; renderToday() });
   const txt = await page.textContent('#v-today');
   assert.match(txt, /Gel sur les fleurs/);
@@ -298,7 +294,7 @@ test('gel annoncé en pleine floraison : alerte sur les fleurs', async () => {
 
 test('planter un arbre fruitier sur le plan et modifier son espèce', async () => {
   const { ctx, page, erreurs } = await verger();
-  await onglet(page, 'plan');
+  await page.click('.tabs [data-tab="plan"]');
   if (await page.isVisible('#sheet [data-act="close"]')) await page.click('#sheet [data-act="close"]');
   await page.click('#editBtn'); await page.click('#addBtn');
   await page.click('[data-act="add"][data-type="fruitier"]');
@@ -321,7 +317,7 @@ test('planter un arbre fruitier sur le plan et modifier son espèce', async () =
 
 test('fruitier modifiable : variété tardive et mise à fruit', async () => {
   const { ctx, page, erreurs } = await verger();
-  await onglet(page, 'crops');
+  await page.click('.tabs [data-tab="crops"]');
   await page.click('[data-cact="variety"][data-crop="fr_pommier"]');
   await page.fill('#ce-n', 'Pommier Reinette grise');
   await page.click('[data-mk="hv"] [data-m="8"]');   /* plus de récolte en août */
@@ -345,14 +341,14 @@ test('variante : même terrain et éléments fixes, plan vide ; copie complète'
   assert.equal(v.north, 23); assert.equal(v.shape, 4); assert.equal(v.ex, false);
   await page.click('[data-act="gdup"]');
   assert.equal(await page.evaluate(() => S.objs.length), src.fixes, 'la copie d\'une variante reprend la variante');
-  assert.equal(await page.evaluate(() => GL.get().list.length), 4);   /* propriété + potager + variante + copie */
+  assert.equal(await page.evaluate(() => GL.get().list.length), 3);
   assert.deepEqual(erreurs, []);
   await ctx.close();
 });
 
 test('modifier la forme du terrain depuis le mode édition', async () => {
   const { ctx, page, erreurs } = await ouvrir();
-  await onglet(page, 'plan');
+  await page.click('.tabs [data-tab="plan"]');
   if (await page.isVisible('#sheet [data-act="close"]')) await page.click('#sheet [data-act="close"]');
   await page.click('#editBtn');
   assert.ok(await page.isVisible('#shapeBtn'), 'bouton « forme du terrain » absent en mode édition');
@@ -369,7 +365,7 @@ test('modifier la forme du terrain depuis le mode édition', async () => {
 
 test('rotation au degré près : objet, angle tapé, terrain seul ou avec tout le plan', async () => {
   const { ctx, page, erreurs } = await ouvrir();
-  await onglet(page, 'plan');
+  await page.click('.tabs [data-tab="plan"]');
   if (await page.isVisible('#sheet [data-act="close"]')) await page.click('#sheet [data-act="close"]');
   await page.click('#editBtn');
   const id = await page.evaluate(() => { const o = S.objs.find(o => o.type === 'planche' && !o.grp && !o.locked); selId = o.id; sheetMode = 'obj'; renderSheet(); renderPlan(); return o.id });
@@ -399,7 +395,7 @@ test('rotation au degré près : objet, angle tapé, terrain seul ou avec tout l
 
 test('terrain : Rectangle puis rotation sans que le plan saute, dimensions au cm, déplacement par appui long', async () => {
   const { ctx, page, erreurs } = await ouvrir();
-  await onglet(page, 'plan');
+  await page.click('.tabs [data-tab="plan"]');
   if (await page.isVisible('#sheet [data-act="close"]')) await page.click('#sheet [data-act="close"]');
   await page.click('#editBtn'); await page.click('#shapeBtn');
   await page.click('[data-sh="rect"]');
@@ -436,7 +432,7 @@ test('terrain : Rectangle puis rotation sans que le plan saute, dimensions au cm
 
 test('le rond de rotation tourne au degré près', async () => {
   const { ctx, page, erreurs } = await ouvrir();
-  await onglet(page, 'plan');
+  await page.click('.tabs [data-tab="plan"]');
   if (await page.isVisible('#sheet [data-act="close"]')) await page.click('#sheet [data-act="close"]');
   await page.click('#editBtn');
   const id = await page.evaluate(() => { const o = S.objs.find(o => o.type === 'compost' || (o.type === 'planche' && !o.grp)); selId = o.id; renderPlan(); return o.id });
@@ -454,7 +450,7 @@ test('le rond de rotation tourne au degré près', async () => {
 
 test('terrain incliné : grille, aimantation et nouveaux objets suivent le terrain', async () => {
   const { ctx, page, erreurs } = await ouvrir();
-  await onglet(page, 'plan');
+  await page.click('.tabs [data-tab="plan"]');
   if (await page.isVisible('#sheet [data-act="close"]')) await page.click('#sheet [data-act="close"]');
   await page.click('#editBtn'); await page.click('#shapeBtn');
   await page.click('[data-sh="rect"]');
@@ -488,7 +484,7 @@ test('terrain incliné : grille, aimantation et nouveaux objets suivent le terra
 
 test('terrain incliné : la serre se cale au centre du terrain et sur les autres objets', async () => {
   const { ctx, page, erreurs } = await ouvrir();
-  await onglet(page, 'plan');
+  await page.click('.tabs [data-tab="plan"]');
   if (await page.isVisible('#sheet [data-act="close"]')) await page.click('#sheet [data-act="close"]');
   await page.click('#editBtn'); await page.click('#shapeBtn');
   await page.click('[data-sh="rect"]');
@@ -513,183 +509,15 @@ test('terrain incliné : la serre se cale au centre du terrain et sur les autres
   await ctx.close();
 });
 
-/* ---------- Propriété : le terrain entier et ses parcelles ---------- */
-test('mise à jour : la propriété est créée, les vrais jardins posés dessus, les exemples à côté', async () => {
-  const ctx = await nav.newContext({ serviceWorkers: 'block' });
-  await ctx.route('**/*', r => r.request().url().startsWith('http://127.0.0.1') ? r.continue() : r.abort());
-  const page = await ctx.newPage(), erreurs = []; page.on('pageerror', e => erreurs.push(e.message));
-  /* un ancien appareil : un vrai potager (« main ») et un exemple de verger, sans propriété */
-  await page.goto(srv.url); await page.waitForFunction(() => window.APP_PRETE === true);
-  await page.evaluate(() => { const st = emptyGarden('Mon potager'); st.w = 1400; st.h = 900; st.north = 20; st.objs.push({ id: 'p1', type: 'planche', name: 'Planche 1', x: 100, y: 100, w: 90, h: 500, rot: 0, zones: [{ crop: null, len: 500, cells: {} }] });
-    const ex = sampleOrchard(); localStorage.clear(); localStorage.setItem(keyOf('main'), JSON.stringify(st)); localStorage.setItem(keyOf('vx'), JSON.stringify(ex));
-    localStorage.setItem('atelier-potager-list', JSON.stringify({ cur: 'main', list: [{ id: 'main', name: 'Mon potager' }, { id: 'vx', name: ex.name, ex: true }] })) });
-  await page.reload(); await page.waitForFunction(() => window.APP_PRETE === true);
-  const r = await page.evaluate(() => ({ top: TOP, gid: GID, ids: GL.get().list.map(x => x.id + ':' + x.k) }));
-  assert.equal(r.top, 'potager', 'l\'app s\'ouvre sur Aujourd\'hui du potager'); assert.equal(r.gid, 'main');
-  assert.deepEqual(r.ids, ['prop:propriete', 'main:potager', 'vx:verger']);
-  assert.equal(await page.evaluate(() => tab), 'today');
-  await page.click('.tabs [data-top="prop"]');
-  assert.deepEqual(await page.evaluate(() => S.objs.filter(o => o.type === 'parcelle').map(o => [o.gid, o.w, o.h, o.rot])), [['main', 1400, 900, 340]], 'seul le vrai potager est posé, tourné pour que son nord suive celui de la propriété');
-  assert.equal(await page.isVisible('.tabs [data-top="fleurs"]'), false, 'pas de jardin de fleurs : pas d\'onglet Fleurs');
-  assert.equal(await page.isVisible('.tabs [data-top="verger"]'), false, 'l\'exemple de verger n\'est pas sur le plan : pas d\'onglet');
-  const txt = await page.textContent('#v-prop');
-  assert.match(txt, /Mon potager/); assert.match(txt, /Pas sur le plan/); assert.match(txt, /exemple/);
-  /* toucher la parcelle ouvre le potager */
-  await page.click('#v-prop .trow[data-pg="main"]');
-  assert.deepEqual(await page.evaluate(() => [TOP, GID, tab]), ['potager', 'main', 'today']);
-  assert.equal(await page.isVisible('.subtabs [data-tab="plan"]'), true);
-  /* « Ouvrir » dans « Pas sur le plan » ouvre l'exemple de verger dans son onglet, l'onglet Plan revient à la propriété */
-  await page.click('.tabs [data-top="prop"]');
-  await page.click('#v-prop button[data-pg="vx"]');
-  assert.deepEqual(await page.evaluate(() => [TOP, GID, VRG()]), ['verger', 'vx', true]);
-  assert.equal(await page.textContent('.subtabs [data-tab="crops"]'), 'Fruitiers');
-  await page.click('.tabs [data-top="prop"]');
-  assert.deepEqual(await page.evaluate(() => [TOP, GID, tab]), ['prop', 'prop', 'prop']);
-  /* supprimer un vieux jardin depuis « Pas sur le plan » (deux touches) */
-  await page.click('#v-prop [data-pdel="vx"]'); await page.click('#v-prop [data-pdel="vx"]');
-  assert.deepEqual(await page.evaluate(() => GL.get().list.map(x => x.id)), ['prop', 'main']);
-  assert.doesNotMatch(await page.textContent('#v-prop'), /Pas sur le plan/);
-  /* au redémarrage, la propriété existante n'est pas recréée */
-  await page.reload(); await page.waitForFunction(() => window.APP_PRETE === true);
-  assert.equal(await page.evaluate(() => GL.get().list.filter(x => x.k === 'propriete').length), 1);
-  assert.deepEqual(erreurs, []);
-  await ctx.close();
-});
-
-test('propriété : ajouter un verger, il est posé et son onglet apparaît', async () => {
-  const { ctx, page, erreurs } = await ouvrir({ debut: 'prop' });
-  assert.equal(await page.isVisible('.tabs [data-top="fleurs"]'), false);
-  assert.equal(await page.isVisible('.tabs [data-top="verger"]'), false);
-  await page.click('#v-prop [data-pnew="verger"]');
-  assert.equal(await page.isVisible('.tabs [data-top="verger"]'), true, 'le verger créé fait apparaître son onglet');
-  const r = await page.evaluate(() => { const o = S.objs.find(q => q.id === selId); return { tab, edit: editMode, type: o && o.type, k: o && gKind(o.gid), n: parcels().length } });
-  assert.deepEqual(r, { tab: 'plan', edit: true, type: 'parcelle', k: 'verger', n: 2 });
-  /* la taille d'une parcelle ne se change pas depuis la propriété : pas de poignée */
-  assert.equal(await page.locator('#layer [data-handle]').count(), 0);
-  if (await page.isVisible('#sheet [data-act="close"]')) await page.click('#sheet [data-act="close"]');
-  await page.click('#doneBtn');
-  await page.click('.tabs [data-top="verger"]');
-  assert.deepEqual(await page.evaluate(() => [TOP, tab, VRG(), S.name]), ['verger', 'today', true, 'Verger']);
-  /* agrandir le verger dans son propre plan : la parcelle suit sur la propriété */
-  await page.evaluate(() => { S.w = 2000; save() });
-  await page.click('.tabs [data-top="prop"]');
-  assert.equal(await page.evaluate(() => S.objs.find(o => o.type === 'parcelle' && gKind(o.gid) === 'verger').w), 2000);
-  assert.deepEqual(erreurs, []);
-  await ctx.close();
-});
-
-test('propriété : maison et piscine au menu Ajouter, pas dans le potager', async () => {
-  const { ctx, page, erreurs } = await ouvrir({ debut: 'prop' });
-  await page.click('.subtabs [data-tab="plan"]');
-  if (await page.isVisible('#sheet [data-act="close"]')) await page.click('#sheet [data-act="close"]');
-  await page.click('#editBtn'); await page.click('#addBtn');
-  for (const t of ['maison', 'piscine', 'terrasse']) assert.ok(await page.isVisible(`.typebtn[data-type="${t}"]`), t);
-  assert.equal(await page.locator('[data-act="series"]').count(), 0);
-  await page.click('.typebtn[data-type="maison"]');
-  assert.equal(await page.evaluate(() => S.objs.filter(o => o.type === 'maison').length), 1);
-  if (await page.isVisible('#sheet [data-act="close"]')) await page.click('#sheet [data-act="close"]');
-  await page.click('#doneBtn');
-  await onglet(page, 'plan');
-  await page.click('#editBtn'); await page.click('#addBtn');
-  assert.equal(await page.locator('.typebtn[data-type="maison"]').count(), 0);
-  assert.ok(await page.isVisible('[data-act="series"]'));
-  assert.deepEqual(erreurs, []);
-  await ctx.close();
-});
-
-test('capture satellite : importer, deux points et la distance mettent l\'image à l\'échelle', async () => {
-  const { ctx, page, erreurs } = await ouvrir({ debut: 'prop' });
-  /* une « capture » de 400 × 300 px fabriquée sur place */
-  const png = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = 400; c.height = 300; const g = c.getContext('2d'); g.fillStyle = '#5a7'; g.fillRect(0, 0, 400, 300); return c.toDataURL('image/png').split(',')[1] });
-  const choix = page.waitForEvent('filechooser');
-  await page.click('#v-prop [data-pbg="add"]');
-  await (await choix).setFiles({ name: 'capture.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') });
-  await page.waitForFunction(() => sheetMode === 'calib');
-  assert.equal(await page.evaluate(() => [tab, !!document.querySelector('#groundL image')].join()), 'plan,true');
-  const w0 = await page.evaluate(() => BG.w);
-  /* deux taps, à 100 px d'écart à l'écran */
-  const box = await page.locator('#map').boundingBox(), y = box.y + box.height * .3;
-  await page.mouse.click(box.x + 100, y); await page.mouse.click(box.x + 200, y);
-  assert.equal(await page.evaluate(() => calib.pts.length), 2);
-  const L = await page.evaluate(() => Math.hypot(calib.pts[1].x - calib.pts[0].x, calib.pts[1].y - calib.pts[0].y));
-  await page.fill('#bg-d', '10');
-  await page.click('[data-bg="apply"]');
-  const w1 = await page.evaluate(() => BG.w);
-  assert.ok(Math.abs(w1 - w0 * 1000 / L) < 1, `échelle fausse : ${w0} → ${w1} (L = ${L})`);
-  assert.equal(await page.evaluate(() => sheetMode), null);
-  /* l'image reste sur l'appareil : elle n'est pas dans l'état synchronisé */
-  assert.equal(await page.evaluate(() => lastJSON.includes('data:image')), false);
-  await page.reload(); await page.waitForFunction(() => window.APP_PRETE === true);
-  assert.ok(await page.evaluate(w => Math.abs(bgOf().w - w) < 1, w1));
-  assert.deepEqual(erreurs, []);
-  await ctx.close();
-});
-
-test('ébauche collée : contour, maison, étang, arbres posés ; la même capture se cale toute seule', async () => {
-  const { ctx, page, erreurs } = await ouvrir({ debut: 'prop' });
-  const eb = { ebauche: 1, nord: 0, contour: [[0, 0], [80, 0], [80, 60], [0, 60]],
-    objets: [['maison', 5, 5, 20, 12, -10], ['etang', 40, 10, 20, 10, 0, [[0, .5], [.5, 0], [1, .5], [.5, 1]]], ['arbre', 60, 45, 8], ['arbre', 70, 50, 6], ['inconnu', 1, 1, 1, 1]],
-    fond: { l: 400, h: 300, mpx: .25, ox: 50, oy: 40 } };
-  page.on('dialog', d => d.accept(JSON.stringify(eb)));
-  await page.click('#v-prop [data-pbg="paste"]');
-  await page.waitForFunction(() => tab === 'plan' && S.shape, null, { timeout: 5000 });
-  const r = await page.evaluate(() => ({ tab, shape: S.shape.map(p => [p.x, p.y]), t: S.objs.map(o => o.type).sort(), m: S.objs.find(o => o.type === 'maison'), e: S.objs.find(o => o.type === 'etang').poly.length, a: S.objs.filter(o => o.type === 'arbre').map(o => [o.x + o.w / 2, o.y + o.h / 2, o.w]), p: S.objs.find(o => o.type === 'parcelle') }));
-  assert.equal(r.tab, 'plan');
-  assert.deepEqual(r.shape, [[0, 0], [8000, 0], [8000, 6000], [0, 6000]]);
-  assert.deepEqual(r.t, ['arbre', 'arbre', 'etang', 'maison', 'parcelle'], 'objets inconnus ignorés, la parcelle existante gardée');
-  assert.deepEqual([r.m.x, r.m.y, r.m.w, r.m.h, r.m.rot], [500, 500, 2000, 1200, 350]);
-  assert.equal(r.e, 4);
-  assert.deepEqual(r.a, [[6000, 4500, 800], [7000, 5000, 600]]);
-  assert.ok(r.p.x >= 0 && r.p.x + r.p.w <= 8000 && r.p.y >= 0 && r.p.y + r.p.h <= 6000, 'parcelle rangée dans le terrain');
-  /* une capture de même format (800 × 600 px, la même en plus grand) se cale sans étape d'échelle */
-  const png = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = 800; c.height = 600; c.getContext('2d').fillRect(0, 0, 800, 600); return c.toDataURL('image/png').split(',')[1] });
-  await page.click('.tabs [data-top="prop"]');
-  const choix = page.waitForEvent('filechooser');
-  await page.click('#v-prop [data-pbg="add"]');
-  await (await choix).setFiles({ name: 'capture.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') });
-  await page.waitForFunction(() => bgOf() && tab === 'plan');
-  assert.deepEqual(await page.evaluate(() => [BG.x, BG.y, BG.w, BG.h, sheetMode]), [-1250, -1000, 10000, 7500, null]);
-  assert.deepEqual(erreurs, []);
-  await ctx.close();
-});
-
-test('changer d\'onglet revient sur Aujourd\'hui, et l\'app redémarre sur Aujourd\'hui', async () => {
+test('retour en arrière : la propriété enregistrée par l\'essai précédent est retirée sans erreur', async () => {
   const { ctx, page, erreurs } = await ouvrir();
-  await onglet(page, 'crops');
-  await page.click('.tabs [data-top="prop"]');
-  await page.click('.tabs [data-top="potager"]');
-  assert.equal(await page.evaluate(() => tab), 'today');
-  await page.click('.tabs [data-top="prop"]');
-  await page.reload(); await page.waitForFunction(() => window.APP_PRETE === true);
-  assert.deepEqual(await page.evaluate(() => [TOP, tab]), ['potager', 'today']);
-  assert.deepEqual(erreurs, []);
-  await ctx.close();
-});
-
-test('vieux jardins pas liés à la propriété : les poser depuis le menu ou le bandeau', async () => {
-  const ctx = await nav.newContext({ serviceWorkers: 'block' });
-  await ctx.route('**/*', r => r.request().url().startsWith('http://127.0.0.1') ? r.continue() : r.abort());
-  const page = await ctx.newPage(), erreurs = []; page.on('pageerror', e => erreurs.push(e.message));
-  await page.goto(srv.url); await page.waitForFunction(() => window.APP_PRETE === true);
-  /* une propriété sans parcelle (et une parcelle d'un jardin absent de cet appareil), deux vieux potagers */
-  await page.evaluate(() => { const p = emptyGarden('Ma propriété', 'propriete'); p.objs.push({ id: 'x', type: 'parcelle', gid: 'ailleurs', name: 'Ailleurs', x: 0, y: 0, w: 500, h: 500, rot: 0, zones: [] });
-    localStorage.clear(); localStorage.setItem(keyOf('prop'), JSON.stringify(p)); localStorage.setItem(keyOf('main'), JSON.stringify(emptyGarden('Vieux 1'))); localStorage.setItem(keyOf('g2'), JSON.stringify(emptyGarden('Vieux 2')));
-    localStorage.setItem('atelier-potager-list', JSON.stringify({ cur: 'main', list: [{ id: 'prop', name: 'Ma propriété', k: 'propriete' }, { id: 'main', name: 'Vieux 1' }, { id: 'g2', name: 'Vieux 2' }] })) });
-  await page.reload(); await page.waitForFunction(() => window.APP_PRETE === true);
-  assert.deepEqual(await page.evaluate(() => [TOP, tab]), ['prop', 'prop'], 'aucun jardin posé : on arrive sur la propriété');
-  assert.equal(await page.isVisible('.tabs [data-top="potager"]'), false);
-  assert.match(await page.textContent('#v-prop .tcard'), /Pas sur le plan/, 'la carte des jardins à poser est en haut');
-  /* menu : « Poser sur le plan » */
-  await page.click('#menuBtn');
-  await page.click('[data-act="gplace"][data-g="main"]');
-  assert.equal(await page.isVisible('.tabs [data-top="potager"]'), true);
-  /* l'autre, ouvert depuis le menu, affiche un bandeau pour le poser */
-  await page.click('[data-act="gopen"][data-g="g2"]');
-  assert.ok(await page.isVisible('#subnav [data-pput]'));
-  await page.click('#subnav [data-pput]');
-  assert.equal(await page.isVisible('#subnav [data-pput]'), false);
-  await page.click('.tabs [data-top="prop"]');
-  assert.deepEqual(await page.evaluate(() => S.objs.filter(o => o.type === 'parcelle').map(o => o.gid).sort()), ['ailleurs', 'g2', 'main'], 'la parcelle d\'un jardin absent n\'est pas effacée');
+  await page.evaluate(() => { const p = { ...emptyGarden('Ma propriété'), kind: 'propriete' }; p.objs.push({ id: 'm', type: 'maison', name: 'Maison', x: 0, y: 0, w: 900, h: 700, rot: 0, zones: [] });
+    localStorage.setItem('atelier-potager-v1:prop', JSON.stringify(p)); localStorage.setItem('atelier-potager-fond', '{"src":"data:x"}');
+    const g = GL.get(); g.list.unshift({ id: 'prop', name: 'Ma propriété', k: 'propriete' }); g.cur = 'prop'; GL.set(g) });
+  await page.reload(); await page.waitForFunction(() => typeof S === 'object' && document.querySelector('.tabs'));
+  const r = await page.evaluate(() => ({ ids: GL.get().list.map(x => x.id), gid: GID, k: S.kind || 'potager', st: localStorage.getItem('atelier-potager-v1:prop'), fond: localStorage.getItem('atelier-potager-fond') }));
+  assert.ok(!r.ids.includes('prop')); assert.notEqual(r.gid, 'prop'); assert.equal(r.st, null); assert.equal(r.fond, null);
+  await page.click('.tabs [data-tab="plan"]');
   assert.deepEqual(erreurs, []);
   await ctx.close();
 });
