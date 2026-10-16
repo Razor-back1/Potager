@@ -44,3 +44,5 @@ correspondent aux sources), puis lance :
   qui passe par le vrai code du relais ;
 - `tests/relais.test.mjs` : le relais avec une base D1 simulée — accès, potagers, conflits de version,
   amis, photos, calendrier.
+- `tests/pluie.test.mjs` : les alertes pluie de l'app Météo Leuze (radar Buienradar et pluviomètre simulés),
+  une alerte par épisode, réglages par appareil, potager toujours toutes les 30 minutes.

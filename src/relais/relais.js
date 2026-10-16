@@ -6,13 +6,16 @@
 //   1. garde ta clé GARDENA en secret (elle n'est jamais dans l'app) ;
 //   2. lit l'état des vannes, sondes et prises pour l'app ;
 //   3. ouvre ou ferme une vanne quand l'app le demande (arrosage manuel avec minuteur) ;
-//   4. toutes les 30 minutes, applique tes règles d'arrosage automatique, même app fermée.
+//   4. toutes les 30 minutes, applique tes règles d'arrosage automatique, même app fermée ;
+//   5. toutes les 5 minutes, prévient l'app Météo Leuze quand le radar annonce de la pluie
+//      et quand le pluviomètre de la station en mesure.
 //
 // À régler dans Cloudflare (Worker > Settings) :
 //   Variables and Secrets : APP_TOKEN (obligatoire), GARDENA_KEY et GARDENA_SECRET (seulement pour l'arrosage), type « Secret »
 //   Bindings              : KV namespace, nom de variable POTAGER
 //                           D1 database, nom de variable DB
-//   Triggers > Cron       : */30 * * * *  (notifications et arrosage automatique)
+//   Triggers > Cron       : */5 * * * *  (alertes pluie ; notifications du potager et arrosage restent toutes les 30 min)
+//   (facultatif) Secret WU_KEY : clé Weather Underground si tu en changes ; sinon celle de la station IGHEZE29
 //
 // Limite GARDENA : environ 3 000 requêtes par mois. Le relais met l'état en cache
 // (10 min) et ne lit GARDENA en automatique que pendant tes créneaux d'arrosage.
@@ -247,7 +250,10 @@ async function encrypt(sub, text) {
   const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, k, cat(utf8(text), new Uint8Array([2]))));
   return cat(salt, new Uint8Array([0, 0, 16, 0]), new Uint8Array([65]), as, ct);
 }
-const subsOf = async (env, uid) => (await env.DB.prepare('SELECT * FROM subs WHERE uid=?').bind(uid).all()).results.map(r => ({ ...r, keys: JSON.parse(r.keys), prefs: JSON.parse(r.prefs || '{}') }));
+/* chaque app (potager ou météo) ne reçoit que ses propres notifications */
+const appOf = s => (s.prefs && s.prefs.app) || 'potager';
+const parseSub = r => ({ ...r, keys: JSON.parse(r.keys), prefs: JSON.parse(r.prefs || '{}') });
+const subsOf = async (env, uid, app = 'potager') => (await env.DB.prepare('SELECT * FROM subs WHERE uid=?').bind(uid).all()).results.map(parseSub).filter(s => app === '*' || appOf(s) === app);
 async function sendPush(env, sub, msg) {
   try {
     const r = await fetch(sub.endpoint, { method: 'POST', headers: { Authorization: await vapidAuth(env, sub.endpoint), 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream', TTL: '43200', Urgency: 'normal' }, body: await encrypt(sub, JSON.stringify(msg)) });
@@ -305,6 +311,80 @@ async function runNotify(env) {
   if (!env.DB) return; await schema(env);
   const h = localHour(); if (h !== 18 && !(h >= 5 && h <= 12)) return;   /* rien à envoyer en dehors de ces heures */
   for (const r of (await env.DB.prepare('SELECT DISTINCT uid FROM subs').all()).results) { try { await notifyUser(env, r.uid) } catch (e) { } }
+}
+
+/* ---------- alertes pluie pour l'app Météo Leuze ----------
+   Toutes les 5 minutes : le radar de Buienradar (Benelux, 2 h à l'avance par pas de 5 min)
+   et le pluviomètre de la station. Une alerte par épisode : pas de nouvelle alerte du même type
+   tant qu'il n'a pas fait sec pendant une heure. */
+const WU_STATION = 'IGHEZE29', WU_DEF = '6fffe640ff8c4e82bfe640ff8cfe8292';
+const RAIN_MIN = 0.2;          /* mm/h : en dessous, on ne prévient pas */
+const DRY_GAP = 60 * 60e3;     /* il faut une heure sèche pour ouvrir un nouvel épisode */
+const fr1 = v => String(Math.round(v * 10) / 10).replace('.', ',');
+const hhmm = ms => new Intl.DateTimeFormat('fr-BE', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(ms));
+const intensity = mm => mm < 1 ? 'faible' : mm < 4 ? 'modérée' : mm < 10 ? 'forte' : 'très forte';
+/* Buienradar : lignes « 077|20:35 », valeur 0-255 -> mm/h = 10^((v-109)/32) */
+function parseRadar(txt, now = Date.now()) {
+  const loc = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(now)).split(':').map(Number);
+  const nowMin = loc[0] * 60 + loc[1], out = [];
+  for (const line of String(txt).split(/\r?\n/)) {
+    const m = /^\s*(\d{1,3})\|(\d{1,2}):(\d{2})/.exec(line); if (!m) continue;
+    const v = +m[1]; let d = (+m[2]) * 60 + (+m[3]) - nowMin; if (d < -720) d += 1440; if (d > 720) d -= 1440;
+    out.push({ at: now + d * 60e3, min: d, mm: v ? Math.round(Math.pow(10, (v - 109) / 32) * 10) / 10 : 0 });
+  }
+  return out;
+}
+async function rainInputs(env, now = Date.now()) {
+  const key = env.WU_KEY || WU_DEF, st = env.WU_STATION || WU_STATION;
+  let obs = null, radar = null;
+  try { const r = await fetch(`https://api.weather.com/v2/pws/observations/current?stationId=${st}&format=json&units=m&numericPrecision=decimal&apiKey=${key}`); if (r.ok) obs = ((await r.json()).observations || [])[0] || null } catch (e) { }
+  const lat = (obs && obs.lat) || 50.553, lon = (obs && obs.lon) || 4.913;
+  try { const r = await fetch(`https://gpsgadget.buienradar.nl/data/raintext?lat=${lat.toFixed(2)}&lon=${lon.toFixed(2)}`); if (r.ok) radar = parseRadar(await r.text(), now) } catch (e) { }
+  return { obs, radar };
+}
+/* décide quoi envoyer ; dry = ne rien envoyer ni enregistrer (lecture depuis l'app) */
+async function rainCheck(env, { dry = false, now = Date.now() } = {}) {
+  const { obs, radar } = await rainInputs(env, now);
+  const st = (await metaGet(env, 'meteo', 'rain')) || {};
+  const m = (obs && obs.metric) || {}, day = localDay(now);
+  const rate = +m.precipRate || 0, total = +m.precipTotal || 0;
+  const fresh = obs && now - obs.epoch * 1000 < 30 * 60e3;
+  const grew = fresh && st.day === day && st.total != null && total - st.total >= 0.2;
+  const wetNow = !!fresh && (rate > 0 || grew);
+  const ahead = (radar || []).filter(x => x.min >= -5 && x.min <= 60);
+  const first = ahead.find(x => x.mm >= RAIN_MIN);
+  const res = { station: obs ? { rate, total, at: obs.epoch * 1000, fresh: !!fresh } : null, radar: radar ? ahead : null, wetNow, send: [] };
+  if (first) {
+    const run = []; for (const x of ahead.slice(ahead.indexOf(first))) { if (x.mm < RAIN_MIN && run.length) break; run.push(x) }
+    res.next = { at: first.at, min: first.min, peak: Math.max(...run.map(x => x.mm)), until: run[run.length - 1].at + 5 * 60e3, ongoing: run.length === ahead.length - ahead.indexOf(first) };
+  }
+  if (wetNow && (!st.wetAt || now - st.wetAt > DRY_GAP))
+    res.send.push({ kind: 'now', msg: { title: `Il pleut à Leuze${rate > 0 ? ' · ' + fr1(rate) + ' mm/h' : ''}`, body: `Le pluviomètre de la station mesure de la pluie (${fr1(total)} mm aujourd'hui).` + (res.next && !res.next.ongoing ? ` Le radar la voit s'arrêter vers ${hhmm(res.next.until)}.` : ''), tag: 'rain-now', url: './' } });
+  if (!wetNow && first && (!st.wetAt || now - st.wetAt > DRY_GAP) && (!st.soonAt || now - st.soonAt > DRY_GAP + 30 * 60e3)) {
+    const n = res.next, when = n.min <= 5 ? 'dans les minutes qui viennent' : `vers ${hhmm(n.at)} (dans ${Math.round(n.min / 5) * 5} min)`;
+    res.send.push({ kind: 'soon', msg: { title: `Pluie prévue ${when}`, body: `Radar : pluie ${intensity(n.peak)}, jusqu'à ${fr1(n.peak)} mm/h` + (n.ongoing ? ', encore en cours dans une heure.' : `, jusque vers ${hhmm(n.until)}.`), tag: 'rain-soon', url: './' } });
+  }
+  if (dry) return res;
+  if (fresh) { st.day = day; st.total = total }
+  if (wetNow) st.wetAt = now;
+  for (const x of res.send) if (x.kind === 'soon') st.soonAt = now;
+  await metaSet(env, 'meteo', 'rain', st);
+  return res;
+}
+function rainSample(kind) {
+  return kind === 'now' ? { title: 'Il pleut à Leuze · 1,2 mm/h (essai)', body: 'Exemple d\'alerte du pluviomètre de la station.', tag: 'test', url: './' }
+    : { title: 'Pluie prévue vers 18:40 (essai)', body: 'Exemple d\'alerte du radar : pluie modérée, jusqu\'à 2,4 mm/h.', tag: 'test', url: './' };
+}
+async function runRain(env, now = Date.now()) {
+  if (!env.DB) return; await schema(env);
+  const subs = (await env.DB.prepare("SELECT * FROM subs WHERE prefs LIKE '%\"app\":\"meteo\"%'").all()).results.map(parseSub).filter(s => appOf(s) === 'meteo');
+  if (!subs.length) return;
+  const res = await rainCheck(env, { now }), h = localHour(now), night = h >= 22 || h < 7;
+  for (const x of res.send) for (const s of subs) {
+    const p = s.prefs; if (p[x.kind] === false || (night && !p.night)) continue;
+    await sendPush(env, s, x.msg);
+  }
+  return res;
 }
 
 /* ---------- calendrier : abonnement iPhone / iPad (se met à jour tout seul) ---------- */
@@ -400,7 +480,8 @@ export default {
         }
         case '/push/prefs': { const r = await env.DB.prepare('UPDATE subs SET prefs=? WHERE endpoint=? AND uid=?').bind(JSON.stringify(body.prefs || {}), body.endpoint || '', uid).run(); return r.meta.changes ? J({ ok: true }) : J({ error: 'Appareil non abonné.' }, 404) }
         case '/push/unsubscribe': await env.DB.prepare('DELETE FROM subs WHERE endpoint=? AND uid=?').bind(body.endpoint || '', uid).run(); return J({ ok: true });
-        case '/push/test': { const x = (await subsOf(env, uid)).find(y => y.endpoint === body.endpoint); if (!x) return J({ error: 'Appareil non abonné.' }, 404); const r = await sendPush(env, x, { title: 'Atelier Potager', body: 'Les notifications fonctionnent sur cet appareil.', tag: 'test', url: './' }); return r === 'ok' ? J({ ok: true }) : J({ error: 'Envoi refusé (' + r + ').' }, 502) }
+        case '/push/test': { const x = (await subsOf(env, uid, '*')).find(y => y.endpoint === body.endpoint); if (!x) return J({ error: 'Appareil non abonné.' }, 404); const r = await sendPush(env, x, appOf(x) === 'meteo' ? rainSample(body.kind) : { title: 'Atelier Potager', body: 'Les notifications fonctionnent sur cet appareil.', tag: 'test', url: './' }); return r === 'ok' ? J({ ok: true }) : J({ error: 'Envoi refusé (' + r + ').' }, 502) }
+        case '/meteo/rain': return J(await rainCheck(env, { dry: true }));
         case '/push/digest': { if (url.searchParams.get('reset')) { const n = (await metaGet(env, uid, 'nsent')) || { digest: {}, frost: {}, ev: {} }; n.digest = {}; n.frost = {}; await metaSet(env, uid, 'nsent', n) } await notifyUser(env, uid, true); return J({ ok: true }) }
         /* gestion des amis (propriétaire seulement) */
         case '/admin/users': {
@@ -430,5 +511,11 @@ export default {
       }
     } catch (e) { return J({ error: e.message }, 502) }
   },
-  async scheduled(ev, env, ctx) { ctx.waitUntil(Promise.all([runNotify(env).catch(() => { }), (env.GARDENA_KEY && env.POTAGER ? runAuto(env) : Promise.resolve()).catch(e => addLog(env, { type: 'error', msg: e.message }))])) }
+  async scheduled(ev, env, ctx) {
+    const t = ev.scheduledTime || Date.now(), half = new Date(t).getUTCMinutes() % 30 < 5;   /* avec un cron toutes les 5 min, le potager et l'arrosage restent à :00 et :30 */
+    ctx.waitUntil(Promise.all([
+      runRain(env, t).catch(() => { }),
+      half ? runNotify(env).catch(() => { }) : null,
+      half && env.GARDENA_KEY && env.POTAGER ? runAuto(env).catch(e => addLog(env, { type: 'error', msg: e.message })) : null]))
+  }
 };
