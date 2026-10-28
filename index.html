@@ -3398,11 +3398,14 @@ if(!seenHelp)sheetMode='help';
 renderHeader();requestAnimationFrame(()=>{fit();renderSheet();setTab('today')});
 initCaps();
 setTimeout(()=>syncStation(false),600);
+
+/* Ouverte dans le hub familial : lui donner la couleur du haut de l'app pour la barre d'état de l'iPhone. */
+(function(){if(window.parent===window)return;const send=()=>{const ms=[...document.querySelectorAll('meta[name="theme-color"]')];const m=ms.find(x=>!x.media||matchMedia(x.media).matches)||ms[0];if(m)parent.postMessage({hubThemeColor:m.getAttribute('content')},'*')};send();new MutationObserver(send).observe(document.head,{subtree:true,attributes:true,attributeFilter:['content','media']});matchMedia('(prefers-color-scheme: dark)').addEventListener('change',send)})();
 </script>
 
 <script>
 setTimeout(()=>{const s=document.getElementById('splash');if(s){s.classList.add('out');setTimeout(()=>s.remove(),600)}},matchMedia('(display-mode: standalone)').matches||navigator.standalone?650:120);
-/* version 11408f9fe3 : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
+/* version b2dd41befe : service worker « réseau d'abord » pour que chaque mise à jour arrive tout de suite */
 if('serviceWorker' in navigator&&location.protocol==='https:'){
   navigator.serviceWorker.register('sw.js').then(r=>r.update()).catch(()=>{});
   let reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!reloaded){reloaded=true;location.reload()}});

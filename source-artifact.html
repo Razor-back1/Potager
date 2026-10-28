@@ -3367,4 +3367,7 @@ if(!seenHelp)sheetMode='help';
 renderHeader();requestAnimationFrame(()=>{fit();renderSheet();setTab('today')});
 initCaps();
 setTimeout(()=>syncStation(false),600);
+
+/* Ouverte dans le hub familial : lui donner la couleur du haut de l'app pour la barre d'état de l'iPhone. */
+(function(){if(window.parent===window)return;const send=()=>{const ms=[...document.querySelectorAll('meta[name="theme-color"]')];const m=ms.find(x=>!x.media||matchMedia(x.media).matches)||ms[0];if(m)parent.postMessage({hubThemeColor:m.getAttribute('content')},'*')};send();new MutationObserver(send).observe(document.head,{subtree:true,attributes:true,attributeFilter:['content','media']});matchMedia('(prefers-color-scheme: dark)').addEventListener('change',send)})();
 </script>
