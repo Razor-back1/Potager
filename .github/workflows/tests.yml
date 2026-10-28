@@ -7,7 +7,8 @@ on:
 
 jobs:
   tests:
-    runs-on: ubuntu-latest
+    # Playwright 1.56 ne sait pas encore installer ses dépendances sur Ubuntu 26 (ubuntu-latest depuis le 19 octobre 2026)
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
