@@ -429,6 +429,23 @@ export default {
   async fetch(req, env) {
     if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
     const url = new URL(req.url);
+    /* METAR et TAF d'un aéroport (par défaut Charleroi EBCI) : données publiques NOAA, sans code d'accès. aviationweather.gov
+       n'autorise pas les navigateurs (pas de CORS) : le relais les lit et les renvoie. Sert à l'app Météo. */
+    if (url.pathname === '/aero') {
+      const icao = (url.searchParams.get('icao') || 'EBCI').toUpperCase();
+      if (!/^[A-Z]{4}$/.test(icao)) return J({ error: 'Code OACI invalide.' }, 400);
+      const get = async kind => {
+        const r = await fetch(`https://aviationweather.gov/api/data/${kind}?ids=${icao}&format=json`, { headers: { 'User-Agent': 'potager-relais (github.com/Razor-back1/Potager)' }, cf: { cacheTtl: 60, cacheEverything: true } });
+        if (r.status === 204) return null;
+        if (!r.ok) throw new Error(kind + ' ' + r.status);
+        const j = await r.json();
+        return Array.isArray(j) ? j[0] || null : null;
+      };
+      try {
+        const [m, t] = await Promise.all([get('metar'), get('taf')]);
+        return new Response(JSON.stringify({ icao, fetched: Math.floor(Date.now() / 1000), metar: m ? { rawOb: m.rawOb, obsTime: m.obsTime ?? null, reportTime: m.reportTime ?? null } : null, taf: t ? { rawTAF: t.rawTAF, issueTime: t.issueTime ?? null, bulletinTime: t.bulletinTime ?? null } : null }), { headers: { ...CORS, 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60' } });
+      } catch (e) { return J({ error: 'METAR/TAF indisponibles : ' + e.message }, 502); }
+    }
     if (!env.DB) return J({ error: 'Base D1 « DB » non reliée au relais (Settings → Bindings → D1 database, nom DB).' }, 500);
     try {
       await schema(env);
